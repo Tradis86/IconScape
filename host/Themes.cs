@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-// 主题清单（prototype/themes.json）：页面映射与产品权限共用同一份清单。
-// 未标 product 的 ready 主题默认拒绝，避免新增付费主题被意外免费开放。
+// Theme manifest (prototype/themes.json): page mapping and product entitlement share the same manifest.
+// Ready themes without a "product" are refused by default, so a newly added paid theme cannot be opened for free by accident.
 static class Themes
 {
     static Dictionary<string, object> Find(string pageDir, string id)

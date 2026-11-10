@@ -1,13 +1,13 @@
-// Deskland · 桌面宿主（原型）
+// Deskland · desktop host (prototype)
 //
-// 做四件事：
-//   1. 把一个无边框窗口挂到桌面图标下面（壁纸层），里面用 WebView2 显示当前主题的页面（如 prototype/flat.html?wallpaper=1）
-//   0. 设置窗口（prototype/settings.html）：选主题、调参数，实时同步到壁纸并保存到 settings.json；一键分享（壁纸页面画一张打好马赛克的桌面图）
-//   2. 每 400ms 读取桌面图标的真实位置（桌面 ListView 的跨进程消息），有变化才发给页面
-//   3. 前台窗口最大化 / 全屏时暂停动画；托盘图标可以暂停、重新载入、退出（退出后恢复原壁纸）
-//   4. 资源管理器重建壁纸层时（例如按 Win+D），我们的窗口会被连带销毁 → 自动重新挂载
+// It does four things:
+//   1. Attaches one borderless window per monitor beneath the desktop icons (the wallpaper layer) and uses WebView2 to show the current theme's page (e.g. prototype/flat.html?wallpaper=1)
+//   0. Settings window (prototype/settings.html): pick a theme and tune its parameters, synced live to the wallpaper and saved to settings.json; one-click sharing (the wallpaper page draws a desktop picture with the icons already pixelated)
+//   2. Every 400 ms reads the real positions of the desktop icons (cross-process messages to the desktop ListView) and sends them to the page only when they change
+//   3. Pauses a monitor's animation while a maximized / fullscreen window hides it; the tray icon can pause, reload and exit (exiting restores the original wallpaper)
+//   4. When Explorer rebuilds the wallpaper layer (e.g. on Win+D) our window is destroyed with it → it is re-attached automatically
 //
-// 用 Windows 自带的 .NET Framework 编译器编译（C# 5 语法），见 build.ps1。
+// Built with the .NET Framework compiler that ships with Windows (C# 5 syntax); see build.ps1.
 
 using System;
 using System.Diagnostics;
@@ -31,10 +31,10 @@ static class Program
     public static readonly string MenuEventName = "DesklandHost_Menu" + InstallProfile.Suffix;
     public static readonly string SettingsEventName = "DesklandHost_Settings" + InstallProfile.Suffix;
 
-    // 通知正在运行的实例（退出 / 弹出菜单）
+    // Signal the running instance (exit / show menu)
     static void Signal(string name)
     {
-        Native.AllowSetForegroundWindow(-1);            // 让运行中的实例能把菜单弹到最前面
+        Native.AllowSetForegroundWindow(-1);            // lets the running instance bring its menu to the foreground
         EventWaitHandle ev;
         if (EventWaitHandle.TryOpenExisting(name, out ev)) ev.Set();
     }
@@ -42,37 +42,37 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        // Deskland.exe --exit ：通知正在运行的实例正常退出（恢复原壁纸）
-        // Deskland.exe --menu ：让正在运行的实例在鼠标位置弹出菜单
-        // Deskland.exe --settings ：让正在运行的实例打开设置窗口
+        // Deskland.exe --exit: tell the running instance to exit cleanly (restores the original wallpaper)
+        // Deskland.exe --menu: make the running instance pop up its menu at the mouse position
+        // Deskland.exe --settings: make the running instance open the settings window
         if (args.Length > 0 && args[0] == "--exit") { Signal(ExitEventName); return; }
         if (args.Length > 0 && args[0] == "--menu") { Signal(MenuEventName); return; }
         if (args.Length > 0 && args[0] == "--settings") { Signal(SettingsEventName); return; }
         if (args.Length > 0 && args[0] == "--exit-installed") { Environment.ExitCode = InstallProfile.StopInstalled(); return; }
-        // Preview never migrates or shares the development edition's settings.                                 // 老名字（Habitat Wallpaper）下的数据目录、开机自启项搬过来
+        // Preview never migrates or shares the development edition's settings (the data folder and autostart entry under the old name, Habitat Wallpaper, are not carried over).
         bool fromAutostart = Array.IndexOf(args, "--autostart") >= 0;
-        if (fromAutostart) AutoStartCheck.MarkLaunched();  // 开机自启跑起来了（不管后面是不是已经在运行）
+        if (fromAutostart) AutoStartCheck.MarkLaunched();  // the autostart launch did run (whether or not an instance was already running)
         bool created;
         var mutex = new Mutex(true, "DesklandHost_Singleton" + InstallProfile.Suffix, out created);
         if (!created)
         {
-            if (!fromAutostart) Signal(SettingsEventName); // 已经在运行：再次双击程序 = 打开设置（开机自启那次就悄悄退出）
+            if (!fromAutostart) Signal(SettingsEventName); // already running: double-clicking the program again = open settings (the autostart launch just exits quietly)
             return;
         }
-        // 按物理像素工作：桌面图标坐标、屏幕尺寸都是物理像素
+        // Work in physical pixels: desktop icon coordinates and screen sizes are all physical pixels
         if (!Native.SetProcessDpiAwarenessContext(new IntPtr(-4))) Native.SetProcessDPIAware();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        // 任何意外都写进日志，不弹框也不静默退出
+        // Any unexpected error goes to the log: no message box, no silent exit
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += delegate(object s, ThreadExceptionEventArgs e) { Log.Write("未处理的异常：" + e.Exception); };
         AppDomain.CurrentDomain.UnhandledException += delegate(object s, UnhandledExceptionEventArgs e) { Log.Write("致命异常：" + e.ExceptionObject); };
         string exeDir = AppDomain.CurrentDomain.BaseDirectory;
         string pageDir = Path.GetFullPath(Path.Combine(exeDir, @"..\..\prototype"));
-        // 24H2+ 的挂法：默认做 Progman 的分层子窗口（换系统壁纸时会闪一下）；
-        //   --defview：挂进图标层里、图标列表之下（实验：实测画不出来）；--legacy：挂进 WorkerW（换壁纸时会被连带销毁）
+        // How we attach on 24H2+: by default as a layered child window of Progman (flickers briefly when the system wallpaper changes);
+        //   --defview: attach inside the icon layer, below the icon list (experimental: in practice nothing gets drawn); --legacy: attach inside WorkerW (destroyed along with it when the wallpaper changes)
         string attach = "progman";
-        bool autostart = false;                           // --autostart：开机自动启动，不弹设置窗口
+        bool autostart = false;                           // --autostart: launched at sign-in, do not open the settings window
         foreach (string a in args)
         {
             if (a == "--legacy") attach = "legacy";
@@ -102,10 +102,10 @@ static class Log
     }
 }
 
-// 2026-10-10 改名（Habitat Wallpaper → Deskland）：老用户的东西照旧能用
-//   - 数据目录 %LOCALAPPDATA%\HabitatWallpaper（设置、开机自启的记录、WebView2 缓存）整个搬到 %LOCALAPPDATA%\Deskland；
-//     旧程序还开着、WebView2 的文件被占着搬不动时，只把设置这些小文件拷过去
-//   - 用户开着开机自启：注册表 Run 项里的 HabitatWallpaper 换成指向 Deskland.exe 的 Deskland（用户原来的选择照旧，不会替没开的人打开）
+// 2026-10-10 rename (Habitat Wallpaper → Deskland): existing users keep everything they had
+//   - The data folder %LOCALAPPDATA%\HabitatWallpaper (settings, autostart records, WebView2 cache) is moved as a whole to %LOCALAPPDATA%\Deskland;
+//     if the old program is still running and the WebView2 files are locked and cannot be moved, only the small files such as the settings are copied
+//   - If the user had autostart on: the HabitatWallpaper value in the registry Run key is replaced by a Deskland value pointing to Deskland.exe (the user's choice is kept; it is never turned on for someone who had it off)
 static class Rename
 {
     const string OldName = "HabitatWallpaper";
@@ -143,9 +143,9 @@ static class Rename
     }
 }
 
-// 开机自启有没有被拦（比如被火绒、360 的"启动项管理"禁止了：注册表里的启动项还在，但登录时不让运行）：
-// 每次带 --autostart 启动时记下时间；用户手动打开程序时，如果开着开机自启、本次登录已经过了 3 分钟，
-// 却没有本次登录之后的自启记录 → 登录时那次没跑起来
+// Was the autostart launch blocked? (E.g. disabled by the "startup manager" of Huorong or 360: the startup entry is still in the registry but is not allowed to run at sign-in.)
+// Each launch with --autostart records the time; when the user opens the program manually, if autostart is on and this sign-in is more than 3 minutes old
+// but there is no autostart record after this sign-in → the launch at sign-in did not happen
 static class AutoStartCheck
 {
     static string LastPath { get { return Path.Combine(Log.DataDir, "autostart.last"); } }
@@ -162,7 +162,7 @@ static class AutoStartCheck
     public static void MarkLaunched() { Stamp(LastPath); }
     public static void MarkEnabled() { Stamp(EnabledPath); }
 
-    // 本次登录的时间（UTC）：WTSQuerySessionInformation(WTSSessionInfo) 里的 LogonTime
+    // Time of the current sign-in (UTC): LogonTime from WTSQuerySessionInformation(WTSSessionInfo)
     public static DateTime LogonTimeUtc()
     {
         IntPtr buf; int bytes;
@@ -172,7 +172,7 @@ static class AutoStartCheck
         finally { Native.WTSFreeMemory(buf); }
     }
 
-    // 正在运行的安全软件（只用来在提示里点名，方便用户去对的地方改）
+    // Security software currently running (only named in the hint so the user knows where to change it)
     public static string SecuritySoftware()
     {
         string[,] known = { { "HipsTray", "火绒" }, { "HipsDaemon", "火绒" }, { "360Tray", "360 安全卫士" }, { "360sd", "360 杀毒" },
@@ -182,14 +182,14 @@ static class AutoStartCheck
         return "";
     }
 
-    // 没问题返回 null；被拦了返回正在运行的安全软件名（没认出来是 ""），提示文字由设置页按界面语言拼
+    // Returns null when all is well; when blocked, returns the name of the running security software ("" if not recognized). The settings page builds the hint text in the UI language
     public static string Detect(bool autoStartOn)
     {
         if (!autoStartOn) return null;
         DateTime logon = LogonTimeUtc();
-        if (logon == DateTime.MinValue || (DateTime.UtcNow - logon).TotalMinutes < 3) return null;   // 刚登录：开机启动项可能还没轮到
-        if (ReadStamp(EnabledPath) > logon) return null;                                           // 这次登录之后才打开的开机自启
-        if (ReadStamp(LastPath) > logon) return null;                                              // 这次登录时自启过了
+        if (logon == DateTime.MinValue || (DateTime.UtcNow - logon).TotalMinutes < 3) return null;   // just signed in: startup entries may not have run yet
+        if (ReadStamp(EnabledPath) > logon) return null;                                           // autostart was turned on only after this sign-in
+        if (ReadStamp(LastPath) > logon) return null;                                              // the autostart launch did run at this sign-in
         string sw = SecuritySoftware();
         Log.Write("这次登录时开机自启没有运行（登录于 " + logon.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + "）" + (sw != "" ? "，正在运行的安全软件：" + sw : ""));
         return sw;
@@ -209,13 +209,13 @@ static class Json
     }
 }
 
-// 用户设置：当前主题 + 每个主题的参数（只存用户改过的，没改过的用主题默认值）
-// 保存在 %LOCALAPPDATA%\Deskland\settings.json
+// User settings: current theme + each theme's parameters (only values the user changed are stored; the rest use the theme defaults)
+// Saved to settings.json in the data folder (Log.DataDir)
 static class Settings
 {
     static readonly string FilePath = Path.Combine(Log.DataDir, "settings.json");
     public static string Theme = "beach";
-    public static string Lang = "auto";                // 界面语言："auto"（跟随系统）或 I18n.Supported 里的一种
+    public static string Lang = "auto";                // UI language: "auto" (follow the system) or one of I18n.Supported
     public static Dictionary<string, Dictionary<string, object>> Params = new Dictionary<string, Dictionary<string, object>>();
 
     public static void Load()
@@ -257,13 +257,13 @@ static class Settings
     }
 }
 
-// 界面语言（2026-10-14）：文字表在 prototype/i18n/<语言>.json——ui 给设置页、host 给托盘菜单和提示框、themes 给主题名和参数（简体中文的主题文字就是 themes.json 本身）。
-// 设置里的"语言"默认"跟随系统"：用 Windows 的界面语言；不支持的语言用英文
+// UI language (2026-10-14): the string tables live in prototype/i18n/<language>.json: ui for the settings page, host for the tray menu and message boxes, themes for theme names and parameters (the Simplified Chinese theme texts are themes.json itself).
+// The "Language" setting defaults to "System default": use the Windows display language; unsupported languages fall back to English
 static class I18n
 {
-    // 增加语言时同步设置页 LANGS 与体验版导出的语言列表。
-    public static readonly string[] Supported = { "zh-CN", "en" };
-    public static string Code = "zh-CN", Sys = "en";     // 现在用的语言；"跟随系统"时会用的语言
+    // When adding a language, also update LANGS in the settings page and the language list exported with the Preview edition.
+    public static readonly string[] Supported = { "zh-CN", "en", "it" };
+    public static string Code = "zh-CN", Sys = "en";     // language in use; language that "System default" would use
     static Dictionary<string, object> cur, en, zh;
 
     public static string FromCulture(System.Globalization.CultureInfo c)
@@ -272,7 +272,7 @@ static class I18n
         bool zhHant = n.StartsWith("zh") && (n.Contains("hant") || n.EndsWith("-tw") || n.EndsWith("-hk") || n.EndsWith("-mo"));
         string want = n.StartsWith("zh") ? (zhHant ? "zh-TW" : "zh-CN") : two == "pt" ? "pt-BR" : two;
         if (Array.IndexOf(Supported, want) >= 0) return want;
-        return n.StartsWith("zh") ? "zh-CN" : "en";       // 繁体中文还没做：先用简体
+        return n.StartsWith("zh") ? "zh-CN" : "en";       // Traditional Chinese is not done yet: use Simplified for now
     }
 
     public static void Load(string pageDir, string setting)
@@ -296,7 +296,7 @@ static class I18n
         catch (Exception ex) { Log.Write("读取语言文件失败（" + code + "）：" + ex.Message); return null; }
     }
 
-    // 取一句话：当前语言 → 英文 → 简体中文；{名字} 换成后面成对给的值
+    // Get a string: current language → English → Simplified Chinese; {name} is replaced by the values given in pairs afterwards
     public static string T(string key, params string[] kv)
     {
         object v = null;
@@ -307,9 +307,9 @@ static class I18n
     }
 }
 
-// 整个程序的生命周期：托盘图标常驻；壁纸窗口没了就重新建一个
-// 打开菜单的方式：托盘图标左键 / 右键、快捷键 Ctrl+Alt+H（或 --menu）
-// 打开设置的方式：双击程序（没运行就先启动再打开）、双击托盘图标、菜单 → 设置…（或 --settings）
+// Lifetime of the whole program: the tray icon stays; if the wallpaper window goes away a new one is created
+// Ways to open the menu: left / right click on the tray icon, the Ctrl+Alt+H hotkey (or --menu)
+// Ways to open settings: double-click the program (starts it first if not running), double-click the tray icon, menu → Settings… (or --settings)
 class HostContext : ApplicationContext
 {
     public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunName = "DesklandPreview";
@@ -319,17 +319,21 @@ class HostContext : ApplicationContext
     readonly string pageDir;
     readonly NotifyIcon tray;
     readonly MenuItem pauseItem, autoStartItem, settingsItem, reloadItem, exitItem;
-    readonly System.Windows.Forms.Timer watch;
+    readonly System.Windows.Forms.Timer watch, iconTimer;
     readonly EventWaitHandle exitEvent, menuEvent, settingsEvent;
     readonly HotkeyWindow hotkey = new HotkeyWindow();
     readonly Queue<DateTime> restarts = new Queue<DateTime>();
-    WallpaperForm form, dead;
+    readonly List<WallpaperForm> forms = new List<WallpaperForm>();   // one wallpaper window per monitor
+    readonly List<WallpaperForm> dead = new List<WallpaperForm>();
+    readonly IconReader icons = new IconReader();       // shared: the icons are read once and each window keeps the ones on its own monitor
+    string syncedScreens = "", pendingScreens = "";     // monitor layout the windows were built for / changed layout seen on the last tick
+    Size previewScreen;                                 // primary monitor size last sent to the settings page
     SettingsForm settingsWin;
     DateTime nextStart = DateTime.MaxValue, saveDue = DateTime.MaxValue;
     bool manualPause, exiting;
-    string autoStartSw;                                 // 开机自启没跑起来（只在手动打开时检查）：正在运行的安全软件名（没认出来是 ""）；没问题是 null
+    string autoStartSw;                                 // autostart did not run (checked only when opened manually): name of the running security software ("" if not recognized); null when all is well
     string updateVersion, updateUrl, updateStatus = "", updateError = "";
-    double updateProgress = -1;                         // -1 = 当前阶段没有可显示的百分比
+    double updateProgress = -1;                         // -1 = no percentage to show in the current phase
 
     public HostContext(string pageDir, bool showSettings)
     {
@@ -342,7 +346,7 @@ class HostContext : ApplicationContext
         menuEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.MenuEventName);
         settingsEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.SettingsEventName);
 
-        // 快捷键 Ctrl+Alt+H：在鼠标位置弹出菜单
+        // Hotkey Ctrl+Alt+H: pop up the menu at the mouse position
         bool hotkeyOk = hotkey.Register(Native.MOD_CONTROL | Native.MOD_ALT | Native.MOD_NOREPEAT, Keys.H);
         hotkey.Pressed += delegate { ShowMenu(); };
         Log.Write(hotkeyOk ? "快捷键 Ctrl+Alt+H 已注册" : "快捷键 Ctrl+Alt+H 注册失败（可能被其他程序占用）");
@@ -351,7 +355,7 @@ class HostContext : ApplicationContext
         {
             manualPause = !manualPause;
             pauseItem.Checked = manualPause;
-            if (form != null) form.SetManualPause(manualPause);
+            foreach (WallpaperForm f in forms.ToArray()) f.SetManualPause(manualPause);
         });
         autoStartItem = new MenuItem(I18n.T("trayAutostart"), delegate { SetAutoStart(!autoStartItem.Checked); });
         autoStartItem.Checked = IsAutoStart();
@@ -365,13 +369,13 @@ class HostContext : ApplicationContext
                     Log.Write("开机自动启动已迁移到当前用户启动文件夹");
                 }
                 else if (AutoStartValue().IndexOf("--autostart") < 0)
-                    using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))   // 回退项缺参数时补上
+                    using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))   // add the argument when the fallback entry lacks it
                         k.SetValue(RunName, "\"" + Application.ExecutablePath + "\" --autostart");
             }
             catch (Exception ex) { Log.Write("迁移开机自动启动失败，保留原启动项：" + ex.Message); }
         }
         settingsItem = new MenuItem(I18n.T("traySettings"), delegate { OpenSettings(); });
-        settingsItem.DefaultItem = true;                // 粗体：主入口
+        settingsItem.DefaultItem = true;                // bold: the main entry point
 
         tray = new NotifyIcon();
         tray.Icon = AppIcon.Create();
@@ -379,13 +383,13 @@ class HostContext : ApplicationContext
         tray.ContextMenu = new ContextMenu(new[] {
             settingsItem,
             pauseItem,
-            reloadItem = new MenuItem(I18n.T("trayReload"), delegate { if (form != null) form.Reload(); }),
+            reloadItem = new MenuItem(I18n.T("trayReload"), delegate { foreach (WallpaperForm f in forms.ToArray()) f.Reload(); }),
             autoStartItem,
             new MenuItem("-"),
             exitItem = new MenuItem(I18n.T("trayExit"), delegate { Exit(); }),
         });
         tray.MouseUp += delegate(object s, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ShowMenu(); };
-        tray.DoubleClick += delegate { OpenSettings(); };   // 双击托盘图标：直接打开设置
+        tray.DoubleClick += delegate { OpenSettings(); };   // double-click the tray icon: open settings directly
         tray.Visible = true;
         ShowWelcomeOnce(hotkeyOk);
 
@@ -393,11 +397,15 @@ class HostContext : ApplicationContext
         watch.Interval = 500;
         watch.Tick += delegate { Watch(); };
         watch.Start();
-        StartForm();
-        if (showSettings) OpenSettings();                // 用户双击程序启动：直接打开设置
+        iconTimer = new System.Windows.Forms.Timer();
+        iconTimer.Interval = 400;
+        iconTimer.Tick += delegate { PollIcons(); };
+        iconTimer.Start();
+        SyncForms();
+        if (showSettings) OpenSettings();                // the user started the program by double-clicking: open settings directly
     }
 
-    // 换了界面语言：托盘菜单的文字跟着换
+    // UI language changed: update the tray menu texts
     void ApplyTrayTexts()
     {
         settingsItem.Text = I18n.T("traySettings");
@@ -407,7 +415,7 @@ class HostContext : ApplicationContext
         exitItem.Text = I18n.T("trayExit");
     }
 
-    // ---------------------------------------------------------------- 设置窗口
+    // ---------------------------------------------------------------- Settings window
     public void OpenSettings()
     {
         if (exiting) return;
@@ -419,9 +427,9 @@ class HostContext : ApplicationContext
         }
         if (settingsWin.WindowState == FormWindowState.Minimized) settingsWin.WindowState = FormWindowState.Normal;
         settingsWin.Show();
-        // 外部以 SW_HIDE 启动时，WinForms 的 Visible 状态可能已是 true，
-        // 但原生窗口仍被隐藏；Activate / 再次 Show 不会修复，必须显式还原。
-        // SW_RESTORE 同时处理隐藏和最小化，SW_SHOW 不会展开已最小化的窗口。
+        // When launched externally with SW_HIDE, the WinForms Visible state may already be true
+        // while the native window is still hidden; Activate / another Show does not fix it, so it must be restored explicitly.
+        // SW_RESTORE handles both hidden and minimized; SW_SHOW does not expand a minimized window.
         Native.ShowWindow(settingsWin.Handle, Native.SW_RESTORE);
         settingsWin.Activate();
     }
@@ -442,7 +450,7 @@ class HostContext : ApplicationContext
         if (settingsWin != null) settingsWin.Post(UpdateStateMessage());
     }
 
-    // 仅用于开发联调或非商店更新源；商店版始终使用 StoreContext，不接受网页传入地址。
+    // Only for development testing or non-Store update sources; the Store edition always uses StoreContext and never accepts an address passed in by the web page.
     public void OfferUpdate(string version, string url)
     {
         Uri uri;
@@ -456,6 +464,34 @@ class HostContext : ApplicationContext
         PostUpdateState();
     }
 
+    // Initial state for the settings page; its preview shows the primary monitor (size and icons)
+    void PostInit()
+    {
+        if (settingsWin == null) return;
+        Rectangle scr = Screen.PrimaryScreen.Bounds;
+        previewScreen = scr.Size;
+        settingsWin.Post(Json.Stringify(Json.Obj("t", "init", "theme", Settings.Theme, "params", Settings.Params,
+            "screen", Json.Obj("w", scr.Width, "h", scr.Height), "autostart", IsAutoStart(),
+            "autostartWarn", autoStartSw != null, "autostartSw", autoStartSw ?? "",
+            "lang", Settings.Lang, "langEff", I18n.Code, "langSys", I18n.Sys)));
+        WallpaperForm form = PrimaryForm();
+        if (form != null && form.LastIcons != "") settingsWin.Post(form.LastIcons);
+    }
+
+    // The wallpaper window on the primary monitor (the first one if the primary has none yet); null when there is no window
+    WallpaperForm PrimaryForm()
+    {
+        string primary = Screen.PrimaryScreen.DeviceName;
+        foreach (WallpaperForm f in forms) if (f.Device == primary) return f;
+        return forms.Count > 0 ? forms[0] : null;
+    }
+
+    // Same message to every monitor's page (a snapshot of the list: a dead WebView2 tears its window down while posting)
+    void PostToForms(string json)
+    {
+        foreach (WallpaperForm f in forms.ToArray()) f.Post(json);
+    }
+
     void SaveSoon() { saveDue = DateTime.Now.AddMilliseconds(600); }
 
     bool ThemeAllowed(string id)
@@ -463,7 +499,7 @@ class HostContext : ApplicationContext
         return Themes.Allowed(pageDir, id, delegate(string product) { return false; });
     }
 
-    // 设置页发来的消息：hello / set / reset / theme / autostart / lang / updateProgram
+    // Messages from the settings page: hello / set / reset / theme / autostart / lang / updateProgram
     public void OnSettingsMessage(string s)
     {
         var m = Json.Parse(s) as Dictionary<string, object>;
@@ -473,21 +509,16 @@ class HostContext : ApplicationContext
         switch (t as string)
         {
             case "hello":
-                Rectangle scr = Screen.PrimaryScreen.Bounds;
-                settingsWin.Post(Json.Stringify(Json.Obj("t", "init", "theme", Settings.Theme, "params", Settings.Params,
-                    "screen", Json.Obj("w", scr.Width, "h", scr.Height), "autostart", IsAutoStart(),
-                    "autostartWarn", autoStartSw != null, "autostartSw", autoStartSw ?? "",
-                    "lang", Settings.Lang, "langEff", I18n.Code, "langSys", I18n.Sys)));
+                PostInit();
                 if (updateVersion != null) PostUpdateState();
-                if (form != null && form.LastIcons != "") settingsWin.Post(form.LastIcons);
                 break;
             case "set":
             {
                 string theme = m["theme"] as string, key = m["key"] as string;
                 if (theme == null || key == null) return;
                 Settings.For(theme)[key] = m["value"];
-                if (theme == Settings.Theme && form != null)
-                    form.Post(Json.Stringify(Json.Obj("t", "settings", "v", Json.Obj(key, m["value"]))));
+                if (theme == Settings.Theme)
+                    PostToForms(Json.Stringify(Json.Obj("t", "settings", "v", Json.Obj(key, m["value"]))));
                 SaveSoon();
                 break;
             }
@@ -496,7 +527,7 @@ class HostContext : ApplicationContext
                 string theme = m["theme"] as string;
                 if (theme == null) return;
                 Settings.Params.Remove(theme);
-                if (theme == Settings.Theme && form != null) form.Post("{\"t\":\"reset\"}");
+                if (theme == Settings.Theme) PostToForms("{\"t\":\"reset\"}");
                 SaveSoon();
                 Log.Write("恢复默认设置：" + theme);
                 break;
@@ -514,14 +545,14 @@ class HostContext : ApplicationContext
                 if (page == null || id == Settings.Theme) return;
                 Settings.Theme = id;
                 SaveSoon();
-                if (form != null) form.LoadPage(page);
+                foreach (WallpaperForm f in forms.ToArray()) f.LoadPage(page);
                 Log.Write("切换主题：" + id);
                 break;
             }
             case "autostartWarnSeen":
                 autoStartSw = null;
                 break;
-            case "lang":                                    // 换界面语言：存下来，托盘菜单跟着换，告诉设置页实际用哪种
+            case "lang":                                    // UI language change: save it, update the tray menu, and tell the settings page which language is actually in use
             {
                 object v;
                 if (!m.TryGetValue("v", out v) || !(v is string)) return;
@@ -532,14 +563,20 @@ class HostContext : ApplicationContext
                 settingsWin.Post(Json.Stringify(Json.Obj("t", "lang", "v", Settings.Lang, "eff", I18n.Code, "sys", I18n.Sys)));
                 break;
             }
-            case "share":
+            case "share":                                   // sharing draws the primary monitor, the one the settings preview shows
+            {
+                WallpaperForm form = PrimaryForm();
                 if (form == null) { PostShareResult(false, null, I18n.T("errNotReady")); break; }
                 form.RequestSnapshot(OnShareImage);
                 break;
+            }
             case "shareVideo":
+            {
+                WallpaperForm form = PrimaryForm();
                 if (form == null) { PostShareResult(false, null, I18n.T("errNotReady")); break; }
                 form.RequestRecording(OnShareVideo);
                 break;
+            }
             case "openShare":
                 if (lastShare != null && File.Exists(lastShare)) Process.Start(lastShare);
                 break;
@@ -559,8 +596,8 @@ class HostContext : ApplicationContext
         }
     }
 
-    // ---- 一键分享：壁纸页面画好的图 → 存到"图片\Deskland"，复制到剪贴板，缩略图发回设置页 ----
-    string lastShare;                                   // 最近一张分享图的路径（设置页只能让我们打开这一张）
+    // ---- One-click share: image drawn by the wallpaper page → saved to "Pictures\Deskland Preview", copied to the clipboard, thumbnail sent back to the settings page ----
+    string lastShare;                                   // path of the most recent share file (the settings page can only ask us to open this one)
     void OnShareImage(string thumb, string png, string err)
     {
         if (err != null || png == null) { PostShareResult(false, null, err ?? I18n.T("errNoImage")); Log.Write("生成分享图失败：" + err); return; }
@@ -579,8 +616,8 @@ class HostContext : ApplicationContext
                 using (var img = Image.FromStream(ms))
                 {
                     var data = new DataObject();
-                    data.SetImage(new Bitmap(img));                       // 一般的程序（聊天软件等）认这个
-                    data.SetData("PNG", false, new MemoryStream(bytes));  // 认 PNG 的程序（浏览器、Office）用这个，更清楚
+                    data.SetImage(new Bitmap(img));                       // what ordinary programs (chat apps etc.) understand
+                    data.SetData("PNG", false, new MemoryStream(bytes));  // programs that understand PNG (browsers, Office) use this one; it is sharper
                     Clipboard.SetDataObject(data, true);
                 }
             }
@@ -599,8 +636,8 @@ class HostContext : ApplicationContext
     {
         if (settingsWin != null) settingsWin.Post(Json.Stringify(Json.Obj("t", "shareResult", "ok", ok, "path", path, "msg", msg)));
     }
-    // 分享动画：存成 MP4（不支持时是 WebM），把文件放到剪贴板（在聊天窗口里直接粘贴就能发出去），
-    // 设置页用 https://share.local/文件名 直接播放
+    // Share animation: saved as MP4 (WebM when unsupported); the file is put on the clipboard (paste it straight into a chat window to send it),
+    // and the settings page plays it directly from https://share.local/<file name>
     void OnShareVideo(string mime, string poster, string video, string err)
     {
         if (err != null || video == null) { PostShareResult(false, null, err ?? I18n.T("errNoVideo")); Log.Write("录分享动画失败：" + err); return; }
@@ -636,7 +673,7 @@ class HostContext : ApplicationContext
         }
     }
 
-    // 在鼠标位置弹出托盘菜单（NotifyIcon 自带的弹出逻辑会处理前台窗口，菜单点别处能正常收起）
+    // Pop up the tray menu at the mouse position (NotifyIcon's built-in popup logic handles the foreground window, so the menu closes properly when clicking elsewhere)
     void ShowMenu()
     {
         if (exiting) return;
@@ -644,7 +681,7 @@ class HostContext : ApplicationContext
         if (ShowTrayMenu != null) ShowTrayMenu.Invoke(tray, null);
     }
 
-    // 第一次运行时弹一条系统通知：告诉用户菜单在哪
+    // On first run show one system notification telling the user where the menu is
     void ShowWelcomeOnce(bool hotkeyOk)
     {
         try
@@ -659,8 +696,8 @@ class HostContext : ApplicationContext
         catch (Exception ex) { Log.Write("首次提示失败：" + ex.Message); }
     }
 
-    // 开机自动启动：优先用当前用户“启动”文件夹里的快捷方式；旧 Run 项启动时迁移。
-    // 不使用需要额外权限的任务计划；快捷方式创建失败时仍保留 Run 项作为回退。
+    // Start at sign-in: prefer a shortcut in the current user's Startup folder; an old Run entry is migrated on launch.
+    // Task Scheduler is not used because it needs extra privileges; if creating the shortcut fails the Run entry is kept as a fallback.
     static string AutoStartShortcutPath
     {
         get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "Deskland.lnk"); }
@@ -766,7 +803,17 @@ class HostContext : ApplicationContext
         autoStartItem.Checked = IsAutoStart();
     }
 
-    void StartForm()
+    // Monitor layout in one string (device names, bounds in physical pixels, which one is primary): compared to notice changes
+    static string ScreensSignature()
+    {
+        var sb = new StringBuilder();
+        foreach (Screen s in Screen.AllScreens) sb.Append(s.DeviceName).Append(s.Bounds).Append(s.Primary ? "*" : "").Append(';');
+        return sb.ToString();
+    }
+
+    // One wallpaper window per monitor. Runs at startup, after a window was destroyed and when the monitor layout changes:
+    // windows whose monitor is gone are closed, the others are moved to their monitor's current bounds, monitors without a window get one
+    void SyncForms()
     {
         nextStart = DateTime.MaxValue;
         if (!ThemeAllowed(Settings.Theme)) Settings.Theme = ThemeAllowed("beach") ? "beach" : "meadow";
@@ -777,24 +824,42 @@ class HostContext : ApplicationContext
             nextStart = DateTime.Now.AddSeconds(5);
             return;
         }
-        form = new WallpaperForm(pageDir, page, manualPause);
-        form.SettingsJson = SettingsMessage;
-        form.IconsChanged += delegate(string json) { if (settingsWin != null) settingsWin.Post(json); };
-        form.RecordProgress += delegate(string p) { if (settingsWin != null) settingsWin.Post("{\"t\":\"recProgress\",\"p\":" + p + "}"); };
-        form.HandleDestroyed += OnFormGone;
-        form.Show();
+        Screen[] screens = Screen.AllScreens;
+        syncedScreens = pendingScreens = ScreensSignature();
+        foreach (WallpaperForm f in forms.ToArray())
+        {
+            Screen on = null;
+            foreach (Screen s in screens) if (s.DeviceName == f.Device) on = s;
+            if (on != null) { f.Place(on.Bounds); continue; }
+            forms.Remove(f);                             // removed first, so that OnFormGone does not take it for a window destroyed by the system
+            Log.Write("Monitor " + f.Device + " is gone: closing its wallpaper window");
+            f.Shutdown();
+        }
+        foreach (Screen s in screens)
+        {
+            bool have = false;
+            foreach (WallpaperForm f in forms) if (f.Device == s.DeviceName) have = true;
+            if (have) continue;
+            var form = new WallpaperForm(pageDir, page, manualPause, s.DeviceName, s.Bounds, icons);
+            form.SettingsJson = SettingsMessage;
+            form.IconsChanged += delegate(string json) { if (settingsWin != null && form == PrimaryForm()) settingsWin.Post(json); };
+            form.RecordProgress += delegate(string p) { if (settingsWin != null) settingsWin.Post("{\"t\":\"recProgress\",\"p\":" + p + "}"); };
+            form.HandleDestroyed += OnFormGone;
+            forms.Add(form);
+            form.Show();
+        }
     }
 
     void OnFormGone(object sender, EventArgs e)
     {
         var f = (WallpaperForm)sender;
-        if (f != form) return;
-        form = null;
-        dead = f;                                        // 稍后在计时器里释放，避免在销毁回调里重入
+        dead.Add(f);                                     // disposed later from the timer, to avoid re-entrancy inside the destroy callback
+        if (!forms.Remove(f)) return;                    // closed on purpose (its monitor is gone)
         if (exiting) return;
         if (f.Fatal) { Exit(); return; }
+        if (nextStart != DateTime.MaxValue) return;      // Explorer destroys the windows of all monitors together: that is one rebuild, already scheduled
 
-        // 1 分钟内反复被销毁：不再重试，避免和资源管理器打架
+        // Destroyed repeatedly within 1 minute: stop retrying, to avoid fighting with Explorer
         restarts.Enqueue(DateTime.Now);
         while (restarts.Count > 0 && (DateTime.Now - restarts.Peek()).TotalSeconds > 60) restarts.Dequeue();
         if (restarts.Count > 5)
@@ -808,14 +873,43 @@ class HostContext : ApplicationContext
         nextStart = DateTime.Now.AddSeconds(1);
     }
 
+    // Every 400 ms: keep every window on its monitor and in the right layer, read the desktop icons once and give each monitor its own
+    void PollIcons()
+    {
+        if (exiting || forms.Count == 0) return;
+        foreach (WallpaperForm f in forms.ToArray()) f.EnsurePlacement();
+        bool visible;
+        List<Native.RECT> rects = icons.Read(out visible);
+        if (rects == null) return;
+        foreach (WallpaperForm f in forms.ToArray()) f.SetIcons(rects, visible);
+    }
+
+    // Monitor plugged in / unplugged, resolution or arrangement changed. The layout changes in several steps, so wait until two ticks in a row see the same one
+    void WatchScreens()
+    {
+        string now = ScreensSignature();
+        if (now == syncedScreens || now != pendingScreens) { pendingScreens = now; return; }
+        Log.Write("Monitor layout changed: " + now);
+        Size preview = previewScreen;
+        SyncForms();
+        if (settingsWin == null) return;
+        WallpaperForm primary = PrimaryForm();
+        if (Screen.PrimaryScreen.Bounds.Size != preview) PostInit();          // the preview is laid out at the primary monitor's size
+        else if (primary != null && primary.LastIcons != "") settingsWin.Post(primary.LastIcons);
+    }
+
     void Watch()
     {
-        if (dead != null) { try { dead.Dispose(); } catch { } dead = null; }
+        WallpaperForm[] gone = dead.ToArray();
+        dead.Clear();
+        foreach (WallpaperForm f in gone) { try { f.Dispose(); } catch { } }
         if (exitEvent.WaitOne(0)) { Exit(); return; }
         if (menuEvent.WaitOne(0)) ShowMenu();
         if (settingsEvent.WaitOne(0)) OpenSettings();
         if (DateTime.Now >= saveDue) { saveDue = DateTime.MaxValue; Settings.Save(); }
-        if (form == null && !exiting && DateTime.Now >= nextStart) StartForm();
+        if (exiting) return;
+        if (DateTime.Now >= nextStart) SyncForms();
+        else if (nextStart == DateTime.MaxValue) WatchScreens();
     }
 
     void Exit()
@@ -823,17 +917,19 @@ class HostContext : ApplicationContext
         if (exiting) return;
         exiting = true;
         watch.Stop();
+        iconTimer.Stop();
         if (saveDue != DateTime.MaxValue) Settings.Save();
         if (settingsWin != null) { try { settingsWin.Close(); } catch { } }
         hotkey.Dispose();
         tray.Visible = false;
-        if (form != null) form.Shutdown();
+        foreach (WallpaperForm f in forms.ToArray()) f.Shutdown();
+        icons.Dispose();
         Log.Write("退出");
         ExitThread();
     }
 }
 
-// 接收全局快捷键的隐藏窗口（只收消息，不显示）
+// Hidden window that receives the global hotkey (message-only, never shown)
 class HotkeyWindow : NativeWindow, IDisposable
 {
     public event EventHandler Pressed;
@@ -842,7 +938,7 @@ class HotkeyWindow : NativeWindow, IDisposable
     public HotkeyWindow()
     {
         var cp = new CreateParams();
-        cp.Parent = new IntPtr(-3);                     // HWND_MESSAGE：纯消息窗口
+        cp.Parent = new IntPtr(-3);                     // HWND_MESSAGE: message-only window
         CreateHandle(cp);
     }
 
@@ -866,7 +962,7 @@ class HotkeyWindow : NativeWindow, IDisposable
     }
 }
 
-// 托盘和设置窗口共用 Deskland 图标；构建脚本会把图标复制到程序目录。
+// The tray and the settings window share the Deskland icon; the build script copies the icon into the program folder.
 static class AppIcon
 {
     public static Icon Create()
@@ -887,7 +983,7 @@ static class AppIcon
     }
 }
 
-// 设置窗口：普通的桌面窗口，里面用 WebView2 显示 prototype/settings.html
+// Settings window: an ordinary desktop window that shows prototype/settings.html in WebView2
 class SettingsForm : Form
 {
     readonly WebView2 web;
@@ -903,8 +999,8 @@ class SettingsForm : Form
         ShowIcon = true;
         Icon = AppIcon.Create();
         StartPosition = FormStartPosition.CenterScreen;
-        float s = Native.GetDpiForSystem() / 96f;       // 进程按物理像素工作，窗口尺寸要自己按缩放比例算
-        ClientSize = new Size((int)(1120 * s), (int)(800 * s));     // 左边主题排三列，右边上面预览、下面参数
+        float s = Native.GetDpiForSystem() / 96f;       // the process works in physical pixels, so window sizes must be scaled by hand
+        ClientSize = new Size((int)(1120 * s), (int)(800 * s));     // themes in three columns on the left; on the right the preview on top and the parameters below
         MinimumSize = new Size((int)(940 * s), (int)(680 * s));
         BackColor = Color.White;
 
@@ -916,8 +1012,8 @@ class SettingsForm : Form
         Controls.Add(web);
     }
 
-    // 标题栏（系统原生那条）刷成和页面底色一样：settings.html 跟随系统深浅色（浅 #ffffff / 深 #171717），
-    // 标题栏也按系统深浅色取同一个颜色。DWMWA_CAPTION_COLOR / 深色模式要 Win11，旧系统调用失败就保持系统原样
+    // Paint the (native) title bar the same color as the page background: settings.html follows the system light/dark mode (light #ffffff / dark #171717),
+    // and the title bar takes the same color for the system mode. DWMWA_CAPTION_COLOR / dark mode need Win11; on older systems the call fails and the title bar stays as is
     void ThemeTitleBar()
     {
         bool light = true;
@@ -928,14 +1024,14 @@ class SettingsForm : Form
         }
         catch { }
         int dark = light ? 0 : 1;
-        int color = light ? 0x00FFFFFF : 0x00171717;      // COLORREF 是 0x00BBGGRR
-        Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);    // DWMWA_USE_IMMERSIVE_DARK_MODE：标题文字、按钮跟着深浅色
+        int color = light ? 0x00FFFFFF : 0x00171717;      // COLORREF is 0x00BBGGRR
+        Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);    // DWMWA_USE_IMMERSIVE_DARK_MODE: title text and buttons follow light/dark mode
         Native.DwmSetWindowAttribute(Handle, 35, ref color, 4);   // DWMWA_CAPTION_COLOR
     }
     protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); ThemeTitleBar(); }
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == 0x001A /* WM_SETTINGCHANGE */) ThemeTitleBar();   // 系统切深浅色时标题栏跟着换
+        if (m.Msg == 0x001A /* WM_SETTINGCHANGE */) ThemeTitleBar();   // the title bar follows when the system switches light/dark mode
         base.WndProc(ref m);
     }
 
@@ -970,12 +1066,12 @@ class SettingsForm : Form
 
     public void Post(string json)
     {
-        // 设置窗口是临时窗口：它的 WebView2 失效就先不发（关掉重开即恢复），别把异常抛回壁纸的轮询
+        // The settings window is temporary: if its WebView2 is gone just skip the message (closing and reopening recovers); do not throw back into the wallpaper's polling
         try { if (!IsDisposed && web.CoreWebView2 != null) web.CoreWebView2.PostWebMessageAsString(json); }
         catch { }
     }
 
-    // 分享的图片 / 动画所在的文件夹：映射成 https://share.local/，设置页可以直接显示、播放
+    // Folder holding the shared images / clips: mapped to https://share.local/ so the settings page can show and play them directly
     bool shareMapped;
     public void MapShareFolder(string dir)
     {
@@ -988,28 +1084,32 @@ class SettingsForm : Form
 class WallpaperForm : Form
 {
     readonly WebView2 web;
-    readonly System.Windows.Forms.Timer iconTimer, fgTimer;
+    readonly System.Windows.Forms.Timer fgTimer;
     readonly string pageDir;
-    readonly IconReader reader = new IconReader();
-    Rectangle screen;
+    readonly IconReader reader;                         // shared with the windows of the other monitors; owned by HostContext
+    Rectangle screen;                                   // this window's monitor: physical pixels, virtual-screen coordinates
     IntPtr parentHwnd, insertAfter;
     string lastIcons = "";
     int lastPause = -1;
     bool manualPause, shuttingDown;
 
+    public readonly string Device;                      // device name of the monitor (\\.\DISPLAY1 …): tells the windows apart across layout changes
     public bool Fatal { get; private set; }
 
-    string page;                                        // 当前主题的页面（themes.json 里的 page）
-    public Func<string> SettingsJson;                   // 页面就绪时先发给它的设置消息
-    public event Action<string> IconsChanged;           // 图标变化时转给设置窗口的预览
+    string page;                                        // page of the current theme ("page" in themes.json)
+    public Func<string> SettingsJson;                   // settings message sent first when the page is ready
+    public event Action<string> IconsChanged;           // forwarded to the settings window preview when the icons change
     public string LastIcons { get { return lastIcons; } }
     protected override bool ShowWithoutActivation { get { return true; } }
 
-    public WallpaperForm(string pageDir, string page, bool manualPause)
+    public WallpaperForm(string pageDir, string page, bool manualPause, string device, Rectangle bounds, IconReader reader)
     {
         this.pageDir = pageDir;
         this.page = page;
         this.manualPause = manualPause;
+        this.reader = reader;
+        Device = device;
+        screen = bounds;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
@@ -1023,9 +1123,6 @@ class WallpaperForm : Form
         web.CreationProperties.UserDataFolder = Path.Combine(Log.DataDir, "WebView2");
         Controls.Add(web);
 
-        iconTimer = new System.Windows.Forms.Timer();
-        iconTimer.Interval = 400;
-        iconTimer.Tick += delegate { PollIcons(); };
         fgTimer = new System.Windows.Forms.Timer();
         fgTimer.Interval = 500;
         fgTimer.Tick += delegate { PollForeground(); };
@@ -1033,8 +1130,8 @@ class WallpaperForm : Form
 
     public void SetManualPause(bool v) { manualPause = v; PollForeground(); }
 
-    // ---- 一键分享：请页面画一张打好马赛克的桌面图（页面不截屏，只用图标的位置） ----
-    Action<string, string, string> snapshotDone;           // (缩略图, 整张 PNG, 出错信息)
+    // ---- One-click share: ask the page to draw a desktop picture with the icons pixelated (the page takes no screenshot; it only uses the icon positions) ----
+    Action<string, string, string> snapshotDone;           // (thumbnail, full PNG, error message)
     System.Windows.Forms.Timer snapshotTimeout;
     public void RequestSnapshot(Action<string, string, string> done)
     {
@@ -1064,10 +1161,10 @@ class WallpaperForm : Form
         if (done != null) done(thumb, png, err);
     }
 
-    // ---- 分享动画：按当前图标布局录制主题动画，途中发进度，录完发 "record|格式|封面|整段视频" ----
-    Action<string, string, string, string> recordDone;    // (格式, 封面, 整段视频, 出错信息)
+    // ---- Share animation: record the theme animation with the current icon layout, send progress along the way, then send "record|format|poster|full video" ----
+    Action<string, string, string, string> recordDone;    // (format, poster, full video, error message)
     System.Windows.Forms.Timer recordTimeout;
-    public event Action<string> RecordProgress;            // 0..1（字符串）
+    public event Action<string> RecordProgress;            // 0..1 (as a string)
     public void RequestRecording(Action<string, string, string, string> done)
     {
         if (web.CoreWebView2 == null) { done(null, null, null, I18n.T("errNotReady")); return; }
@@ -1110,8 +1207,8 @@ class WallpaperForm : Form
         catch (COMException ex) { WebDead(ex); }
     }
 
-    // WebView2 运行时后台更新 / 浏览器进程被杀后，CoreWebView2 不为 null 但已 disposed，任何调用都抛异常
-    // （前面的 null 检查挡不住这种状态）。按"壁纸窗口被系统销毁"的既有路径处理：拆掉本窗口，HostContext 1 秒后自动重建
+    // After a background WebView2 runtime update / the browser process being killed, CoreWebView2 is non-null but already disposed, and every call throws
+    // (the null checks above do not catch this state). Handle it through the existing "wallpaper window destroyed by the system" path: tear down this window and HostContext rebuilds it after 1 second
     void WebDead(Exception ex)
     {
         if (shuttingDown) return;
@@ -1120,7 +1217,7 @@ class WallpaperForm : Form
     }
     string PageUrl { get { return "https://app.local/" + page + "?wallpaper=1"; } }
 
-    // 切换主题：换页面；新页面就绪后会重新收到设置和图标
+    // Switch theme: load the other page; once the new page is ready it receives the settings and icons again
     public void LoadPage(string newPage)
     {
         page = newPage;
@@ -1152,8 +1249,8 @@ class WallpaperForm : Form
             core.Settings.AreDefaultContextMenusEnabled = false;
             core.Settings.AreDevToolsEnabled = true;
             core.Settings.IsStatusBarEnabled = false;
-            // 页面就绪（发来 "ready"）：先发设置，再发图标和暂停状态（岸线要按设置里的离岸距离来算）
-            // 一键分享：页面画好分享图后发来 "snapshot|缩略图|整张 PNG"（都是 data URL；整张图很大，不走 JSON）
+            // Page ready (it sends "ready"): send the settings first, then the icons and pause state (the shoreline depends on the shore distance in the settings)
+            // One-click share: when the page has drawn the share image it sends "snapshot|thumbnail|full PNG" (both data URLs; the full image is large, so it does not go through JSON)
             core.WebMessageReceived += delegate(object s, CoreWebView2WebMessageReceivedEventArgs a)
             {
                 string msg = null;
@@ -1165,38 +1262,44 @@ class WallpaperForm : Form
                 lastIcons = ""; lastPause = -1; PollIcons(); PollForeground();
             };
             core.Navigate(PageUrl);
-            iconTimer.Start();
             fgTimer.Start();
-            Log.Write("WebView2 就绪：" + core.Environment.BrowserVersionString);
+            Log.Write("WebView2 就绪（" + Device + "）：" + core.Environment.BrowserVersionString);
         }
         catch (Exception ex)
         {
-            if (shuttingDown || IsDisposed) return;       // 启动途中窗口被系统销毁：交给 HostContext 重试
+            if (shuttingDown || IsDisposed) return;       // window destroyed by the system during startup: leave the retry to HostContext
             Log.Write("启动失败：" + ex);
             Fail(I18n.T("errStart", "msg", ex.Message));
         }
     }
 
+    static bool failShown;                              // the same failure on every monitor is reported once
     void Fail(string msg)
     {
         Log.Write(msg);
-        MessageBox.Show(msg + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), "Deskland Preview");
         Fatal = true;
+        if (!failShown)
+        {
+            failShown = true;
+            MessageBox.Show(msg + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), "Deskland Preview");
+        }
         Shutdown();
     }
 
-    // ---------------------------------------------------------------- 挂到壁纸层
-    // 两种桌面结构：
-    //   · Windows 11 24H2 起（"抬高的桌面"）：Progman 下依次是 图标层（SHELLDLL_DefView）→ 系统壁纸层（WorkerW）。
-    //     系统壁纸层会在换壁纸（幻灯片 / 聚焦）时被销毁重建，所以我们不挂进它里面，而是做 Progman 的
-    //     分层子窗口（WS_EX_LAYERED，alpha 255），排在图标层正下方、系统壁纸层之上，并持续守住这个顺序。
-    //     （Progman 没有可供普通子窗口绘制的表面，所以必须是分层窗口；分层子窗口需要 app.manifest 声明支持 Win8+）
-    //   · 旧版：图标层在某个顶层 WorkerW 里，它后面紧跟着负责画壁纸的顶层 WorkerW → 挂进这个 WorkerW
+    // ---------------------------------------------------------------- Attaching to the wallpaper layer
+    // Two desktop structures:
+    //   · From Windows 11 24H2 (the "raised desktop"): under Progman come the icon layer (SHELLDLL_DefView) → the system wallpaper layer (WorkerW).
+    //     The system wallpaper layer is destroyed and rebuilt whenever the wallpaper changes (slideshow / Spotlight), so we do not attach inside it; instead we are a
+    //     layered child window of Progman (WS_EX_LAYERED, alpha 255), placed right below the icon layer and above the system wallpaper layer, and we keep enforcing that order.
+    //     (Progman has no surface that ordinary child windows can draw on, so it must be a layered window; layered child windows require app.manifest to declare Win8+ support)
+    //   · Older versions: the icon layer sits in some top-level WorkerW, immediately followed by the top-level WorkerW that paints the wallpaper → attach inside that WorkerW
     public static string AttachMode = "progman";
+    static readonly List<IntPtr> Attached = new List<IntPtr>();   // the attached wallpaper windows of all monitors (siblings under the same parent)
+    IntPtr attachedHandle;
     bool raised;
-    IntPtr zAnchor;                                     // 我们要紧跟在它下面的窗口（图标列表 / 图标层）
+    IntPtr zAnchor;                                     // the window we must stay right below (icon list / icon layer)
     IntPtr winEventHook;
-    Native.WinEventDelegate winEventProc;               // 保持引用，防止被 GC
+    Native.WinEventDelegate winEventProc;               // keep a reference so the GC does not collect it
 
     static IntPtr FindClassicWorker()
     {
@@ -1209,7 +1312,7 @@ class WallpaperForm : Form
         return host != IntPtr.Zero ? Native.FindWindowEx(IntPtr.Zero, host, "WorkerW", null) : IntPtr.Zero;
     }
 
-    // 请资源管理器生成壁纸层（只发一次 0xD,1；再发 0xD,0 会把刚生成的壁纸层删掉），最多等 2 秒
+    // Ask Explorer to create the wallpaper layer (send 0xD,1 only once; sending 0xD,0 afterwards would delete the layer just created), waiting up to 2 seconds
     static void RequestWorkerW(IntPtr progman, Func<bool> ready)
     {
         IntPtr res;
@@ -1219,7 +1322,7 @@ class WallpaperForm : Form
 
     bool AttachToDesktop()
     {
-        screen = Screen.PrimaryScreen.Bounds;          // 进程是 DPI 感知的 → 物理像素
+        // screen: this monitor's bounds; the process is DPI-aware → physical pixels
         IntPtr progman = Native.FindWindow("Progman", null);
         if (progman == IntPtr.Zero) { Log.Write("找不到 Progman"); return false; }
         IntPtr defView = Native.FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
@@ -1239,7 +1342,7 @@ class WallpaperForm : Form
             }
             else if (AttachMode == "defview" && listView != IntPtr.Zero)
             {
-                // 实验：挂进图标层里、图标列表之下（换壁纸时不会被重排，但实测在 24H2 上画不出来）
+                // Experimental: attach inside the icon layer, below the icon list (not reordered when the wallpaper changes, but in practice nothing gets drawn on 24H2)
                 parentHwnd = defView; insertAfter = listView; zAnchor = listView;
                 mode = "24H2+：图标层（DefView）的分层子窗口，位于图标列表之下";
             }
@@ -1271,7 +1374,10 @@ class WallpaperForm : Form
         style = (style & ~(Native.WS_POPUP | Native.WS_CAPTION | Native.WS_THICKFRAME)) | Native.WS_CHILD | Native.WS_VISIBLE;
         Native.SetWindowLong(Handle, Native.GWL_STYLE, style);
         Native.SetParent(Handle, parentHwnd);
+        attachedHandle = Handle;
+        Attached.Add(attachedHandle);
 
+        // The parent (Progman / WorkerW) spans all monitors: place this window over its own monitor
         var pt = new Native.POINT { X = screen.X, Y = screen.Y };
         Native.ScreenToClient(parentHwnd, ref pt);
         Native.SetWindowPos(Handle, insertAfter, pt.X, pt.Y, screen.Width, screen.Height,
@@ -1280,7 +1386,7 @@ class WallpaperForm : Form
 
         if (raised)
         {
-            // 资源管理器新建 / 重排壁纸层时立刻修正顺序（换壁纸时它会把新的 WorkerW 插到我们上面）
+            // Fix the order as soon as Explorer creates / reorders the wallpaper layer (when the wallpaper changes it inserts the new WorkerW above us)
             uint pid;
             Native.GetWindowThreadProcessId(progman, out pid);
             winEventProc = delegate(IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
@@ -1290,17 +1396,44 @@ class WallpaperForm : Form
             winEventHook = Native.SetWinEventHook(0x8000 /* OBJECT_CREATE */, 0x8004 /* OBJECT_REORDER */, IntPtr.Zero,
                 winEventProc, pid, 0, 0 /* WINEVENT_OUTOFCONTEXT */);
         }
-        Log.Write(string.Format("已挂载（{0}），屏幕 {1}", mode, screen));
+        Log.Write(string.Format("已挂载（{0}），屏幕 {1} {2}", mode, Device, screen));
         return true;
     }
 
-    // 守住顺序：紧跟在 zAnchor（图标列表 / 图标层）下面；Progman 挂法还要把系统壁纸层推到最底（被打乱才修）
+    // Cover the monitor. Called again when the monitor layout changes (resolution, arrangement, another monitor added or removed)
+    public void Place(Rectangle bounds)
+    {
+        if (bounds != screen) { screen = bounds; lastIcons = ""; lastPause = -1; }   // icons and pause are relative to the monitor: send them again
+        if (attachedHandle == IntPtr.Zero || shuttingDown || !IsHandleCreated) return;
+        var pt = new Native.POINT { X = screen.X, Y = screen.Y };
+        Native.ScreenToClient(parentHwnd, ref pt);
+        Native.SetWindowPos(Handle, IntPtr.Zero, pt.X, pt.Y, screen.Width, screen.Height, Native.SWP_NOACTIVATE | Native.SWP_NOZORDER);
+    }
+
+    // Explorer resizes the parent a moment after the layout changes, and its child windows shift with it: put ours back over its monitor (only when it moved)
+    int placeFixes;
+    public void EnsurePlacement()
+    {
+        if (attachedHandle == IntPtr.Zero || shuttingDown || !IsHandleCreated) return;
+        Native.RECT r;
+        if (Native.GetWindowRect(Handle, out r) && (r.Left != screen.Left || r.Top != screen.Top || r.Right != screen.Right || r.Bottom != screen.Bottom))
+        {
+            Place(screen);
+            if (++placeFixes <= 20) Log.Write("Wallpaper window moved back over its monitor: " + Device + " " + screen);
+        }
+        EnsureZOrder();
+    }
+
+    // Keep the order: the wallpaper windows of all monitors form one block right below zAnchor (icon list / icon layer), in any order;
+    // with the Progman attach mode also push the system wallpaper layer to the very bottom (only fixed when disturbed)
     int zFixes;
     void EnsureZOrder()
     {
         if (!raised || zAnchor == IntPtr.Zero || !Native.IsWindow(zAnchor)) return;
-        bool fixedAny = false;
-        if (Native.GetWindow(zAnchor, 2 /* GW_HWNDNEXT */) != Handle)
+        bool fixedAny = false, inBlock = false;
+        for (IntPtr w = Native.GetWindow(zAnchor, 2 /* GW_HWNDNEXT */); w != IntPtr.Zero && Attached.Contains(w); w = Native.GetWindow(w, 2))
+            if (w == Handle) { inBlock = true; break; }
+        if (!inBlock)
         {
             Native.SetWindowPos(Handle, zAnchor, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
             fixedAny = true;
@@ -1310,7 +1443,7 @@ class WallpaperForm : Form
             for (IntPtr w = Native.FindWindowEx(parentHwnd, IntPtr.Zero, "WorkerW", null); w != IntPtr.Zero;
                  w = Native.FindWindowEx(parentHwnd, w, "WorkerW", null))
             {
-                if (Native.GetWindow(w, 2) != IntPtr.Zero)   // 不在最底下 → 推到最底下
+                if (Native.GetWindow(w, 2) != IntPtr.Zero)   // not at the bottom → push it to the bottom
                 {
                     Native.SetWindowPos(w, new IntPtr(1) /* HWND_BOTTOM */, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
                     fixedAny = true;
@@ -1320,20 +1453,26 @@ class WallpaperForm : Form
         if (fixedAny && ++zFixes <= 20) Log.Write("修正了桌面层级（资源管理器重排了窗口）");
     }
 
-    // ---------------------------------------------------------------- 读取桌面图标
+    // ---------------------------------------------------------------- Reading the desktop icons
+    // The page just became ready: read the icons right away instead of waiting for the next shared poll
     void PollIcons()
     {
-        EnsureZOrder();
-        if (web.CoreWebView2 == null) return;
         bool visible;
         List<Native.RECT> rects = reader.Read(out visible);
-        if (rects == null) return;
+        if (rects != null) SetIcons(rects, visible);
+    }
+
+    // Icons of the whole desktop (screen coordinates) → the ones that touch this monitor, relative to its top-left corner; sent to the page only when they change
+    public void SetIcons(List<Native.RECT> rects, bool visible)
+    {
+        if (web.CoreWebView2 == null || shuttingDown) return;
         var sb = new StringBuilder();
         sb.Append("{\"t\":\"icons\",\"vis\":").Append(visible ? "true" : "false").Append(",\"r\":[");
-        for (int i = 0; i < rects.Count; i++)
+        int n = 0;
+        foreach (Native.RECT r in rects)
         {
-            Native.RECT r = rects[i];
-            if (i > 0) sb.Append(',');
+            if (r.Right <= screen.Left || r.Left >= screen.Right || r.Bottom <= screen.Top || r.Top >= screen.Bottom) continue;
+            if (n++ > 0) sb.Append(',');
             sb.Append('[').Append(r.Left - screen.X).Append(',').Append(r.Top - screen.Y).Append(',')
               .Append(r.Right - screen.X).Append(',').Append(r.Bottom - screen.Y).Append(']');
         }
@@ -1343,50 +1482,76 @@ class WallpaperForm : Form
         lastIcons = json;
         if (IconsChanged != null) IconsChanged(json);
         Post(json);
-        Log.Write(string.Format("图标变化：{0} 个，可见={1}", rects.Count, visible));
+        Log.Write(string.Format("图标变化（{2}）：{0} 个，可见={1}", n, visible, Device));
     }
 
-    // ---------------------------------------------------------------- 最大化 / 全屏时暂停
+    // ---------------------------------------------------------------- Pause while a maximized / fullscreen window hides this monitor
     void PollForeground()
     {
         if (web.CoreWebView2 == null) return;
         bool pause = manualPause;
         string pauseBy = "";
-        IntPtr fg = Native.GetForegroundWindow();
-        int cloaked = 0;
-        if (!pause && fg != IntPtr.Zero && fg != Handle && Native.IsWindowVisible(fg)
-            && (Native.DwmGetWindowAttribute(fg, 14 /* DWMWA_CLOAKED */, out cloaked, 4) != 0 || cloaked == 0))
+        if (!pause)
         {
-            var cls = new StringBuilder(64);
-            Native.GetClassName(fg, cls, 64);
-            string c = cls.ToString();
-            if (c != "Progman" && c != "WorkerW" && c != "Shell_TrayWnd" && c != "Shell_SecondaryTrayWnd")
+            // The foreground window first (the usual case); otherwise any window that hides this monitor: with several monitors
+            // one often stays covered by a maximized window while the user works on another
+            IntPtr fg = Native.GetForegroundWindow();
+            if (fg != IntPtr.Zero && Hides(fg, true, out pauseBy)) pause = true;
+            else
             {
-                Native.RECT wr;
-                Native.GetWindowRect(fg, out wr);
-                bool covers = wr.Left <= screen.Left && wr.Top <= screen.Top && wr.Right >= screen.Right && wr.Bottom >= screen.Bottom;
-                int cx = (wr.Left + wr.Right) / 2, cy = (wr.Top + wr.Bottom) / 2;
-                if (screen.Contains(cx, cy) && (covers || Native.IsZoomed(fg))) { pause = true; pauseBy = c; }
+                string by = "";
+                Native.EnumWindows(delegate(IntPtr w, IntPtr l)
+                {
+                    if (w == fg || !Hides(w, false, out by)) return true;
+                    pause = true;
+                    return false;
+                }, IntPtr.Zero);
+                pauseBy = by;
             }
         }
         int p = pause ? 1 : 0;
         if (p == lastPause) return;
         lastPause = p;
         Post("{\"t\":\"pause\",\"v\":" + (pause ? "true" : "false") + "}");
-        Log.Write(pause ? "暂停（有窗口最大化 / 全屏，或手动暂停）" + (pauseBy == "" ? "" : "，前台窗口类 " + pauseBy) : "继续播放");
+        Log.Write(pause ? "暂停（" + Device + "：有窗口最大化 / 全屏，或手动暂停）" + (pauseBy == "" ? "" : "，窗口类 " + pauseBy) : "继续播放（" + Device + "）");
     }
 
-    // ---------------------------------------------------------------- 退出：拆掉窗口，让资源管理器重画原壁纸
+    // Does this top-level window hide the monitor's wallpaper? It must be visible, not minimized, not cloaked (other virtual desktop, suspended app),
+    // not part of the shell, centered on this monitor, and either maximized or covering the whole monitor (fullscreen).
+    // A window that is not in the foreground counts as fullscreen only if it is an ordinary opaque one:
+    // overlays (transparent to the mouse, layered, tool or no-activate windows) span the screen without hiding anything
+    bool Hides(IntPtr w, bool foreground, out string cls)
+    {
+        cls = "";
+        if (w == Handle || !Native.IsWindowVisible(w) || Native.IsIconic(w)) return false;
+        Native.RECT wr;
+        if (!Native.GetWindowRect(w, out wr) || !screen.Contains((wr.Left + wr.Right) / 2, (wr.Top + wr.Bottom) / 2)) return false;
+        bool zoomed = Native.IsZoomed(w);
+        if (!zoomed && !(wr.Left <= screen.Left && wr.Top <= screen.Top && wr.Right >= screen.Right && wr.Bottom >= screen.Bottom)) return false;
+        int cloaked = 0;
+        if (Native.DwmGetWindowAttribute(w, 14 /* DWMWA_CLOAKED */, out cloaked, 4) == 0 && cloaked != 0) return false;
+        var sb = new StringBuilder(64);
+        Native.GetClassName(w, sb, 64);
+        string c = sb.ToString();
+        if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return false;
+        if (!zoomed && !foreground
+            && (Native.GetWindowLong(w, Native.GWL_EXSTYLE) & (Native.WS_EX_TRANSPARENT | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE | Native.WS_EX_LAYERED)) != 0)
+            return false;
+        cls = c;
+        return true;
+    }
+
+    // ---------------------------------------------------------------- Exit: tear down the window and let Explorer repaint the original wallpaper
     public void Shutdown()
     {
         if (shuttingDown) return;
         shuttingDown = true;
-        iconTimer.Stop(); fgTimer.Stop();
-        reader.Dispose();
+        fgTimer.Stop();
+        Attached.Remove(attachedHandle);
         IntPtr parent = parentHwnd;
         try { web.Dispose(); } catch { }
         if (IsHandleCreated) { Native.SetParent(Handle, IntPtr.Zero); Hide(); }
-        // 不改动壁纸设置（幻灯片 / 聚焦壁纸也不受影响），只让资源管理器重画
+        // Do not touch the wallpaper settings (slideshow / Spotlight wallpapers are unaffected); just let Explorer repaint
         if (parent != IntPtr.Zero && Native.IsWindow(parent))
             Native.RedrawWindow(parent, IntPtr.Zero, IntPtr.Zero, 0x1 | 0x4 | 0x80 | 0x100);
         Close();
@@ -1395,13 +1560,15 @@ class WallpaperForm : Form
     protected override void OnHandleDestroyed(EventArgs e)
     {
         if (winEventHook != IntPtr.Zero) { Native.UnhookWinEvent(winEventHook); winEventHook = IntPtr.Zero; }
-        iconTimer.Stop(); fgTimer.Stop();
-        reader.Dispose();
+        fgTimer.Stop();
+        Attached.Remove(attachedHandle);
+        attachedHandle = IntPtr.Zero;
         base.OnHandleDestroyed(e);
     }
 }
 
-// 通过桌面 ListView 的跨进程消息读取图标矩形（图标 + 文字，物理像素，屏幕坐标）
+// Reads the icon rectangles (icon + label, physical pixels, screen coordinates) through cross-process messages to the desktop ListView.
+// The desktop has a single ListView spanning all monitors, so one reader serves every wallpaper window
 class IconReader : IDisposable
 {
     IntPtr listView, proc, mem;
@@ -1442,13 +1609,13 @@ class IconReader : IDisposable
         if (listView == IntPtr.Zero || mem == IntPtr.Zero || !Native.IsWindow(listView)) { if (!Open()) return null; }
         visible = Native.IsWindowVisible(listView);
         var result = new List<Native.RECT>();
-        if (!visible) return result;                   // 用户隐藏了桌面图标 → 全是海
+        if (!visible) return result;                   // the user hid the desktop icons → it is all sea
         int count = (int)Native.SendMessage(listView, 0x1004 /* LVM_GETITEMCOUNT */, IntPtr.Zero, IntPtr.Zero);
         var origin = new Native.POINT();
         Native.ClientToScreen(listView, ref origin);
         for (int i = 0; i < count; i++)
         {
-            var r = new Native.RECT();                 // Left = LVIR_BOUNDS（0）：图标 + 文字的整体范围
+            var r = new Native.RECT();                 // Left = LVIR_BOUNDS (0): the overall bounds of icon + label
             IntPtr n;
             if (!Native.WriteProcessMemory(proc, mem, ref r, 16, out n)) { Close(); return null; }
             Native.SendMessage(listView, 0x100E /* LVM_GETITEMRECT */, new IntPtr(i), mem);
@@ -1472,7 +1639,8 @@ class IconReader : IDisposable
 static class Native
 {
     public const int GWL_STYLE = -16, GWL_EXSTYLE = -20, WS_EX_LAYERED = 0x00080000;
-    public const uint LWA_ALPHA = 0x2, SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002;
+    public const int WS_EX_TRANSPARENT = 0x00000020, WS_EX_TOOLWINDOW = 0x00000080, WS_EX_NOACTIVATE = 0x08000000;
+    public const uint LWA_ALPHA = 0x2, SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004;
     public const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
     public const int SW_SHOW = 5, SW_RESTORE = 9;
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr h, int id, uint modifiers, uint vk);
@@ -1512,6 +1680,7 @@ static class Native
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder sb, int max);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);

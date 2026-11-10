@@ -1,0 +1,553 @@
+{
+  "name": "Italiano",
+  "ui": {
+    "adaptive": "Adattivo",
+    "themes": "Temi",
+    "collectionTitle": "Trova il tuo paesaggio.",
+    "collectionSubtitle": "Fai delle tue icone parte del paesaggio.",
+    "language": "Lingua",
+    "langAuto": "Predefinita di sistema",
+    "langAutoWith": "Predefinita di sistema ({name})",
+    "autostart": "Avvia con Windows",
+    "autostartTitle": "Esegui Deskland automaticamente all'accesso",
+    "autostartBlocked": "L'avvio con Windows potrebbe essere stato bloccato",
+    "autostartWarnSw": "Questa volta Deskland non si è avviato automaticamente: {sw} potrebbe averlo bloccato. Apri {sw}, cerca Deskland nella gestione dell'avvio e impostalo su Consenti.",
+    "autostartWarnGeneric": "Questa volta Deskland non si è avviato automaticamente: il software di sicurezza o l'impostazione App di avvio di Windows potrebbero averlo bloccato. Attiva Deskland nella gestione dell'avvio del software di sicurezza oppure in Impostazioni di Windows → App → Avvio.",
+    "gotIt": "Ho capito",
+    "updateAvailable": "Aggiornamento disponibile",
+    "updateVersion": "Deskland {version} è pronto. Il tema attuale e le impostazioni verranno mantenuti.",
+    "updateProgram": "Aggiorna ora",
+    "updateRetry": "Riprova l'aggiornamento",
+    "updateWorking": "Aggiornamento in corso…",
+    "updateDownloading": "Download e installazione in corso… {progress}",
+    "updateInstalling": "Installazione dell'aggiornamento… {progress}",
+    "updateCompletedTitle": "Aggiornamento completato",
+    "updateCompleted": "L'aggiornamento è stato scaricato e installato. Se Deskland non si riavvia automaticamente, aprilo di nuovo.",
+    "updateDone": "Fine",
+    "updateCanceled": "L'aggiornamento è stato annullato. Puoi riprovare più tardi.",
+    "updateLowBattery": "Impossibile completare l'aggiornamento con l'alimentazione a batteria. Collega il dispositivo alla corrente e riprova.",
+    "updateWifiRecommended": "Questa rete potrebbe comportare costi. Cambia rete o riprova più tardi.",
+    "updateWifiRequired": "Connettiti al Wi-Fi per scaricare questo aggiornamento.",
+    "updateStoreRequired": "Questo metodo di aggiornamento è disponibile solo nell'edizione Microsoft Store.",
+    "updateFailed": "Aggiornamento non riuscito. Controlla la connessione o il Microsoft Store e riprova.",
+    "updateCheckingTitle": "Ricerca aggiornamenti",
+    "updateChecking": "Connessione al server degli aggiornamenti e ricerca di una nuova versione…",
+    "updateFailedTitle": "Aggiornamento non completato",
+    "updateCheckFailedTitle": "Impossibile cercare gli aggiornamenti",
+    "networkTimeout": "La connessione o il download sono scaduti. Controlla rete, proxy o firewall e riprova. Se gli altri siti funzionano, è possibile che il server risponda lentamente.",
+    "networkDns": "Impossibile risolvere l'indirizzo del server. Controlla le impostazioni di rete, DNS o proxy e riprova.",
+    "networkTls": "Impossibile stabilire una connessione sicura. Controlla l'ora di sistema e l'eventuale intercettazione di sicurezza da parte della rete o del proxy, poi riprova.",
+    "networkLocal": "La connessione di rete non è riuscita o si è interrotta. Controlla rete, proxy o firewall e riprova.",
+    "serverUnavailable": "Il server è stato raggiunto, ma il servizio è temporaneamente non disponibile (HTTP 5xx). Riprova più tardi.",
+    "serverRejected": "Il server ha rifiutato la richiesta (HTTP 4xx). Riprova più tardi o contatta l'assistenza se il problema persiste.",
+    "serverInvalid": "Il server ha restituito una risposta non riconosciuta. Riprova più tardi o contatta l'assistenza se il problema persiste.",
+    "downloadInvalid": "Il download era incompleto o non ha superato la verifica di sicurezza, quindi l'installazione è stata interrotta. Riprova o contatta l'assistenza se il problema continua.",
+    "livePreview": "Anteprima dal vivo",
+    "previewIcons": "Anteprima dal vivo · usa le {n} icone del tuo desktop",
+    "previewNoIcons": "Anteprima dal vivo · le icone del desktop sono nascoste",
+    "refresh": "Rigenera",
+    "refreshTitle": "Genera una nuova scena per questo tema",
+    "shareImage": "Condividi immagine",
+    "shareImageTitle": "Condividi l'immagine del tuo desktop proteggendo la tua privacy",
+    "shareVideo": "Condividi video",
+    "shareVideoTitle": "Condividi l'animazione del tuo desktop proteggendo la tua privacy",
+    "generating": "Generazione…",
+    "preparingRec": "Preparazione…",
+    "recording": "Registrazione {p}%",
+    "savingVideo": "Salvataggio…",
+    "shareFailImage": "Impossibile creare l'immagine: {msg}",
+    "shareFailVideo": "Impossibile registrare il video: {msg}",
+    "unknownReason": "errore sconosciuto",
+    "shareReadyImage": "L'immagine del tuo desktop è pronta",
+    "shareReadyVideo": "Il video del tuo desktop è pronto",
+    "sharePrivacy": "Le icone sono sostituite da icone di esempio e i nomi dei file da blocchi colorati, quindi nessuno dei tuoi file viene mostrato.",
+    "shareCopiedImage": "L'immagine è negli appunti: incollala direttamente in una chat o in un post.",
+    "shareCopiedVideo": "Il file video è negli appunti: incollalo in una finestra di chat per inviarlo.",
+    "shareBrowserHint": " (Anteprima nel browser: fai clic su “{btn}” per scaricare.)",
+    "savedTo": "Salvato in {path}",
+    "openFolder": "Mostra nella cartella",
+    "openImage": "Apri immagine",
+    "openVideo": "Apri video",
+    "saveImage": "Salva immagine",
+    "saveVideo": "Salva video",
+    "ok": "OK",
+    "close": "Chiudi",
+    "sharePreviewAlt": "Anteprima dell'immagine condivisa",
+    "autosave": "Le modifiche vengono salvate automaticamente e applicate subito al desktop",
+    "saved": "Salvato ✓",
+    "resetAll": "Ripristina tutto",
+    "resetAllTitle": "Ripristina tutte le impostazioni di questo tema ai valori predefiniti",
+    "helpButtonTitle": "Domande frequenti e risoluzione dei problemi",
+    "helpTitle": "Guida",
+    "helpSubtitle": "Domande frequenti e risoluzione dei problemi",
+    "helpWallpaperQ": "Deskland continua a sfarfallare o a riavviarsi. Come risolvo?",
+    "helpWallpaperA": "Se lo sfondo normale di Windows cambia automaticamente, a ogni cambio Deskland può sfarfallare o riavviarsi. Usa uno sfondo fisso che non ruoti.",
+    "helpWallpaperStep1": "Apri Impostazioni di Windows → Personalizzazione → Sfondo.",
+    "helpWallpaperStep2": "Imposta “Personalizza lo sfondo” su “Immagine” o “Tinta unita”. Non usare “Presentazione” o “Contenuti in evidenza di Windows”.",
+    "helpWallpaperStep3": "Dopo aver cambiato questa impostazione, riavvia Deskland.",
+    "badgeOn": "In uso",
+    "badgeReady": "Disponibile",
+    "badgeSoon": "In arrivo",
+    "badgeLocked": "Wallpaper",
+    "lockedTitle": "{name} · tema dell'edizione Wallpaper; fai clic per i dettagli sull'acquisto",
+    "purchaseLocalTitle": "Sblocca l'edizione Wallpaper",
+    "purchaseLocalTheme": "“{name}” è incluso nell'edizione Wallpaper.",
+    "purchaseLocalMessage": "Dopo l'acquisto dallo store attuale, Deskland verifica l'acquisto e lo sblocca automaticamente, senza bisogno di accedere a un account. Se l'hai appena acquistato, verifica di nuovo.",
+    "purchaseRecheck": "Verifica gli acquisti su questo PC",
+    "purchaseChecking": "Verifica in corso…",
+    "purchaseCrossChannel": "Ripristina da un altro canale",
+    "ongoingTitle": "Altro in arrivo",
+    "ongoingDesc": "Nuove scene ed elementi verranno aggiunti nel tempo.",
+    "noParams": "Questo tema non ha ancora impostazioni",
+    "resetOne": "Ripristina il valore predefinito: {v}",
+    "resetOneAria": "Ripristina {label} al valore predefinito",
+    "dblclickReset": "Doppio clic per ripristinare ({v})",
+    "comingSoon": "In arrivo:",
+    "purchaseTitle": "Ottieni l'edizione Wallpaper",
+    "purchaseTheme": "“{name}” è incluso nell'edizione Wallpaper.",
+    "purchaseMessage": "L'anteprima include Spiaggia e Prato per sempre. Con l'edizione Wallpaper sblocchi altri temi nella stessa app Deskland.",
+    "purchaseLater": "Continua a esplorare",
+    "purchaseWebsite": "Visita il sito"
+  },
+  "host": {
+    "traySettings": "Impostazioni…",
+    "trayPause": "Metti in pausa l'animazione",
+    "trayReload": "Ricarica",
+    "trayAutostart": "Avvia con Windows",
+    "trayExit": "Esci (ripristina lo sfondo)",
+    "welcomeTitle": "Deskland è in esecuzione",
+    "welcomeBody": "Fai clic sull'icona della spiaggia nell'area di notifica{hotkey} per aprire il menu.\nNon la vedi? Fai clic su ^ sul lato destro della barra delle applicazioni.",
+    "welcomeHotkey": " oppure premi Ctrl+Alt+H",
+    "errNotReady": "Lo sfondo non è ancora pronto",
+    "errNoImage": "Non è stata restituita alcuna immagine",
+    "errNoVideo": "Non è stato restituito alcun video",
+    "errBusyImage": "L'immagine precedente è ancora in fase di generazione",
+    "errBusyVideo": "Il video precedente è ancora in registrazione",
+    "errImageTimeout": "La generazione ha richiesto troppo tempo",
+    "errVideoTimeout": "La registrazione ha richiesto troppo tempo",
+    "errBadData": "La pagina ha restituito dati incompleti",
+    "errRebuilt": "Windows ha continuato a ricreare il livello dello sfondo, quindi Deskland si è arrestato.",
+    "errSeeLog": "Per i dettagli consulta il log: {path}",
+    "errSettings": "Impossibile aprire la finestra delle impostazioni: {msg}",
+    "errNoPage": "Pagina non trovata: {path}",
+    "errNoDesktop": "Impossibile trovare la finestra del desktop, quindi lo sfondo non può essere agganciato.",
+    "errStart": "Impossibile avviare: {msg}"
+  },
+  "themes": {
+    "lotus": {
+      "name": "Stagno di loto",
+      "desc": "Foglie e fiori di loto riempiono lo stagno, mentre le carpe koi nuotano tra le foglie e le icone lasciando increspature",
+      "groups": [
+        "Intorno alle icone",
+        "Dettagli"
+      ],
+      "params": {
+        "density": {
+          "label": "Densità delle foglie di loto",
+          "hint": "Quanta acqua è coperta dalle foglie; 100% è la densità originale, 0 nasconde le foglie e i loro fiori"
+        },
+        "sigma": {
+          "label": "Acqua libera",
+          "hint": "Quanta acqua libera circonda le tue icone"
+        },
+        "fish": {
+          "label": "Carpe koi",
+          "hint": "Carpe koi che nuotano tra le foglie di loto e le icone",
+          "unit": ""
+        },
+        "flowers": {
+          "label": "Fiori di loto",
+          "hint": "La quantità di fiori di loto, boccioli e ninfee"
+        }
+      }
+    },
+    "lake": {
+      "name": "Lago",
+      "desc": "Un prato ad acquerello circonda un lago limpido, con pietre dipinte sotto l'acqua bassa e i riflessi nitidi di nuvole paffute",
+      "groups": [
+        "Riva",
+        "Acqua",
+        "Nuvole"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Riva erbosa",
+          "hint": "Quanto si estendono le rive erbose dalle tue icone"
+        },
+        "warp": {
+          "label": "Riva sinuosa",
+          "hint": "Quanto è curva la riva del lago"
+        },
+        "shoal": {
+          "label": "Acqua bassa limpida",
+          "hint": "Fino a che distanza dalla riva restano visibili le pietre sott'acqua"
+        },
+        "depth": {
+          "label": "Profondità dell'acqua",
+          "hint": "La distanza tra l'acqua bassa turchese e l'acqua più profonda verde petrolio"
+        },
+        "flow": {
+          "label": "Movimento dell'acqua",
+          "hint": "La velocità delle lievi increspature, dei riflessi di luce e dei riflessi delle nuvole"
+        },
+        "clouds": {
+          "label": "Numero di nuvole",
+          "hint": "Il numero di nuvole riflesse sul lago; imposta 0 per nasconderle",
+          "unit": ""
+        }
+      }
+    },
+    "beach-turquoise": {
+      "name": "Maldive",
+      "desc": "Acqua turchese e sabbia beige chiaro, con banchi di pesciolini che nuotano tra scure barriere coralline",
+      "groups": [
+        "Linea di costa",
+        "Acqua",
+        "Dettagli"
+      ],
+      "params": {
+        "fishSchools": {
+          "label": "Banchi di pesci",
+          "hint": "Numero di fitti banchi di pesci che nuotano in acque profonde; imposta 0 per nasconderli",
+          "unit": ""
+        },
+        "palms": {
+          "label": "Palme da cocco",
+          "hint": "Numero di palme lungo la costa; 0 per nasconderle. Se la sabbia non basta ne compaiono meno.",
+          "unit": ""
+        },
+        "sigma": {
+          "label": "Distanza dalle icone",
+          "hint": "Quanto dista la linea di costa dalle tue icone"
+        },
+        "warp": {
+          "label": "Costa sinuosa",
+          "hint": "Quanto è tortuosa la linea di costa"
+        },
+        "shoal": {
+          "label": "Acqua bassa limpida",
+          "hint": "Quanto è larga la fascia d'acqua trasparente sopra la sabbia"
+        },
+        "shallow": {
+          "label": "Mare poco profondo",
+          "hint": "La distanza tra l'acqua bassa verde menta chiaro e il turchese intenso"
+        },
+        "kayaks": {
+          "label": "Kayak",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Uccelli marini",
+          "hint": "Gabbiani che planano e volteggiano in alto",
+          "unit": ""
+        },
+        "turtles": {
+          "label": "Tartarughe marine",
+          "hint": "Tartarughe marine che nuotano lentamente; imposta 0 per nasconderle",
+          "unit": ""
+        }
+      }
+    },
+    "beach": {
+      "name": "Spiaggia",
+      "desc": "La linea di costa si curva intorno ai tuoi file mentre le onde risalgono la sabbia",
+      "groups": [
+        "Linea di costa",
+        "Acqua",
+        "Dettagli"
+      ],
+      "params": {
+        "palms": {
+          "label": "Palme da cocco",
+          "hint": "Numero di palme lungo la costa; 0 per nasconderle. Se la sabbia non basta ne compaiono meno.",
+          "unit": ""
+        },
+        "sigma": {
+          "label": "Distanza dalle icone",
+          "hint": "Quanto dista la linea di costa dalle tue icone"
+        },
+        "warp": {
+          "label": "Costa sinuosa",
+          "hint": "Quanto è tortuosa la linea di costa"
+        },
+        "shoal": {
+          "label": "Acqua bassa limpida",
+          "hint": "Quanto è larga la fascia d'acqua trasparente sopra la sabbia"
+        },
+        "shallow": {
+          "label": "Mare poco profondo",
+          "hint": "In quanta distanza l'acqua sfuma dal turchese al blu profondo"
+        },
+        "kayaks": {
+          "label": "Kayak",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Uccelli marini",
+          "hint": "Gabbiani che planano e volteggiano in alto",
+          "unit": ""
+        }
+      }
+    },
+    "sky": {
+      "name": "Cielo",
+      "desc": "Un cielo azzurro da cartone animato in cui le icone poggiano su nuvole tonde e paffute: giorno, tramonto o notte",
+      "groups": [
+        "Momento della giornata",
+        "Intorno alle icone",
+        "Nuvole",
+        "Dettagli"
+      ],
+      "params": {
+        "time": {
+          "label": "Momento della giornata",
+          "hint": "Segue l'orologio: alba alle 6:00, giorno alle 7:00, tramonto alle 17:30, notte alle 19:00",
+          "options": [
+            "Automatico",
+            "Giorno",
+            "Tramonto",
+            "Notte"
+          ]
+        },
+        "sigma": {
+          "label": "Dimensione delle nuvole",
+          "hint": "Quanto si estendono le nuvole intorno alle tue icone"
+        },
+        "cover": {
+          "label": "Nuvole nel cielo",
+          "hint": "Quante nuvole attraversano il cielo aperto"
+        },
+        "flow": {
+          "label": "Velocità di movimento",
+          "hint": "Quanto velocemente si muovono le nuvole e cambiano i loro sbuffi"
+        },
+        "birds": {
+          "label": "Uccelli",
+          "hint": "Di notte non volano",
+          "unit": ""
+        },
+        "plane": {
+          "label": "Aereo",
+          "hint": "Un piccolo aereo lascia una scia nella parte alta dello schermo",
+          "options": [
+            "Mai",
+            "Ogni tanto",
+            "Spesso"
+          ]
+        },
+        "moon": {
+          "label": "Luna",
+          "hint": "La luna e il chiaro di luna di notte",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        "stars": {
+          "label": "Dimensione delle stelle",
+          "hint": "Le stelle di notte; aumenta il valore per stelle luminose con scintillii a croce"
+        }
+      }
+    },
+    "ocean": {
+      "name": "Oceano",
+      "desc": "Uno sguardo dall'alto su un oceano blu: le icone si nascondono tra nuvole bianche le cui ombre cadono sul mare",
+      "groups": [
+        "Intorno alle icone",
+        "Nuvole",
+        "Dettagli"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione delle nuvole",
+          "hint": "Quanto si estendono le nuvole intorno alle tue icone"
+        },
+        "cover": {
+          "label": "Nuvole sul mare",
+          "hint": "Quante nuvole si muovono sopra il mare aperto"
+        },
+        "flow": {
+          "label": "Velocità di movimento",
+          "hint": "Quanto velocemente si muovono le nuvole e cambiano i loro sbuffi"
+        },
+        "boats": {
+          "label": "Barche a vela",
+          "hint": "Barche a vela bianche e grigie che navigano lentamente in mare aperto",
+          "unit": ""
+        },
+        "yachts": {
+          "label": "Yacht",
+          "hint": "Yacht bianchi e grigi con finestrini grigio scuro, sedili grigio chiaro e scie spumeggianti",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Uccelli marini",
+          "hint": "Gabbiani bianchi che planano e volteggiano sul mare",
+          "unit": ""
+        }
+      }
+    },
+    "meadow": {
+      "name": "Prato",
+      "desc": "Un prato a penna e acquerello in cui le icone si nascondono tra nuvole bianche che proiettano ombre verde scuro",
+      "groups": [
+        "Intorno alle icone",
+        "Nuvole",
+        "Personaggi"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione delle nuvole",
+          "hint": "Quanto si estendono le nuvole intorno alle tue icone"
+        },
+        "cover": {
+          "label": "Nuvole sul prato",
+          "hint": "Quante nuvole si muovono sopra il prato aperto"
+        },
+        "flow": {
+          "label": "Velocità di movimento",
+          "hint": "Quanto velocemente si muovono le nuvole e cambiano i loro sbuffi"
+        },
+        "showBoy": {
+          "label": "Mostra il bambino",
+          "hint": "Mostra o nasconde il bambino insieme al suo aquilone",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "showCat": {
+          "label": "Mostra il gattino",
+          "hint": "Il gattino nero che riposa sull'erba",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        }
+      }
+    },
+    "forest": {
+      "name": "Foresta",
+      "desc": "Le icone stanno in una radura circondata da alberi a tempera in stile cartone animato che ondeggiano nella brezza",
+      "groups": [
+        "Intorno alle icone",
+        "Alberi",
+        "Dettagli"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione della radura",
+          "hint": "Quanto è grande la radura intorno alle tue icone e quanto distano gli alberi"
+        },
+        "wind": {
+          "label": "Vento",
+          "hint": "Quanto ondeggiano le chiome; 0 significa assenza di vento"
+        },
+        "birds": {
+          "label": "Uccelli",
+          "hint": "Stanno per lo più appollaiati sulle chiome e ogni tanto volano su un albero vicino: restano nel bosco",
+          "unit": ""
+        }
+      }
+    },
+    "pinkforest": {
+      "name": "Foresta rosa",
+      "desc": "Una foresta ad acquerello: chiome rosa traslucide su sottili tronchi a inchiostro",
+      "groups": [
+        "Intorno alle icone",
+        "Alberi",
+        "Dettagli"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione della radura",
+          "hint": "Quanto è grande la radura intorno alle tue icone e quanto distano gli alberi"
+        },
+        "wind": {
+          "label": "Vento",
+          "hint": "Quanto ondeggiano le chiome; 0 significa assenza di vento"
+        },
+        "birds": {
+          "label": "Uccelli",
+          "hint": "Uccellini a inchiostro, per lo più appollaiati sulle chiome, che ogni tanto volano su un albero vicino",
+          "unit": ""
+        }
+      }
+    },
+    "map": {
+      "name": "Città disegnata a mano",
+      "desc": "Una mappa a volo d'uccello di una città vecchia: file di case disegnate a inchiostro costeggiano le strade e le icone stanno nelle piazze",
+      "groups": [
+        "Intorno alle icone",
+        "Città"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione delle piazze",
+          "hint": "Quanto sono grandi le piazze aperte intorno alle tue icone"
+        },
+        "canals": {
+          "label": "Canali",
+          "hint": "Quanti canali attraversano la città, con piccole barche che vi scivolano lungo",
+          "unit": ""
+        }
+      }
+    },
+    "citymap": {
+      "name": "Città colorata",
+      "desc": "Una mappa illustrata di città con tetti rossi e muri gialli, rosa e azzurri; le icone stanno nelle piazze",
+      "groups": [
+        "Intorno alle icone"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione delle piazze",
+          "hint": "Quanto sono grandi le piazze aperte intorno alle tue icone"
+        }
+      }
+    },
+    "worldmap": {
+      "name": "Mappa antica",
+      "desc": "Un continente su pergamena: le icone diventano mari, strade tratteggiate collegano i paesi e carri trainati da cavalli trasportano rifornimenti dall'uno all'altro",
+      "groups": [
+        "Intorno alle icone",
+        "Dettagli"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione del mare",
+          "hint": "Quanto mare circonda le tue icone"
+        },
+        "ships": {
+          "label": "Velieri",
+          "hint": "Velieri a tre alberi che dondolano sul mare",
+          "unit": ""
+        },
+        "wagons": {
+          "label": "Carri mercantili",
+          "hint": "I carri trasportano casse e sacchi di grano tra i paesi; imposta 0 per nasconderli",
+          "unit": ""
+        }
+      }
+    },
+    "nauticalmap": {
+      "name": "Carta nautica",
+      "desc": "Una carta nautica su pergamena con porti e fari lungo la costa, rotte marine sinuose, velieri e mostri marini disegnati a mano",
+      "groups": [
+        "Intorno alle icone",
+        "Dettagli"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione della terraferma",
+          "hint": "Quanto si estende la terraferma intorno alle tue icone"
+        },
+        "ships": {
+          "label": "Velieri",
+          "hint": "Galeoni, golette e cutter disegnati a mano che dondolano dolcemente tra le isole",
+          "unit": ""
+        }
+      }
+    }
+  }
+}

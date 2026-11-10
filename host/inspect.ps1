@@ -1,4 +1,4 @@
-﻿# 调试用：列出桌面相关窗口的层级（Progman / WorkerW / 图标层 / 壁纸窗口），不截屏
+﻿# Debug helper: lists the hierarchy of desktop-related windows (Progman / WorkerW / icon layer / wallpaper window); takes no screenshot
 Add-Type @'
 using System; using System.Text; using System.Runtime.InteropServices;
 public static class DeskInspect {

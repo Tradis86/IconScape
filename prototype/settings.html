@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deskland Preview</title>
+<title>IconScape</title>
 <!--
-  Deskland settings window
-  - Opened by the desktop host (host/Deskland.exe) inside WebView2; when opened directly in a browser it uses mock data, handy for UI work
+  IconScape settings window (IconScape is a modified version of Deskland Preview, GPL-3.0)
+  - Opened by the desktop host (host/IconScape.exe) inside WebView2; when opened directly in a browser it uses mock data, handy for UI work
   - Themes and parameters come from themes.json; the controls are generated from the manifest
   - Live preview: an iframe loads the theme page in ?preview=1 mode, using the real icon positions on your desktop
   - Messages exchanged with the host (JSON strings):
@@ -247,6 +247,7 @@
   .saved { transition: color .2s; }
   .saved.flash { color: var(--text); }
   .bottom-actions { display: flex; align-items: center; gap: 8px; }
+  .based-on { margin-right: 6px; white-space: nowrap; }   /* how IconScape relates to Deskland, as its authors ask of modified versions (TRADEMARKS.md) */
   .ghost-btn.help-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 50%; font-size: 16px; font-weight: 800; line-height: 1; }
   .ghost-btn {
     display: inline-block; text-decoration: none; font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 10px;
@@ -274,7 +275,7 @@
 <body>
 <header class="top">
   <div class="top-left">
-    <div class="brand">Deskland Preview</div>
+    <div class="brand">IconScape</div>
     <div class="section-title" data-i18n="themes">主题</div>
   </div>
   <div class="top-right">
@@ -282,7 +283,7 @@
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c1.8 1.7 2.7 3.8 2.7 6.2S9.8 12.5 8 14.2C6.2 12.5 5.3 10.4 5.3 8S6.2 3.5 8 1.8z"/></svg>
       <select id="lang" data-i18n-title="language" aria-label="Language"></select>
     </label>
-    <label class="switch-row" data-i18n-title="autostartTitle" title="开机后自动运行 Deskland">
+    <label class="switch-row" data-i18n-title="autostartTitle" title="开机后自动运行 IconScape">
       <span data-i18n="autostart">开机自动启动</span><input type="checkbox" id="autostart"><i class="switch"></i>
     </label>
   </div>
@@ -327,9 +328,9 @@
 <div class="modal" id="purchaseModal" hidden role="dialog" aria-modal="true" aria-labelledby="purchaseTitle">
   <div class="box purchase-box">
     <div class="purchase-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-    <h3 id="purchaseTitle" data-i18n="purchaseTitle">购买壁纸版</h3>
+    <h3 id="purchaseTitle" data-i18n="purchaseTitle">Deskland 壁纸版主题</h3>
     <p class="sub" id="purchaseTheme"></p>
-    <p class="sub" data-i18n="purchaseMessage">体验版可永久使用沙滩和草地。壁纸版可解锁更多主题，并在同一个 Deskland 中使用。</p>
+    <p class="sub" data-i18n="purchaseMessage">这个主题属于 Deskland 壁纸版，IconScape 是基于 Deskland 体验版修改的独立项目，不包含也不出售这些主题。可以在 Deskland 官网了解它们。</p>
     <div class="actions">
       <button class="ghost-btn" id="purchaseLater" data-i18n="purchaseLater">继续体验</button>
       <button class="ghost-btn primary" id="purchaseWebsite" data-i18n="purchaseWebsite">前往官网</button>
@@ -347,7 +348,7 @@
     <div class="actions">
       <button class="ghost-btn" id="shareReveal" data-i18n="openFolder">打开所在文件夹</button>
       <button class="ghost-btn" id="shareOpen">打开图片</button>
-      <a class="ghost-btn" id="shareDownload" hidden download="Deskland.png">保存图片</a>
+      <a class="ghost-btn" id="shareDownload" hidden download="IconScape.png">保存图片</a>
       <button class="ghost-btn primary" id="shareClose" data-i18n="ok">好的</button>
     </div>
   </div>
@@ -359,12 +360,12 @@
     <h3 id="helpTitle" data-i18n="helpTitle">使用帮助</h3>
     <p class="sub" data-i18n="helpSubtitle">常见使用问题和解决方法</p>
     <section class="help-article">
-      <h4 data-i18n="helpWallpaperQ">Deskland 频繁闪烁或重启，怎么办？</h4>
-      <p data-i18n="helpWallpaperA">如果系统壁纸会定时自动切换，切换时可能让 Deskland 闪烁或反复重启。请把常规壁纸改成不会自动切换的固定背景。</p>
+      <h4 data-i18n="helpWallpaperQ">IconScape 频繁闪烁或重启，怎么办？</h4>
+      <p data-i18n="helpWallpaperA">如果系统壁纸会定时自动切换，切换时可能让 IconScape 闪烁或反复重启。请把常规壁纸改成不会自动切换的固定背景。</p>
       <ol>
         <li data-i18n="helpWallpaperStep1">打开 Windows 设置 → 个性化 → 背景。</li>
         <li data-i18n="helpWallpaperStep2">将“个性化设置背景”设为“图片”或“纯色”，不要选择“幻灯片放映”或“Windows 聚焦”。</li>
-        <li data-i18n="helpWallpaperStep3">改完后重新打开 Deskland。</li>
+        <li data-i18n="helpWallpaperStep3">改完后重新打开 IconScape。</li>
       </ol>
     </section>
     <div class="actions"><button class="ghost-btn primary" id="helpDone" data-i18n="gotIt">知道了</button></div>
@@ -374,6 +375,7 @@
 <footer class="bottom">
   <span class="saved" id="saved" data-i18n="autosave">设置会自动保存，并立即应用到桌面</span>
   <div class="bottom-actions">
+    <span class="based-on" data-i18n="basedOn">基于 Deskland Preview 修改 · GPL-3.0 · 非官方版本</span>
     <button class="ghost-btn help-button" id="helpOpen" data-i18n-title="helpButtonTitle" title="常见问题" aria-label="Help">?</button>
   </div>
 </footer>
@@ -713,7 +715,12 @@ function shareBusy(which) {                                  // which: null (idl
 function shareProgress(p) { $('shareVideoText').textContent = p < 1 ? t('recording', { p: Math.round(p * 100) }) : t('savingVideo'); }
 function showShare(r) {
   shareBusy(null);
-  if (!r.ok) { alert(t(r.kind === 'video' ? 'shareFailVideo' : 'shareFailImage', { msg: r.msg || t('unknownReason') })); return; }
+  if (!r.ok) {
+    // The theme page reports its errors as codes ("err:NoFrames" → shareErrNoFrames); the host's own messages already arrive in the UI language
+    const code = /^err:(\w+)$/.exec(r.msg || ''), msg = code ? t('shareErr' + code[1]) : r.msg;
+    alert(t(r.kind === 'video' ? 'shareFailVideo' : 'shareFailImage', { msg: msg || t('unknownReason') }));
+    return;
+  }
   const video = r.kind === 'video', inHost = !!host;
   $('shareTitle').textContent = t(video ? 'shareReadyVideo' : 'shareReadyImage');
   $('shareImg').hidden = video; $('shareVid').hidden = !video;
@@ -727,7 +734,7 @@ function showShare(r) {
   if (!inHost) {
     $('shareDownload').href = r.full;
     $('shareDownload').textContent = t(video ? 'saveVideo' : 'saveImage');
-    $('shareDownload').download = 'Deskland.' + (video ? (r.ext || 'mp4') : 'png');
+    $('shareDownload').download = 'IconScape.' + (video ? (r.ext || 'mp4') : 'png');
   }
   $('shareModal').hidden = false;
   $('shareClose').focus();
@@ -796,6 +803,7 @@ function onHost(m) {
       showAutostartWarn();
       showUpdate();
       showTheme();
+      shareBusy(shareState);                               // the share buttons have no data-i18n: their text depends on what is being generated
       document.documentElement.classList.add('ready');
     });
   } else if (m.t === 'themeChanged') {

@@ -36,17 +36,17 @@ $WebView2Bootstrapper = [IO.Path]::GetFullPath($WebView2Bootstrapper)
 
 # A fixed source list prevents other editions or private working files entering this package.
 $sources = @('.gitattributes', '.gitignore', 'AGENTS.md', 'LICENSE', 'NOTICE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
-    'host\DesktopHost.cs', 'host\DesklandPreview.ico', 'host\README.md', 'host\app.manifest', 'host\build.ps1', 'host\inspect.ps1',
-    'tools\build-installer.ps1', 'tools\installer.nsi', 'tools\version.json')
-$themeFiles = @('flat.html', 'meadow.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
+    'host\DesktopHost.cs', 'host\Themes.cs', 'host\IconScape.ico', 'host\README.md', 'host\app.manifest', 'host\build.ps1', 'host\inspect.ps1',
+    'tools\build-installer.ps1', 'tools\installer.nsi', 'tools\version.json', 'tools\make-icon.ps1', 'tools\serve.ps1')
+$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
     'i18n\en.json', 'i18n\it.json', 'i18n\zh-CN.json', 'thumbs\beach.webp', 'thumbs\meadow.webp',
     'assets\beach-coconut-palm-v2.png', 'assets\beach-coconut-palm-curved.png', 'assets\beach-coconut-palm-airy.png', 'assets\beach-coconut-palm-windswept.png', 'assets\beach-coconut-palm-arch.png',
     'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png')
 $themes = (Get-Content -LiteralPath (Join-Path $root 'prototype\themes.json') -Raw -Encoding UTF8 | ConvertFrom-Json).themes
 $ready = @($themes | Where-Object { $_.status -eq 'ready' })
 $locked = @($themes | Where-Object { $_.locked -eq $true })
-if ($themes.Count -ne 13 -or $ready.Count -ne 2 -or $locked.Count -ne 11 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,meadow')) {
-    throw 'Expected two usable themes and eleven locked preview cards'
+if ($themes.Count -ne 17 -or $ready.Count -ne 6 -or $locked.Count -ne 11 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,meadow,steampunk')) {
+    throw 'Expected six usable themes and eleven locked preview cards'
 }
 foreach ($theme in $locked) {
     if ($theme.page -or $theme.groups) { throw 'Locked themes must not contain page source or settings' }
@@ -67,16 +67,16 @@ foreach ($file in $sources) {
     Copy-Item -LiteralPath (Join-Path $root $file) -Destination $target
 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[IO.Compression.ZipFile]::CreateFromDirectory($sourceStage, (Join-Path $payload 'Deskland-source.zip'))
+[IO.Compression.ZipFile]::CreateFromDirectory($sourceStage, (Join-Path $payload 'IconScape-source.zip'))
 # Only program data is installed. The accompanying ZIP contains the exact corresponding source.
-$runtimeFiles = @('host\bin\Deskland.exe', 'host\bin\DesklandPreview.ico', 'host\bin\Microsoft.Web.WebView2.Core.dll', 'host\bin\Microsoft.Web.WebView2.WinForms.dll', 'host\bin\WebView2Loader.dll')
+$runtimeFiles = @('host\bin\IconScape.exe', 'host\bin\IconScape.ico', 'host\bin\Microsoft.Web.WebView2.Core.dll', 'host\bin\Microsoft.Web.WebView2.WinForms.dll', 'host\bin\WebView2Loader.dll')
 $installFiles = @('LICENSE', 'NOTICE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md') + @($themeFiles | Where-Object { $_ -ne 'serve.mjs' } | ForEach-Object { 'prototype\' + $_ }) + $runtimeFiles
 foreach ($file in $installFiles) {
     $target = Join-Path $payload $file
     New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
     Copy-Item -LiteralPath (Join-Path $root $file) -Destination $target
 }
-$installFiles += 'Deskland-source.zip'
+$installFiles += 'IconScape-source.zip'
 $utf8 = New-Object Text.UTF8Encoding($true)
 $fileLines = @()
 $deleteLines = @()
@@ -94,7 +94,7 @@ $fileList = Join-Path $payload 'files.nsh'
 $deleteList = Join-Path $payload 'delete.nsh'
 [IO.File]::WriteAllLines($fileList, [string[]]$fileLines, $utf8)
 [IO.File]::WriteAllLines($deleteList, [string[]]$deleteLines, $utf8)
-$output = Join-Path $dist "Deskland-Preview-$version-win-x64-Setup.exe"
+$output = Join-Path $dist "IconScape-$version-win-x64-Setup.exe"
 & $NsisCompiler /V2 "/DVERSION=$version" "/DPAYLOAD=$payload" "/DOUTPUT=$output" "/DBOOTSTRAPPER=$WebView2Bootstrapper" "/DFILE_LIST=$fileList" "/DDELETE_LIST=$deleteList" (Join-Path $PSScriptRoot 'installer.nsi')
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
 $hash = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash

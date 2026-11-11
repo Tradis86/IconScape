@@ -9,20 +9,20 @@
     "langAuto": "Predefinita di sistema",
     "langAutoWith": "Predefinita di sistema ({name})",
     "autostart": "Avvia con Windows",
-    "autostartTitle": "Esegui Deskland automaticamente all'accesso",
+    "autostartTitle": "Esegui IconScape automaticamente all'accesso",
     "autostartBlocked": "L'avvio con Windows potrebbe essere stato bloccato",
-    "autostartWarnSw": "Questa volta Deskland non si è avviato automaticamente: {sw} potrebbe averlo bloccato. Apri {sw}, cerca Deskland nella gestione dell'avvio e impostalo su Consenti.",
-    "autostartWarnGeneric": "Questa volta Deskland non si è avviato automaticamente: il software di sicurezza o l'impostazione App di avvio di Windows potrebbero averlo bloccato. Attiva Deskland nella gestione dell'avvio del software di sicurezza oppure in Impostazioni di Windows → App → Avvio.",
+    "autostartWarnSw": "Questa volta IconScape non si è avviato automaticamente: {sw} potrebbe averlo bloccato. Apri {sw}, cerca IconScape nella gestione dell'avvio e impostalo su Consenti.",
+    "autostartWarnGeneric": "Questa volta IconScape non si è avviato automaticamente: il software di sicurezza o l'impostazione App di avvio di Windows potrebbero averlo bloccato. Attiva IconScape nella gestione dell'avvio del software di sicurezza oppure in Impostazioni di Windows → App → Avvio.",
     "gotIt": "Ho capito",
     "updateAvailable": "Aggiornamento disponibile",
-    "updateVersion": "Deskland {version} è pronto. Il tema attuale e le impostazioni verranno mantenuti.",
+    "updateVersion": "IconScape {version} è pronto. Il tema attuale e le impostazioni verranno mantenuti.",
     "updateProgram": "Aggiorna ora",
     "updateRetry": "Riprova l'aggiornamento",
     "updateWorking": "Aggiornamento in corso…",
     "updateDownloading": "Download e installazione in corso… {progress}",
     "updateInstalling": "Installazione dell'aggiornamento… {progress}",
     "updateCompletedTitle": "Aggiornamento completato",
-    "updateCompleted": "L'aggiornamento è stato scaricato e installato. Se Deskland non si riavvia automaticamente, aprilo di nuovo.",
+    "updateCompleted": "L'aggiornamento è stato scaricato e installato. Se IconScape non si riavvia automaticamente, aprilo di nuovo.",
     "updateDone": "Fine",
     "updateCanceled": "L'aggiornamento è stato annullato. Puoi riprovare più tardi.",
     "updateLowBattery": "Impossibile completare l'aggiornamento con l'alimentazione a batteria. Collega il dispositivo alla corrente e riprova.",
@@ -55,6 +55,11 @@
     "preparingRec": "Preparazione…",
     "recording": "Registrazione {p}%",
     "savingVideo": "Salvataggio…",
+    "shareErrNoRecorder": "questo computer non supporta la registrazione video",
+    "shareErrBusy": "la registrazione precedente è ancora in corso",
+    "shareErrNoFrames": "l'immagine non si è mossa (lo sfondo potrebbe essere completamente coperto)",
+    "shareErrReadVideo": "impossibile leggere il video registrato",
+    "shareErrRecordingNow": "è in corso la registrazione di un video, riprova al termine",
     "shareFailImage": "Impossibile creare l'immagine: {msg}",
     "shareFailVideo": "Impossibile registrare il video: {msg}",
     "unknownReason": "errore sconosciuto",
@@ -74,25 +79,26 @@
     "close": "Chiudi",
     "sharePreviewAlt": "Anteprima dell'immagine condivisa",
     "autosave": "Le modifiche vengono salvate automaticamente e applicate subito al desktop",
+    "basedOn": "Basato su Deskland Preview · GPL-3.0 · versione non ufficiale",
     "saved": "Salvato ✓",
     "resetAll": "Ripristina tutto",
     "resetAllTitle": "Ripristina tutte le impostazioni di questo tema ai valori predefiniti",
     "helpButtonTitle": "Domande frequenti e risoluzione dei problemi",
     "helpTitle": "Guida",
     "helpSubtitle": "Domande frequenti e risoluzione dei problemi",
-    "helpWallpaperQ": "Deskland continua a sfarfallare o a riavviarsi. Come risolvo?",
-    "helpWallpaperA": "Se lo sfondo normale di Windows cambia automaticamente, a ogni cambio Deskland può sfarfallare o riavviarsi. Usa uno sfondo fisso che non ruoti.",
+    "helpWallpaperQ": "IconScape continua a sfarfallare o a riavviarsi. Come risolvo?",
+    "helpWallpaperA": "Se lo sfondo normale di Windows cambia automaticamente, a ogni cambio IconScape può sfarfallare o riavviarsi. Usa uno sfondo fisso che non ruoti.",
     "helpWallpaperStep1": "Apri Impostazioni di Windows → Personalizzazione → Sfondo.",
     "helpWallpaperStep2": "Imposta “Personalizza lo sfondo” su “Immagine” o “Tinta unita”. Non usare “Presentazione” o “Contenuti in evidenza di Windows”.",
-    "helpWallpaperStep3": "Dopo aver cambiato questa impostazione, riavvia Deskland.",
+    "helpWallpaperStep3": "Dopo aver cambiato questa impostazione, riavvia IconScape.",
     "badgeOn": "In uso",
     "badgeReady": "Disponibile",
     "badgeSoon": "In arrivo",
-    "badgeLocked": "Wallpaper",
-    "lockedTitle": "{name} · tema dell'edizione Wallpaper; fai clic per i dettagli sull'acquisto",
+    "badgeLocked": "Deskland",
+    "lockedTitle": "{name} · tema dell'edizione Wallpaper di Deskland; fai clic per i dettagli",
     "purchaseLocalTitle": "Sblocca l'edizione Wallpaper",
     "purchaseLocalTheme": "“{name}” è incluso nell'edizione Wallpaper.",
-    "purchaseLocalMessage": "Dopo l'acquisto dallo store attuale, Deskland verifica l'acquisto e lo sblocca automaticamente, senza bisogno di accedere a un account. Se l'hai appena acquistato, verifica di nuovo.",
+    "purchaseLocalMessage": "Dopo l'acquisto dallo store attuale, IconScape verifica l'acquisto e lo sblocca automaticamente, senza bisogno di accedere a un account. Se l'hai appena acquistato, verifica di nuovo.",
     "purchaseRecheck": "Verifica gli acquisti su questo PC",
     "purchaseChecking": "Verifica in corso…",
     "purchaseCrossChannel": "Ripristina da un altro canale",
@@ -103,11 +109,11 @@
     "resetOneAria": "Ripristina {label} al valore predefinito",
     "dblclickReset": "Doppio clic per ripristinare ({v})",
     "comingSoon": "In arrivo:",
-    "purchaseTitle": "Ottieni l'edizione Wallpaper",
-    "purchaseTheme": "“{name}” è incluso nell'edizione Wallpaper.",
-    "purchaseMessage": "L'anteprima include Spiaggia e Prato per sempre. Con l'edizione Wallpaper sblocchi altri temi nella stessa app Deskland.",
+    "purchaseTitle": "Un tema di Deskland Wallpaper",
+    "purchaseTheme": "“{name}” fa parte dell'edizione Wallpaper di Deskland.",
+    "purchaseMessage": "IconScape è un progetto indipendente basato su Deskland Preview: non include né vende questo tema. Puoi trovarlo sul sito di Deskland.",
     "purchaseLater": "Continua a esplorare",
-    "purchaseWebsite": "Visita il sito"
+    "purchaseWebsite": "Sito di Deskland"
   },
   "host": {
     "traySettings": "Impostazioni…",
@@ -115,8 +121,8 @@
     "trayReload": "Ricarica",
     "trayAutostart": "Avvia con Windows",
     "trayExit": "Esci (ripristina lo sfondo)",
-    "welcomeTitle": "Deskland è in esecuzione",
-    "welcomeBody": "Fai clic sull'icona della spiaggia nell'area di notifica{hotkey} per aprire il menu.\nNon la vedi? Fai clic su ^ sul lato destro della barra delle applicazioni.",
+    "welcomeTitle": "IconScape è in esecuzione",
+    "welcomeBody": "Fai clic sull'icona di IconScape nell'area di notifica{hotkey} per aprire il menu.\nNon la vedi? Fai clic su ^ sul lato destro della barra delle applicazioni.",
     "welcomeHotkey": " oppure premi Ctrl+Alt+H",
     "errNotReady": "Lo sfondo non è ancora pronto",
     "errNoImage": "Non è stata restituita alcuna immagine",
@@ -126,7 +132,7 @@
     "errImageTimeout": "La generazione ha richiesto troppo tempo",
     "errVideoTimeout": "La registrazione ha richiesto troppo tempo",
     "errBadData": "La pagina ha restituito dati incompleti",
-    "errRebuilt": "Windows ha continuato a ricreare il livello dello sfondo, quindi Deskland si è arrestato.",
+    "errRebuilt": "Windows ha continuato a ricreare il livello dello sfondo, quindi IconScape si è arrestato.",
     "errSeeLog": "Per i dettagli consulta il log: {path}",
     "errSettings": "Impossibile aprire la finestra delle impostazioni: {msg}",
     "errNoPage": "Pagina non trovata: {path}",
@@ -134,6 +140,217 @@
     "errStart": "Impossibile avviare: {msg}"
   },
   "themes": {
+    "cosmos": {
+      "name": "Universo",
+      "desc": "Spazio profondo: ogni gruppo di icone è un sistema stellare, con orbite che ne seguono la forma e pianeti che le percorrono; intorno nebulose, una galassia che ruota, stelle cadenti, comete e qualche nova",
+      "groups": [
+        "Spazio",
+        "Sistemi stellari",
+        "Cielo profondo"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Estensione della nebulosa",
+          "hint": "Quanto si estendono la nebulosa e la zona scura intorno alle tue icone"
+        },
+        "palette": {
+          "label": "Colore della nebulosa",
+          "options": [
+            "Viola",
+            "Smeraldo",
+            "Fuoco",
+            "Ghiaccio"
+          ]
+        },
+        "stars": {
+          "label": "Stelle",
+          "hint": "Quante stelle riempiono lo sfondo"
+        },
+        "orbits": {
+          "label": "Orbite",
+          "hint": "Numero di orbite intorno a ogni gruppo di icone",
+          "unit": ""
+        },
+        "planets": {
+          "label": "Pianeti",
+          "hint": "Numero di pianeti che percorrono le orbite",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Velocità",
+          "hint": "Velocità dei pianeti e della rotazione della galassia"
+        },
+        "galaxy": {
+          "label": "Mostra la galassia",
+          "hint": "Una galassia a spirale che ruota lentamente nello spazio libero",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "meteors": {
+          "label": "Stelle cadenti",
+          "hint": "Quante stelle cadenti attraversano il cielo; ogni tanto passa anche una cometa"
+        }
+      }
+    },
+    "steampunk": {
+      "name": "Steampunk",
+      "desc": "Una macchina su un banco di legno scuro: le icone poggiano su piastre di metallo rivettate, gli ingranaggi girano ingranando tra loro, i tubi di rame portano ai manometri e sbuffano vapore, e ogni tanto passa un dirigibile",
+      "groups": [
+        "Piastre",
+        "Meccanismo",
+        "Vapore"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione delle piastre",
+          "hint": "Quanto si estendono le piastre intorno alle tue icone"
+        },
+        "metal": {
+          "label": "Metallo",
+          "options": [
+            "Ottone",
+            "Rame",
+            "Ferro"
+          ]
+        },
+        "gears": {
+          "label": "Ingranaggi",
+          "hint": "Quanti gruppi di ingranaggi riempiono lo spazio libero"
+        },
+        "speed": {
+          "label": "Velocità",
+          "hint": "Velocità degli ingranaggi e delle lancette dei manometri"
+        },
+        "pipes": {
+          "label": "Tubi",
+          "hint": "Numero di tubi di rame che partono dalle piastre",
+          "unit": ""
+        },
+        "steam": {
+          "label": "Vapore",
+          "hint": "Quanto vapore esce dai giunti dei tubi"
+        },
+        "airship": {
+          "label": "Mostra il dirigibile",
+          "hint": "Un dirigibile che ogni tanto passa sopra la macchina",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        }
+      }
+    },
+    "isles": {
+      "name": "Isole sospese",
+      "desc": "Isole erbose sospese sopra un mare di nubi al crepuscolo: le icone poggiano sulle isole tra cristalli luminosi, lucciole magiche e, ogni tanto, un drago di passaggio",
+      "groups": [
+        "Isole",
+        "Cielo",
+        "Magia",
+        "Creature"
+      ],
+      "params": {
+        "sky": {
+          "label": "Colore del cielo",
+          "hint": "La tinta del cielo e del mare di nubi sotto le isole",
+          "options": [
+            "Crepuscolo",
+            "Alba",
+            "Giorno",
+            "Notte"
+          ]
+        },
+        "sigma": {
+          "label": "Dimensione delle isole",
+          "hint": "Quanto si estendono le isole intorno alle tue icone"
+        },
+        "warp": {
+          "label": "Bordi frastagliati",
+          "hint": "Quanto è irregolare il profilo delle isole"
+        },
+        "islets": {
+          "label": "Isolotti",
+          "hint": "Piccole isole in più che fluttuano lontano dalle icone",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Alberi",
+          "hint": "Quanti alberi crescono sulle isole"
+        },
+        "crystals": {
+          "label": "Cristalli",
+          "hint": "Numero di cristalli luminosi vicino ai bordi delle isole",
+          "unit": ""
+        },
+        "motes": {
+          "label": "Lucciole magiche",
+          "hint": "Puntini di luce che salgono lentamente",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocità di movimento",
+          "hint": "Quanto velocemente si muovono le nubi e le lucciole"
+        },
+        "dragon": {
+          "label": "Mostra il drago",
+          "hint": "Un drago che ogni tanto attraversa il cielo",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        }
+      }
+    },
+    "circuit": {
+      "name": "Circuito",
+      "desc": "Un circuito stampato scuro: le icone poggiano su zone di rame, le piste si diramano a 45° e gli impulsi di dati le percorrono",
+      "groups": [
+        "Scheda",
+        "Segnali"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zona di rame",
+          "hint": "Quanto si estende la zona di rame intorno alle tue icone"
+        },
+        "density": {
+          "label": "Densità delle piste",
+          "hint": "Quante piste, chip e componenti riempiono la scheda"
+        },
+        "color": {
+          "label": "Colore",
+          "options": [
+            "Verde",
+            "Ciano",
+            "Ambra",
+            "Magenta"
+          ]
+        },
+        "pulses": {
+          "label": "Impulsi di dati",
+          "hint": "Numero di punti luminosi che corrono lungo le piste",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Velocità",
+          "hint": "Velocità degli impulsi, della scansione e delle cifre che cadono"
+        },
+        "rain": {
+          "label": "Pioggia di cifre",
+          "hint": "Quante colonne di cifre esadecimali scendono sulla scheda"
+        },
+        "scan": {
+          "label": "Scansione",
+          "hint": "Una fascia di luce che percorre le piste dall'alto verso il basso",
+          "options": [
+            "Spenta",
+            "Accesa"
+          ]
+        }
+      }
+    },
     "lotus": {
       "name": "Stagno di loto",
       "desc": "Foglie e fiori di loto riempiono lo stagno, mentre le carpe koi nuotano tra le foglie e le icone lasciando increspature",

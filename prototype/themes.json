@@ -175,6 +175,431 @@
       ]
     },
     {
+      "id": "isles",
+      "adaptive": true,
+      "name": "浮空岛",
+      "desc": "暮色云海之上漂浮着长满青草的小岛，图标落在岛上；水晶发光，萤火飘动，偶尔有龙飞过",
+      "page": "isles.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/isles.webp?v=3202f94e94) center / cover no-repeat, radial-gradient(ellipse 24% 22% at 30% 40%, #5aa862 88%, #5b4636 92%, transparent 96%), radial-gradient(ellipse 16% 15% at 72% 62%, #5aa862 86%, #5b4636 92%, transparent 96%), radial-gradient(ellipse 30% 18% at 60% 30%, rgba(190,160,230,0.5) 0%, transparent 100%), linear-gradient(160deg, #6a4590 0%, #2a1f5c 45%, #120c2a 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "岛屿",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "岛屿大小",
+              "hint": "岛从图标往外延伸多远",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 70,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "岸线曲折",
+              "hint": "岛的边缘弯弯绕绕的程度",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 40
+            },
+            {
+              "key": "islets",
+              "label": "小岛数量",
+              "hint": "图标之外额外漂浮的小岛",
+              "min": 0,
+              "max": 12,
+              "step": 1,
+              "default": 5,
+              "unit": "座"
+            },
+            {
+              "key": "trees",
+              "label": "树木",
+              "hint": "岛上树木的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            }
+          ]
+        },
+        {
+          "name": "天空",
+          "params": [
+            {
+              "key": "sky",
+              "label": "天空颜色",
+              "hint": "岛屿下方天空和云海的色调",
+              "options": [
+                "黄昏",
+                "日出",
+                "白天",
+                "夜晚"
+              ],
+              "default": 0
+            },
+            {
+              "key": "flow",
+              "label": "流动速度",
+              "hint": "云海和光点移动多快",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        },
+        {
+          "name": "魔法",
+          "params": [
+            {
+              "key": "crystals",
+              "label": "水晶",
+              "hint": "岛边发光的水晶数量",
+              "min": 0,
+              "max": 12,
+              "step": 1,
+              "default": 5,
+              "unit": "簇"
+            },
+            {
+              "key": "motes",
+              "label": "萤火",
+              "hint": "缓缓上升的发光光点",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 30,
+              "unit": "个"
+            }
+          ]
+        },
+        {
+          "name": "生物",
+          "params": [
+            {
+              "key": "dragon",
+              "label": "显示飞龙",
+              "hint": "偶尔飞过天空的龙",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "circuit",
+      "adaptive": true,
+      "name": "电路板",
+      "desc": "深色电路板：图标落在铺铜区上，走线以 45° 向外延伸，数据脉冲沿走线流动",
+      "page": "circuit.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/circuit.webp?v=9283919aa6) center / cover no-repeat, linear-gradient(90deg, transparent 0 30%, #187c96 30% 31%, transparent 31% 100%), linear-gradient(0deg, transparent 0 55%, #187c96 55% 57%, transparent 57% 100%), radial-gradient(circle at 30% 44%, #5cd8ec 0 3%, transparent 3.5%), radial-gradient(ellipse 22% 26% at 68% 40%, #0b3140 92%, #5cd8ec 94%, transparent 97%), linear-gradient(160deg, #07141d 0%, #02070b 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "电路板",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "铺铜范围",
+              "hint": "图标周围的铺铜区延伸多远",
+              "min": 30,
+              "max": 140,
+              "step": 1,
+              "default": 46,
+              "unit": "px"
+            },
+            {
+              "key": "density",
+              "label": "走线密度",
+              "hint": "走线、芯片和元件的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "color",
+              "label": "配色",
+              "options": [
+                "绿色",
+                "青色",
+                "琥珀",
+                "品红"
+              ],
+              "default": 1
+            }
+          ]
+        },
+        {
+          "name": "信号",
+          "params": [
+            {
+              "key": "pulses",
+              "label": "数据脉冲",
+              "hint": "沿走线流动的光点数量",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 24,
+              "unit": "个"
+            },
+            {
+              "key": "speed",
+              "label": "速度",
+              "hint": "脉冲、扫描和数字下落的快慢",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "rain",
+              "label": "数字雨",
+              "hint": "下落的十六进制数字列的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.3,
+              "format": "percent"
+            },
+            {
+              "key": "scan",
+              "label": "扫描光带",
+              "hint": "一条自上而下扫过走线的光带",
+              "options": [
+                "关闭",
+                "开启"
+              ],
+              "default": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steampunk",
+      "adaptive": true,
+      "name": "蒸汽朋克",
+      "desc": "深色木台上的机器：图标落在铆接的金属板上，齿轮组咬合转动，铜管连着压力表并喷出蒸汽，偶尔有飞艇飘过",
+      "page": "steam.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/steampunk.webp?v=92f6348889) center / cover no-repeat, radial-gradient(circle at 70% 60%, #1d1712 0 4%, #bd963c 4.5% 13%, transparent 13.5%), radial-gradient(circle at 84% 38%, #1d1712 0 3%, #b8673b 3.5% 9%, transparent 9.5%), linear-gradient(90deg, #8d7130 0 34%, transparent 34%), repeating-linear-gradient(0deg, #2e1c13 0 20px, #120a06 20px 21px)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "金属板",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "金属板大小",
+              "hint": "金属板从图标往外延伸多远",
+              "min": 30,
+              "max": 140,
+              "step": 1,
+              "default": 50,
+              "unit": "px"
+            },
+            {
+              "key": "metal",
+              "label": "金属",
+              "options": [
+                "黄铜",
+                "紫铜",
+                "铁"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "机械",
+          "params": [
+            {
+              "key": "gears",
+              "label": "齿轮",
+              "hint": "空白处齿轮组的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "speed",
+              "label": "转速",
+              "hint": "齿轮转动和指针摆动的快慢",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "pipes",
+              "label": "管道",
+              "hint": "从金属板伸出的铜管数量",
+              "min": 0,
+              "max": 12,
+              "step": 1,
+              "default": 6,
+              "unit": "根"
+            }
+          ]
+        },
+        {
+          "name": "蒸汽",
+          "params": [
+            {
+              "key": "steam",
+              "label": "蒸汽",
+              "hint": "管道接头喷出蒸汽的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "airship",
+              "label": "显示飞艇",
+              "hint": "偶尔从上方飘过的飞艇",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cosmos",
+      "adaptive": true,
+      "name": "宇宙",
+      "desc": "深空：每组图标都是一个恒星系，轨道顺着图标的形状展开，行星沿轨道运行；星云环绕、星系旋转，还有流星、彗星和新星",
+      "page": "cosmos.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/cosmos.webp?v=df7243c382) center / cover no-repeat, radial-gradient(circle at 72% 62%, #fff4d7 0 2%, rgba(255,115,205,0.35) 6%, transparent 16%), radial-gradient(ellipse 26% 30% at 30% 42%, #04030f 70%, rgba(125,60,225,0.8) 82%, transparent 100%), radial-gradient(ellipse 60% 50% at 50% 50%, rgba(40,110,255,0.35) 0%, transparent 100%), linear-gradient(160deg, #0c0a26 0%, #020108 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "太空",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "星云范围",
+              "hint": "图标周围的星云和暗区延伸多远",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 80,
+              "unit": "px"
+            },
+            {
+              "key": "palette",
+              "label": "星云颜色",
+              "options": [
+                "紫色",
+                "翡翠",
+                "火焰",
+                "冰蓝"
+              ],
+              "default": 0
+            },
+            {
+              "key": "stars",
+              "label": "星星",
+              "hint": "背景星星的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            }
+          ]
+        },
+        {
+          "name": "恒星系",
+          "params": [
+            {
+              "key": "orbits",
+              "label": "轨道",
+              "hint": "每组图标周围的轨道圈数",
+              "min": 0,
+              "max": 5,
+              "step": 1,
+              "default": 3,
+              "unit": "圈"
+            },
+            {
+              "key": "planets",
+              "label": "行星",
+              "hint": "沿轨道运行的行星数量",
+              "min": 0,
+              "max": 16,
+              "step": 1,
+              "default": 8,
+              "unit": "颗"
+            },
+            {
+              "key": "speed",
+              "label": "速度",
+              "hint": "行星运行和星系旋转的快慢",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        },
+        {
+          "name": "深空",
+          "params": [
+            {
+              "key": "galaxy",
+              "label": "显示星系",
+              "hint": "在空旷处缓缓旋转的旋涡星系",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            },
+            {
+              "key": "meteors",
+              "label": "流星",
+              "hint": "流星的多少；开启后偶尔还会有彗星经过",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "beach-turquoise",
       "name": "马尔代夫",
       "desc": "青绿色海水与浅米黄沙滩，暗色珊瑚礁间的小鱼成群游动",

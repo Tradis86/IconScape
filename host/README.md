@@ -1,15 +1,15 @@
-# Deskland Windows 宿主
+# IconScape Windows 宿主
 
-以 C# / .NET Framework 和 WebView2 把主题页面挂到 Windows 桌面图标层下方。
+以 C# / .NET Framework 和 WebView2 把主题页面挂到 Windows 桌面图标层下方。IconScape 是 Deskland Preview 的修改版（GPL-3.0），使用自己的名称、图标、数据目录和实例标识。
 
 ## 构建与运行
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File host\build.ps1
-host\bin\Deskland.exe
+host\bin\IconScape.exe
 ```
 
-构建脚本使用 Windows 自带的 C# 编译器，首次从 NuGet 下载固定版本的 WebView2 开发库。依赖保存在 `host/lib/`，输出位于 `host/bin/`；二者均不提交到仓库。
+构建脚本使用 Windows 自带的 C# 编译器，首次从 NuGet 下载固定版本的 WebView2 开发库。依赖保存在 `host/lib/`，输出位于 `host/bin/`；二者均不提交到仓库。程序图标 `host/IconScape.ico` 由 `tools/make-icon.ps1` 生成。
 
 ## 常用参数
 
@@ -30,12 +30,13 @@ host\bin\Deskland.exe
 - Windows 11 24H2 及以后使用 Progman 分层子窗口；较早系统使用 WorkerW。
 - 每个显示器一个壁纸窗口（同一主题和参数）：各自只接收落在该显示器上的图标，并单独判断暂停；显示器增减、分辨率或排列变化时自动调整。设置预览与分享使用主显示器。
 - 系统壁纸幻灯片或 Windows 聚焦换图时可能短暂闪烁。
-- 设置保存到 `%LOCALAPPDATA%\DesklandPreview\settings.json`，日志为同目录下的 `host.log`。
+- 设置保存到 `%LOCALAPPDATA%\IconScape\settings.json`，日志为同目录下的 `host.log`；分享的图片和动画保存在“图片\IconScape”。
+- 首次启动时（`%LOCALAPPDATA%\IconScape` 尚不存在）会从 `%LOCALAPPDATA%\DesklandPreview` 复制设置；只有指向同一程序目录下旧 `Deskland.exe` 的开机启动项会被换成 IconScape 的，其他位置安装的 Deskland Preview 不受影响。
 - 不提供账号登录、购买恢复或自动检查更新；不会启动时或打开设置时联网检查新版本。
 - 分享只使用图标位置，主题页面会画示例图标和名字色块，不截取桌面窗口。
 - 主题页面改动后，使用托盘“重新载入”；宿主 C# 改动后需要退出并重新构建。
 
-安装测试可设置绝对路径环境变量 `DESKLAND_PROFILE_DIR`，隔离设置、WebView2 缓存和单实例事件；此模式跳过旧数据迁移，并禁用开机启动写入。正常启动不设置此变量，继续使用原数据目录。
+安装测试可设置绝对路径环境变量 `ICONSCAPE_PROFILE_DIR`，隔离设置、WebView2 缓存和单实例事件；此模式跳过旧数据迁移，并禁用开机启动写入。正常启动不设置此变量，使用默认数据目录。
 
 ## 页面通信
 

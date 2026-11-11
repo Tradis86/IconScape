@@ -1,4 +1,6 @@
-// Deskland · desktop host (prototype)
+// IconScape · desktop host
+// IconScape is a modified version of the Deskland Preview host (https://github.com/BLEZZ0102/Deskland, GPL-3.0);
+// it uses its own name, icon, data folder and instance identity, as the Deskland authors ask of modified distributions (see TRADEMARKS.md).
 //
 // It does four things:
 //   1. Attaches one borderless window per monitor beneath the desktop icons (the wallpaper layer) and uses WebView2 to show the current theme's page (e.g. prototype/flat.html?wallpaper=1)
@@ -27,9 +29,9 @@ using Microsoft.Win32;
 
 static class Program
 {
-    public static readonly string ExitEventName = "DesklandHost_Exit" + InstallProfile.Suffix;
-    public static readonly string MenuEventName = "DesklandHost_Menu" + InstallProfile.Suffix;
-    public static readonly string SettingsEventName = "DesklandHost_Settings" + InstallProfile.Suffix;
+    public static readonly string ExitEventName = "IconScape_Exit" + InstallProfile.Suffix;
+    public static readonly string MenuEventName = "IconScape_Menu" + InstallProfile.Suffix;
+    public static readonly string SettingsEventName = "IconScape_Settings" + InstallProfile.Suffix;
 
     // Signal the running instance (exit / show menu)
     static void Signal(string name)
@@ -42,18 +44,18 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        // Deskland.exe --exit: tell the running instance to exit cleanly (restores the original wallpaper)
-        // Deskland.exe --menu: make the running instance pop up its menu at the mouse position
-        // Deskland.exe --settings: make the running instance open the settings window
+        // IconScape.exe --exit: tell the running instance to exit cleanly (restores the original wallpaper)
+        // IconScape.exe --menu: make the running instance pop up its menu at the mouse position
+        // IconScape.exe --settings: make the running instance open the settings window
         if (args.Length > 0 && args[0] == "--exit") { Signal(ExitEventName); return; }
         if (args.Length > 0 && args[0] == "--menu") { Signal(MenuEventName); return; }
         if (args.Length > 0 && args[0] == "--settings") { Signal(SettingsEventName); return; }
         if (args.Length > 0 && args[0] == "--exit-installed") { Environment.ExitCode = InstallProfile.StopInstalled(); return; }
-        // Preview never migrates or shares the development edition's settings (the data folder and autostart entry under the old name, Habitat Wallpaper, are not carried over).
+        Migration.FromDesklandPreview();                  // before anything writes to the data folder: it only runs while that folder does not exist yet
         bool fromAutostart = Array.IndexOf(args, "--autostart") >= 0;
         if (fromAutostart) AutoStartCheck.MarkLaunched();  // the autostart launch did run (whether or not an instance was already running)
         bool created;
-        var mutex = new Mutex(true, "DesklandHost_Singleton" + InstallProfile.Suffix, out created);
+        var mutex = new Mutex(true, "IconScape_Singleton" + InstallProfile.Suffix, out created);
         if (!created)
         {
             if (!fromAutostart) Signal(SettingsEventName); // already running: double-clicking the program again = open settings (the autostart launch just exits quietly)
@@ -102,44 +104,72 @@ static class Log
     }
 }
 
-// 2026-10-10 rename (Habitat Wallpaper → Deskland): existing users keep everything they had
-//   - The data folder %LOCALAPPDATA%\HabitatWallpaper (settings, autostart records, WebView2 cache) is moved as a whole to %LOCALAPPDATA%\Deskland;
-//     if the old program is still running and the WebView2 files are locked and cannot be moved, only the small files such as the settings are copied
-//   - If the user had autostart on: the HabitatWallpaper value in the registry Run key is replaced by a Deskland value pointing to Deskland.exe (the user's choice is kept; it is never turned on for someone who had it off)
-static class Rename
+// 2026-11-11 rename (this local copy of Deskland Preview → IconScape): the user keeps their settings and their autostart choice
+//   - Settings are copied (not moved) from %LOCALAPPDATA%\DesklandPreview while the IconScape data folder does not exist yet;
+//     the WebView2 cache and the logs stay behind, and an installed Deskland Preview keeps working with its own folder
+//   - Autostart: only an entry that starts Deskland.exe from this very program folder (the old build of this copy) is removed;
+//     the host then creates its own entry. An installed Deskland Preview elsewhere is never touched
+static class Migration
 {
-    const string OldName = "HabitatWallpaper";
-    public static void Migrate()
+    public static bool MovedAutoStart;              // read by HostContext, which creates the IconScape autostart entry
+
+    public static void FromDesklandPreview()
     {
-        string oldDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), OldName);
-        try
+        if (InstallProfile.Isolated) return;
+        var notes = new List<string>();
+        string oldDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesklandPreview");
+        if (!Directory.Exists(InstallProfile.DataDir) && Directory.Exists(oldDir))
         {
-            if (Directory.Exists(oldDir) && !Directory.Exists(Log.DataDir))
+            try
             {
-                try { Directory.Move(oldDir, Log.DataDir); }
-                catch
+                Directory.CreateDirectory(InstallProfile.DataDir);
+                foreach (string name in new[] { "settings.json", "welcome.shown", "autostart.enabled", "autostart.last" })
                 {
-                    Directory.CreateDirectory(Log.DataDir);
-                    foreach (string src in Directory.GetFiles(oldDir))
-                        if (!src.EndsWith(".log", StringComparison.OrdinalIgnoreCase)) File.Copy(src, Path.Combine(Log.DataDir, Path.GetFileName(src)), false);
+                    string src = Path.Combine(oldDir, name);
+                    if (File.Exists(src)) File.Copy(src, Path.Combine(InstallProfile.DataDir, name), false);
                 }
-                Log.Write("改名：数据目录从 " + oldDir + " 搬到 " + Log.DataDir);
+                notes.Add("Settings copied from " + oldDir);
             }
+            catch (Exception ex) { notes.Add("Copying the settings from " + oldDir + " failed: " + ex.Message); }
         }
-        catch (Exception ex) { Log.Write("改名：搬数据目录失败：" + ex.Message); }
+        string oldExe = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Deskland.exe");
         try
         {
+            string lnk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "Deskland.lnk");
+            if (File.Exists(lnk) && string.Equals(ShortcutTarget(lnk), oldExe, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Delete(lnk);
+                MovedAutoStart = true;
+                notes.Add("Removed the old autostart shortcut " + lnk);
+            }
             using (RegistryKey k = Registry.CurrentUser.OpenSubKey(HostContext.RunKey, true))
             {
-                if (k != null && k.GetValue(OldName) != null)
+                string v = k == null ? null : k.GetValue("DesklandPreview") as string;
+                if (v != null && v.IndexOf(oldExe, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    k.DeleteValue(OldName, false);
-                    k.SetValue(HostContext.RunName, "\"" + Application.ExecutablePath + "\" --autostart");
-                    Log.Write("改名：开机自启的启动项 " + OldName + " 换成 " + HostContext.RunName);
+                    k.DeleteValue("DesklandPreview", false);
+                    MovedAutoStart = true;
+                    notes.Add("Removed the old autostart entry DesklandPreview");
                 }
             }
         }
-        catch (Exception ex) { Log.Write("改名：换开机自启的启动项失败：" + ex.Message); }
+        catch (Exception ex) { notes.Add("Moving the old autostart entry failed: " + ex.Message); }
+        foreach (string n in notes) Log.Write(n);
+    }
+
+    static string ShortcutTarget(string path)
+    {
+        object shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")), link = null;
+        try
+        {
+            link = shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
+            return link.GetType().InvokeMember("TargetPath", BindingFlags.GetProperty, null, link, null) as string;
+        }
+        finally
+        {
+            if (link != null) Marshal.FinalReleaseComObject(link);
+            Marshal.FinalReleaseComObject(shell);
+        }
     }
 }
 
@@ -312,7 +342,7 @@ static class I18n
 // Ways to open settings: double-click the program (starts it first if not running), double-click the tray icon, menu → Settings… (or --settings)
 class HostContext : ApplicationContext
 {
-    public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunName = "DesklandPreview";
+    public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunName = InstallProfile.AppName;
     static readonly MethodInfo ShowTrayMenu =
         typeof(NotifyIcon).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -359,6 +389,11 @@ class HostContext : ApplicationContext
         });
         autoStartItem = new MenuItem(I18n.T("trayAutostart"), delegate { SetAutoStart(!autoStartItem.Checked); });
         autoStartItem.Checked = IsAutoStart();
+        if (Migration.MovedAutoStart && !autoStartItem.Checked)
+        {
+            SetAutoStart(true);                         // the old build of this copy started at sign-in: IconScape keeps that choice
+            Log.Write("Autostart moved from Deskland.exe to " + Application.ExecutablePath);
+        }
         if (autoStartItem.Checked && AutoStartValue() != "")
         {
             try
@@ -379,7 +414,7 @@ class HostContext : ApplicationContext
 
         tray = new NotifyIcon();
         tray.Icon = AppIcon.Create();
-        tray.Text = "Deskland Preview";
+        tray.Text = InstallProfile.AppName;
         tray.ContextMenu = new ContextMenu(new[] {
             settingsItem,
             pauseItem,
@@ -580,7 +615,7 @@ class HostContext : ApplicationContext
             case "openShare":
                 if (lastShare != null && File.Exists(lastShare)) Process.Start(lastShare);
                 break;
-            case "openWebsite":
+            case "openWebsite":                             // the locked themes belong to the Deskland Wallpaper edition: their info points to the Deskland website
                 Process.Start("https://deskland.app/");
                 break;
             case "revealShare":
@@ -596,7 +631,7 @@ class HostContext : ApplicationContext
         }
     }
 
-    // ---- One-click share: image drawn by the wallpaper page → saved to "Pictures\Deskland Preview", copied to the clipboard, thumbnail sent back to the settings page ----
+    // ---- One-click share: image drawn by the wallpaper page → saved to "Pictures\IconScape", copied to the clipboard, thumbnail sent back to the settings page ----
     string lastShare;                                   // path of the most recent share file (the settings page can only ask us to open this one)
     void OnShareImage(string thumb, string png, string err)
     {
@@ -605,9 +640,9 @@ class HostContext : ApplicationContext
         {
             int comma = png.IndexOf(',');
             byte[] bytes = Convert.FromBase64String(comma >= 0 ? png.Substring(comma + 1) : png);
-            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Deskland Preview");
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), InstallProfile.AppName);
             Directory.CreateDirectory(dir);
-            string path = Path.Combine(dir, "Deskland " + DateTime.Now.ToString("yyyy-MM-dd HHmmss") + ".png");
+            string path = Path.Combine(dir, InstallProfile.AppName + " " + DateTime.Now.ToString("yyyy-MM-dd HHmmss") + ".png");
             File.WriteAllBytes(path, bytes);
             lastShare = path;
             try
@@ -645,9 +680,9 @@ class HostContext : ApplicationContext
         {
             int comma = video.IndexOf(',');
             byte[] bytes = Convert.FromBase64String(comma >= 0 ? video.Substring(comma + 1) : video);
-            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Deskland Preview");
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), InstallProfile.AppName);
             Directory.CreateDirectory(dir);
-            string name = "Deskland " + DateTime.Now.ToString("yyyy-MM-dd HHmmss") + (mime == "video/webm" ? ".webm" : ".mp4");
+            string name = InstallProfile.AppName + " " + DateTime.Now.ToString("yyyy-MM-dd HHmmss") + (mime == "video/webm" ? ".webm" : ".mp4");
             string path = Path.Combine(dir, name);
             File.WriteAllBytes(path, bytes);
             lastShare = path;
@@ -700,7 +735,7 @@ class HostContext : ApplicationContext
     // Task Scheduler is not used because it needs extra privileges; if creating the shortcut fails the Run entry is kept as a fallback.
     static string AutoStartShortcutPath
     {
-        get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "Deskland.lnk"); }
+        get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), InstallProfile.AppName + ".lnk"); }
     }
 
     static object OpenAutoStartShortcut()
@@ -747,7 +782,7 @@ class HostContext : ApplicationContext
             link.GetType().InvokeMember("IconLocation", BindingFlags.SetProperty,
                 null, link, new object[] { Application.ExecutablePath + ",0" });
             link.GetType().InvokeMember("Description", BindingFlags.SetProperty,
-                null, link, new object[] { "Deskland" });
+                null, link, new object[] { InstallProfile.AppName });
             link.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, link, null);
             return File.Exists(AutoStartShortcutPath);
         }
@@ -865,7 +900,7 @@ class HostContext : ApplicationContext
         if (restarts.Count > 5)
         {
             Log.Write("壁纸窗口 1 分钟内被销毁超过 5 次，停止重试");
-            MessageBox.Show(I18n.T("errRebuilt") + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), "Deskland Preview");
+            MessageBox.Show(I18n.T("errRebuilt") + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), InstallProfile.AppName);
             Exit();
             return;
         }
@@ -962,12 +997,12 @@ class HotkeyWindow : NativeWindow, IDisposable
     }
 }
 
-// The tray and the settings window share the Deskland icon; the build script copies the icon into the program folder.
+// The tray and the settings window share the IconScape icon (drawn by tools/make-icon.ps1); the build script copies it into the program folder.
 static class AppIcon
 {
     public static Icon Create()
     {
-        return new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DesklandPreview.ico"));
+        return new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, InstallProfile.AppName + ".ico"));
     }
 
     static GraphicsPath RoundRect(Rectangle r, int radius)
@@ -994,8 +1029,8 @@ class SettingsForm : Form
     {
         this.pageDir = pageDir;
         this.host = host;
-        Text = "Deskland Preview";
-        AccessibleName = "Deskland Preview";
+        Text = InstallProfile.AppName;
+        AccessibleName = InstallProfile.AppName;
         ShowIcon = true;
         Icon = AppIcon.Create();
         StartPosition = FormStartPosition.CenterScreen;
@@ -1059,7 +1094,7 @@ class SettingsForm : Form
         catch (Exception ex)
         {
             Log.Write("设置窗口启动失败：" + ex);
-            MessageBox.Show(I18n.T("errSettings", "msg", ex.Message), "Deskland Preview");
+            MessageBox.Show(I18n.T("errSettings", "msg", ex.Message), InstallProfile.AppName);
             Close();
         }
     }
@@ -1114,7 +1149,7 @@ class WallpaperForm : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         BackColor = Color.FromArgb(26, 163, 196);
-        Text = "DesklandWindow";
+        Text = "IconScapeWindow";
 
         web = new WebView2();
         web.Dock = DockStyle.Fill;
@@ -1281,7 +1316,7 @@ class WallpaperForm : Form
         if (!failShown)
         {
             failShown = true;
-            MessageBox.Show(msg + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), "Deskland Preview");
+            MessageBox.Show(msg + "\n\n" + I18n.T("errSeeLog", "path", Log.FilePath), InstallProfile.AppName);
         }
         Shutdown();
     }
@@ -1695,25 +1730,26 @@ static class Native
     [DllImport("kernel32.dll")] public static extern bool ReadProcessMemory(IntPtr proc, IntPtr addr, out RECT buf, int size, out IntPtr read);
 }
 
-// Deskland Preview has its own data and instance identity; isolated profiles support installation QA.
+// IconScape has its own name, data and instance identity (separate from Deskland Preview); isolated profiles support installation QA.
 static class InstallProfile
 {
-    public static readonly string Override = Environment.GetEnvironmentVariable("DESKLAND_PROFILE_DIR");
+    public const string AppName = "IconScape";
+    public static readonly string Override = Environment.GetEnvironmentVariable("ICONSCAPE_PROFILE_DIR");
     public static readonly bool Isolated = !string.IsNullOrEmpty(Override);
     public static readonly string DataDir = Isolated ? Path.GetFullPath(Override) : Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesklandPreview");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
     public static readonly string Suffix = MakeSuffix();
     static string MakeSuffix()
     {
-        if (!Isolated) return "_Preview";
+        if (!Isolated) return "";
         using (var hash = System.Security.Cryptography.SHA256.Create())
-            return "_Preview_" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(DataDir.ToUpperInvariant()))).Replace("-", "").Substring(0, 24);
+            return "_" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(DataDir.ToUpperInvariant()))).Replace("-", "").Substring(0, 24);
     }
 
     // An installer may only close the instance using this exact executable path.
     public static int StopInstalled()
     {
-        foreach (Process process in Process.GetProcessesByName("Deskland"))
+        foreach (Process process in Process.GetProcessesByName(AppName))
         {
             using (process)
             {

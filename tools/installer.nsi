@@ -6,24 +6,25 @@
 !include "FileFunc.nsh"
 !include "StrFunc.nsh"
 ${UnStrStr}
-Name "Deskland Preview"
+; IconScape is a modified version of Deskland Preview (GPL-3.0): own name, icon, install folder and registry keys
+Name "IconScape"
 OutFile "${OUTPUT}"
-InstallDir "$LOCALAPPDATA\Programs\Deskland Preview"
-InstallDirRegKey HKCU "Software\DesklandPreview\Installer" "InstallDir"
+InstallDir "$LOCALAPPDATA\Programs\IconScape"
+InstallDirRegKey HKCU "Software\IconScape\Installer" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-BrandingText "Deskland Preview"
+BrandingText "IconScape"
 VIProductVersion "${VERSION}.0"
-VIAddVersionKey /LANG=1033 "ProductName" "Deskland Preview"
-VIAddVersionKey /LANG=1033 "FileDescription" "Deskland Preview Installer"
+VIAddVersionKey /LANG=1033 "ProductName" "IconScape"
+VIAddVersionKey /LANG=1033 "FileDescription" "IconScape Installer"
 VIAddVersionKey /LANG=1033 "FileVersion" "${VERSION}"
 VIAddVersionKey /LANG=1033 "ProductVersion" "${VERSION}"
-VIAddVersionKey /LANG=1033 "LegalCopyright" "Copyright 2026 Deskland authors"
+VIAddVersionKey /LANG=1033 "LegalCopyright" "Copyright 2026 Deskland authors and IconScape contributors"
 !define MUI_ABORTWARNING
-!define MUI_ICON "${PAYLOAD}\host\bin\DesklandPreview.ico"
-!define MUI_UNICON "${PAYLOAD}\host\bin\DesklandPreview.ico"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\host\bin\Deskland.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "$(LaunchDeskland)"
+!define MUI_ICON "${PAYLOAD}\host\bin\IconScape.ico"
+!define MUI_UNICON "${PAYLOAD}\host\bin\IconScape.ico"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\host\bin\IconScape.exe"
+!define MUI_FINISHPAGE_RUN_TEXT "$(LaunchApp)"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PAYLOAD}\LICENSE"
 !insertmacro MUI_PAGE_DIRECTORY
@@ -34,20 +35,28 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" "Copyright 2026 Deskland authors"
 !insertmacro MUI_UNPAGE_FINISH
 !insertmacro MUI_LANGUAGE "SimpChinese"
 !insertmacro MUI_LANGUAGE "English"
-LangString LaunchDeskland ${LANG_SIMPCHINESE} "启动 Deskland Preview"
-LangString LaunchDeskland ${LANG_ENGLISH} "Launch Deskland Preview"
-LangString AppFiles ${LANG_SIMPCHINESE} "Deskland Preview 体验版（沙滩和草地）"
-LangString AppFiles ${LANG_ENGLISH} "Deskland Preview (Beach and Meadow)"
+!insertmacro MUI_LANGUAGE "Italian"
+LangString LaunchApp ${LANG_SIMPCHINESE} "启动 IconScape"
+LangString LaunchApp ${LANG_ENGLISH} "Launch IconScape"
+LangString LaunchApp ${LANG_ITALIAN} "Avvia IconScape"
+LangString AppFiles ${LANG_SIMPCHINESE} "IconScape（基于 Deskland Preview）"
+LangString AppFiles ${LANG_ENGLISH} "IconScape (based on Deskland Preview)"
+LangString AppFiles ${LANG_ITALIAN} "IconScape (basato su Deskland Preview)"
 LangString DesktopShortcut ${LANG_SIMPCHINESE} "桌面快捷方式"
 LangString DesktopShortcut ${LANG_ENGLISH} "Desktop shortcut"
+LangString DesktopShortcut ${LANG_ITALIAN} "Collegamento sul desktop"
 LangString NeedX64 ${LANG_SIMPCHINESE} "需要 64 位 Windows 10 或更高版本。"
 LangString NeedX64 ${LANG_ENGLISH} "64-bit Windows 10 or later is required."
-LangString CloseFailed ${LANG_SIMPCHINESE} "请退出正在运行的 Deskland Preview 后重试。"
-LangString CloseFailed ${LANG_ENGLISH} "Please exit Deskland Preview and retry."
+LangString NeedX64 ${LANG_ITALIAN} "È richiesto Windows 10 o successivo a 64 bit."
+LangString CloseFailed ${LANG_SIMPCHINESE} "请退出正在运行的 IconScape 后重试。"
+LangString CloseFailed ${LANG_ENGLISH} "Please exit IconScape and retry."
+LangString CloseFailed ${LANG_ITALIAN} "Chiudi IconScape e riprova."
 LangString RuntimeFailed ${LANG_SIMPCHINESE} "WebView2 安装未完成。请连接网络，安装 Microsoft Edge WebView2 Runtime 后重试。"
 LangString RuntimeFailed ${LANG_ENGLISH} "WebView2 setup did not complete. Connect to the internet, install Microsoft Edge WebView2 Runtime, and retry."
+LangString RuntimeFailed ${LANG_ITALIAN} "L'installazione di WebView2 non è stata completata. Connettiti a Internet, installa Microsoft Edge WebView2 Runtime e riprova."
 LangString InstallingRuntime ${LANG_SIMPCHINESE} "正在安装 Microsoft Edge WebView2 Runtime（需要联网）..."
 LangString InstallingRuntime ${LANG_ENGLISH} "Installing Microsoft Edge WebView2 Runtime (internet required)..."
+LangString InstallingRuntime ${LANG_ITALIAN} "Installazione di Microsoft Edge WebView2 Runtime (serve Internet)..."
 
 Function .onInit
   ${IfNot} ${RunningX64}
@@ -96,8 +105,8 @@ Section "$(AppFiles)" SecApp
       Abort
     ${EndIf}
   ${EndIf}
-  IfFileExists "$INSTDIR\host\bin\Deskland.exe" 0 closed
-  ExecWait '"$INSTDIR\host\bin\Deskland.exe" --exit-installed' $0
+  IfFileExists "$INSTDIR\host\bin\IconScape.exe" 0 closed
+  ExecWait '"$INSTDIR\host\bin\IconScape.exe" --exit-installed' $0
   ${If} $0 != 0
     MessageBox MB_ICONSTOP "$(CloseFailed)"
     SetErrorLevel 3
@@ -106,21 +115,21 @@ Section "$(AppFiles)" SecApp
   closed:
   !include "${FILE_LIST}"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  CreateDirectory "$SMPROGRAMS\Deskland Preview"
-  CreateShortcut "$SMPROGRAMS\Deskland Preview\Deskland Preview.lnk" "$INSTDIR\host\bin\Deskland.exe"
-  CreateShortcut "$SMPROGRAMS\Deskland Preview\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKCU "Software\DesklandPreview\Installer" "InstallDir" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "DisplayName" "Deskland Preview"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "Publisher" "Deskland"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "DisplayIcon" "$INSTDIR\host\bin\Deskland.exe"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "QuietUninstallString" '$\"$INSTDIR\Uninstall.exe$\" /S'
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "NoRepair" 1
+  CreateDirectory "$SMPROGRAMS\IconScape"
+  CreateShortcut "$SMPROGRAMS\IconScape\IconScape.lnk" "$INSTDIR\host\bin\IconScape.exe"
+  CreateShortcut "$SMPROGRAMS\IconScape\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  WriteRegStr HKCU "Software\IconScape\Installer" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "DisplayName" "IconScape"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "Publisher" "IconScape contributors"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "DisplayIcon" "$INSTDIR\host\bin\IconScape.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "QuietUninstallString" '$\"$INSTDIR\Uninstall.exe$\" /S'
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "NoModify" 1
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "NoRepair" 1
   ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview" "EstimatedSize" $0
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape" "EstimatedSize" $0
 SectionEnd
 
 Function un.onInit
@@ -128,25 +137,25 @@ Function un.onInit
   SetRegView 64
 FunctionEnd
 Section "Uninstall"
-  IfFileExists "$INSTDIR\host\bin\Deskland.exe" 0 unclosed
-  ExecWait '"$INSTDIR\host\bin\Deskland.exe" --exit-installed' $0
+  IfFileExists "$INSTDIR\host\bin\IconScape.exe" 0 unclosed
+  ExecWait '"$INSTDIR\host\bin\IconScape.exe" --exit-installed' $0
   ${If} $0 != 0
     MessageBox MB_ICONSTOP "$(CloseFailed)"
     SetErrorLevel 3
     Abort
   ${EndIf}
   unclosed:
-  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DesklandPreview"
-  ${UnStrStr} $1 $0 '$\"$INSTDIR\host\bin\Deskland.exe$\"'
+  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "IconScape"
+  ${UnStrStr} $1 $0 '$\"$INSTDIR\host\bin\IconScape.exe$\"'
   ${If} $1 != ""
-    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DesklandPreview"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "IconScape"
   ${EndIf}
   !include "${DELETE_LIST}"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
-  Delete "$SMPROGRAMS\Deskland Preview\Deskland Preview.lnk"
-  Delete "$SMPROGRAMS\Deskland Preview\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\Deskland Preview"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesklandPreview"
-  DeleteRegKey HKCU "Software\DesklandPreview\Installer"
+  Delete "$SMPROGRAMS\IconScape\IconScape.lnk"
+  Delete "$SMPROGRAMS\IconScape\Uninstall.lnk"
+  RMDir "$SMPROGRAMS\IconScape"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\IconScape"
+  DeleteRegKey HKCU "Software\IconScape\Installer"
 SectionEnd

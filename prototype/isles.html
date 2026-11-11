@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deskland · 浮空岛</title>
+<title>IconScape · 浮空岛</title>
 <!--
-  Deskland · floating isles theme (fantasy; top view; Canvas 2D)
+  IconScape · floating isles theme (fantasy; top view; Canvas 2D)
   Art direction: islands of moss and rock float above a sea of clouds at dusk; the icons rest on the islands
   - Islands: the same icon field as the other themes (a sum of Gaussians around the icons, warped by noise); the coast is traced with marching squares
     and drawn as vector paths. Deeper contours of the same field, pushed down, make the rocky underside taper like an upside-down cone
@@ -42,11 +42,23 @@ const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
 // Defaults must match the "default" values of the isles theme in themes.json
-const P = { sigma: 70, warp: 40, islets: 5, trees: 0.5, crystals: 5, motes: 30, flow: 1, dragon: 1, adaptive: 1, cap30: true };
+const P = { sigma: 70, warp: 40, islets: 5, trees: 0.5, sky: 0, crystals: 5, motes: 30, flow: 1, dragon: 1, adaptive: 1, cap30: true };
 const DEFAULTS = Object.assign({}, P);
 // Accepted parameters: [min, max, integer]
-const RANGES = { sigma: [40, 200], warp: [0, 80], islets: [0, 12, 1], trees: [0, 1], crystals: [0, 12, 1],
+const RANGES = { sigma: [40, 200], warp: [0, 80], islets: [0, 12, 1], trees: [0, 1], sky: [0, 3, 1], crystals: [0, 12, 1],
   motes: [0, 80, 1], flow: [0, 3], dragon: [0, 1, 1], adaptive: [0, 1, 1] };
+// Sky colors: dusk, dawn, day, night. deep / mid / glow: the gradient far below; puff: shade, body and lit side of the clouds;
+// stars and nebula: how much of them shows; shadow: the islands' shadow on the clouds; light: tint on the lit and the shaded side of the grass
+const SKIES = [
+  { deep: '#120c2a', mid: '#2a1f5c', glow: '#7a4b9a', puff: ['rgba(70,52,130,0.55)', 'rgba(150,128,206,0.6)', 'rgba(244,196,222,0.42)'],
+    stars: 1, nebula: 0.22, shadow: 'rgba(8,3,30,0.6)', light: ['rgba(255,205,170,0.16)', 'rgba(40,20,90,0.2)'] },
+  { deep: '#3a2147', mid: '#a5527a', glow: '#ffb37a', puff: ['rgba(150,80,110,0.5)', 'rgba(255,172,150,0.62)', 'rgba(255,236,200,0.5)'],
+    stars: 0.25, nebula: 0.1, shadow: 'rgba(60,20,50,0.5)', light: ['rgba(255,220,160,0.2)', 'rgba(120,40,90,0.16)'] },
+  { deep: '#2f6fb8', mid: '#58a6e0', glow: '#bfe6ff', puff: ['rgba(120,150,190,0.5)', 'rgba(235,243,252,0.78)', 'rgba(255,255,255,0.6)'],
+    stars: 0, nebula: 0, shadow: 'rgba(20,50,100,0.4)', light: ['rgba(255,255,230,0.14)', 'rgba(30,60,110,0.12)'] },
+  { deep: '#03050f', mid: '#0c1433', glow: '#1d2f66', puff: ['rgba(10,16,40,0.6)', 'rgba(52,66,120,0.55)', 'rgba(140,160,220,0.3)'],
+    stars: 2.2, nebula: 0.1, shadow: 'rgba(0,0,10,0.6)', light: ['rgba(150,170,255,0.1)', 'rgba(0,0,30,0.36)'] },
+];
 const GEOMETRY_KEYS = ['sigma', 'warp', 'islets', 'trees', 'crystals', 'adaptive'];
 
 /* ======================================================================
@@ -220,7 +232,7 @@ function buildGeometry() {
   const G = 26;
   for (let cy = 0; cy * G < H; cy++) for (let cx = 0; cx * G < W; cx++) {
     const h = hash2(cx, cy, 11), grove = ss(0.3, 0.62, vnoise(cx * 0.16, cy * 0.16, 5));
-    if (h > P.trees * (0.25 + 0.75 * grove)) continue;
+    if (h > P.trees * (0.45 + 1.1 * grove)) continue;
     const x = (cx + 0.15 + 0.7 * hash2(cx, cy, 12)) * G, y = (cy + 0.15 + 0.7 * hash2(cx, cy, 13)) * G;
     const r = 7 + 8 * hash2(cx, cy, 14);
     if (!inLand(x, y, r + 6) || nearIcon(x, y, r + 6)) continue;
@@ -267,13 +279,12 @@ const ctx = cv.getContext('2d', { alpha: false });
 function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; }
 function cached(list, build) {
   const w = cv.width, h = cv.height;
-  let hit = list.find(e => e.w === w && e.h === h);
-  if (!hit) { hit = { w, h, c: build(w, h, cv._scale) }; list.unshift(hit); if (list.length > 2) list.pop(); }
+  let hit = list.find(e => e.w === w && e.h === h && e.sky === P.sky);
+  if (!hit) { hit = { w, h, sky: P.sky, c: build(w, h, cv._scale) }; list.unshift(hit); if (list.length > 2) list.pop(); }
   return hit.c;
 }
 
-const SKY_DEEP = rgb('#120c2a'), SKY_MID = rgb('#2a1f5c'), SKY_GLOW = rgb('#7a4b9a');
-const GRASS = rgb('#4f9a5c'), GRASS_LIGHT = rgb('#93cf7d'), GRASS_TEAL = rgb('#2f7f72'), GRASS_DRY = rgb('#a3b85a');
+const GRASS = rgb('#3f8a55'), GRASS_LIGHT = rgb('#9bd67a'), GRASS_TEAL = rgb('#22706c'), GRASS_DRY = rgb('#b3c060');
 const ROCK_TOP = rgb('#7a6250'), ROCK_LOW = rgb('#2b1f3c');
 
 // Large color washes on the grass: a low-resolution image from the field noise, enlarged smoothly
@@ -309,17 +320,19 @@ function grassPattern(x, s) {
 // Sky far below: dusk gradient, faint nebula and stars between the clouds
 const baseCache = [];
 function buildBase(cw, ch, s) {
-  const c = makeCanvas(cw, ch), x = c.getContext('2d');
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), sky = SKIES[P.sky];
   x.setTransform(s, 0, 0, s, 0, 0);
   const g = x.createRadialGradient(W * 0.22, H * 0.15, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.95);
-  g.addColorStop(0, mix(SKY_GLOW, SKY_GLOW, 0)); g.addColorStop(0.35, mix(SKY_MID, SKY_MID, 0)); g.addColorStop(1, mix(SKY_DEEP, SKY_DEEP, 0));
+  g.addColorStop(0, sky.glow); g.addColorStop(0.35, sky.mid); g.addColorStop(1, sky.deep);
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.globalCompositeOperation = 'screen'; x.globalAlpha = 0.22; x.imageSmoothingQuality = 'high';
-  x.filter = 'hue-rotate(150deg) saturate(1.6)';
-  x.drawImage(tone(), 0, 0, W, H);
-  x.filter = 'none'; x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  if (sky.nebula > 0) {
+    x.globalCompositeOperation = 'screen'; x.globalAlpha = sky.nebula; x.imageSmoothingQuality = 'high';
+    x.filter = 'hue-rotate(150deg) saturate(1.6)';
+    x.drawImage(tone(), 0, 0, W, H);
+    x.filter = 'none'; x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  }
   const r = mulberry32(seed + 5);
-  for (let i = 0, n = Math.round(W * H / 2600); i < n; i++) {
+  for (let i = 0, n = Math.round(W * H / 2600 * sky.stars); i < n; i++) {
     x.fillStyle = `rgba(255,240,255,${0.15 + 0.5 * r() * r()})`;
     x.beginPath(); x.arc(r() * W, r() * H, 0.4 + r() * 0.9, 0, 6.29); x.fill();
   }
@@ -389,14 +402,14 @@ function drawCrystal(x, c) {
 function buildIslands(geo, cw, ch, s) {
   const c = makeCanvas(cw, ch), x = c.getContext('2d'), top = geo.levels[0];
   x.setTransform(s, 0, 0, s, 0, 0);
-  x.save(); x.filter = `blur(${Math.max(1, Math.round(16 * s))}px)`; x.translate(70, 112);
-  x.fillStyle = 'rgba(10,4,34,0.42)'; x.fill(geo.levels[1], 'evenodd'); x.restore();
+  x.save(); x.filter = `blur(${Math.max(1, Math.round(12 * s))}px)`; x.translate(84, 132);
+  x.fillStyle = SKIES[P.sky].shadow; x.fill(geo.levels[1], 'evenodd'); x.restore();
   // Underside: deeper contours of the same field, pushed further down, so the rock narrows toward the bottom
-  for (const [li, d0, d1] of [[3, 46, 34], [2, 33, 22], [1, 21, 11], [0, 10, 1]]) {
+  for (const [li, d0, d1] of [[3, 78, 58], [2, 56, 36], [1, 34, 16], [0, 14, 1]]) {
     for (let d = d0; d >= d1; d -= 1.5) {
-      const k = d / 46, band = 0.05 * Math.sin(d * 1.7);
-      x.fillStyle = mix(ROCK_TOP, ROCK_LOW, Math.min(1, Math.max(0, k * 1.1 + band)));
-      x.save(); x.translate(-d * 0.08, d); x.fill(geo.levels[li], 'evenodd'); x.restore();
+      const k = d / 78, band = 0.07 * Math.sin(d * 1.1);
+      x.fillStyle = mix(ROCK_TOP, ROCK_LOW, Math.min(1, Math.max(0, Math.pow(k, 0.7) + band)));
+      x.save(); x.translate(-d * 0.06, d); x.fill(geo.levels[li], 'evenodd'); x.restore();
     }
   }
   x.fillStyle = 'rgba(60,40,30,1)'; x.save(); x.translate(0, 2.5); x.fill(top, 'evenodd'); x.restore();
@@ -405,14 +418,15 @@ function buildIslands(geo, cw, ch, s) {
   x.imageSmoothingQuality = 'high'; x.drawImage(tone(), 0, 0, Gw * STEP, Gh * STEP);
   x.fillStyle = grassPattern(x, s); x.fillRect(0, 0, W, H);
   const light = x.createLinearGradient(0, 0, W, H);
-  light.addColorStop(0, 'rgba(255,205,170,0.16)'); light.addColorStop(1, 'rgba(40,20,90,0.2)');
+  light.addColorStop(0, SKIES[P.sky].light[0]); light.addColorStop(1, SKIES[P.sky].light[1]);
   x.fillStyle = light; x.fillRect(0, 0, W, H);
   const band = (dx, dy, color) => {                // the part of the island not covered by itself shifted by (dx, dy): a rim on the opposite side
     const p = new Path2D(); p.rect(-60, -60, W + 120, H + 120);
     p.addPath(top, new DOMMatrix([1, 0, 0, 1, dx, dy]));
     x.fillStyle = color; x.fill(p, 'evenodd');
   };
-  band(5, 6, 'rgba(225,255,175,0.22)'); band(1.6, 2, 'rgba(240,255,205,0.5)'); band(-4, -5, 'rgba(18,40,40,0.3)');
+  band(9, 11, 'rgba(225,255,175,0.14)'); band(4, 5, 'rgba(225,255,175,0.22)'); band(1.6, 2, 'rgba(240,255,205,0.55)');
+  band(-10, -12, 'rgba(14,34,44,0.16)'); band(-4, -5, 'rgba(14,34,44,0.3)');
   const r = mulberry32(seed + 17), FL = ['#ffd6f0', '#fff6c2', '#e9e3ff', '#ff9ec8'];   // flowers in small clumps
   for (let cy = 0; cy * 9 < H; cy++) for (let cx = 0; cx * 9 < W; cx++) {
     if (hash2(cx, cy, 41) > 0.16 * ss(0.5, 0.75, vnoise(cx * 0.09, cy * 0.09, 42))) continue;
@@ -440,7 +454,7 @@ function glowSprite(inner, outer) {
 }
 const GLOW = [glowSprite('rgba(220,255,255,0.9)', 'rgba(70,215,245,0.45)'), glowSprite('rgba(250,225,255,0.9)', 'rgba(185,110,245,0.45)')];
 const MOTE = glowSprite('rgba(255,255,220,1)', 'rgba(190,255,140,0.5)');
-function puffSprite(k) {
+function puffSprite(k, cols) {
   const S = 256, c = makeCanvas(S, S), x = c.getContext('2d'), r = mulberry32(1234 + k);
   const blobs = [];
   for (let i = 0; i < 13; i++) {
@@ -454,17 +468,18 @@ function puffSprite(k) {
       x.fillStyle = g; x.beginPath(); x.arc(bx + dx, by + dy, br * kr, 0, 6.29); x.fill();
     }
   };
-  pass(7, 9, 1, 'rgba(70,52,130,0.55)'); pass(0, 0, 0.95, 'rgba(150,128,206,0.6)'); pass(-7, -9, 0.7, 'rgba(244,196,222,0.42)');
+  pass(7, 9, 1, cols[0]); pass(0, 0, 0.95, cols[1]); pass(-7, -9, 0.7, cols[2]);
   return c;
 }
-const PUFFS = [0, 1, 2].map(puffSprite);
+const puffSets = [];                             // per sky color: three cloud shapes, drawn the first time that sky is used
+const puffSet = () => puffSets[P.sky] || (puffSets[P.sky] = [0, 1, 2].map(k => puffSprite(k, SKIES[P.sky].puff)));
 let puffs = [], motes = [];
 function initMovers() {
   const r = mulberry32(seed + 77);
   puffs = [];
   for (let i = 0, n = Math.round(W * H / 60000) + 4; i < n; i++) {
     const depth = r();
-    puffs.push({ x: r() * (W + 600) - 300, y: r() * (H + 400) - 200, w: 260 + 340 * depth, sp: PUFFS[i % 3], depth, a: 0.55 + 0.4 * depth });
+    puffs.push({ x: r() * (W + 600) - 300, y: r() * (H + 400) - 200, w: 260 + 340 * depth, k: i % 3, depth, a: 0.55 + 0.4 * depth });
   }
   puffs.sort((a, b) => a.depth - b.depth);
   syncMotes();
@@ -598,7 +613,8 @@ function draw(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(cached(baseCache, buildBase), 0, 0);
   ctx.setTransform(s, 0, 0, s, 0, 0);
-  for (const p of puffs) { ctx.globalAlpha = p.a; ctx.drawImage(p.sp, p.x - p.w / 2, p.y - p.w / 3, p.w, p.w * 0.66); }
+  const set = puffSet();
+  for (const p of puffs) { ctx.globalAlpha = p.a; ctx.drawImage(set[p.k], p.x - p.w / 2, p.y - p.w / 3, p.w, p.w * 0.66); }
   if (dragon) { ctx.globalAlpha = 1; const d = dragon, sh = { ...d, x: d.x + 150, y: d.y + 230, size: d.size * 1.1 }; drawDragon(ctx, sh, true, t); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const aOld = geoOld && e < 1 ? 1 - ss(0.35, 1, e) : 0, aNew = geoNew ? (geoOld ? ss(0, 0.65, e) : ss(0, 1, e)) : 0;
@@ -636,7 +652,7 @@ function reseed(v) {
 }
 function applySettings(v) {
   if (typeof v.seed === 'number' && v.seed !== seed) reseed(v.seed);   // "Refresh" in the settings window: new scene (desktop and preview use the same seed)
-  let geometry = false;
+  let geometry = false, redraw = false;
   for (const k in v) {
     const r = RANGES[k];
     if (!r || typeof v[k] !== 'number' || !Number.isFinite(v[k])) continue;
@@ -645,9 +661,11 @@ function applySettings(v) {
     P[k] = val;
     if (GEOMETRY_KEYS.includes(k)) geometry = true;
     if (k === 'motes') syncMotes();
+    if (k === 'sky') redraw = true;                // the cached layers are kept per sky color: nothing to rebuild
     if (k === 'dragon' && val) dragonWait = Math.min(dragonWait, 2);   // just switched on: show it soon
   }
   if (geometry && iconsSeen) rebuildSoon();
+  else if (redraw && paused && iconsSeen) draw(performance.now());
 }
 function drawGhosts() {
   document.getElementById('ghosts').innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');

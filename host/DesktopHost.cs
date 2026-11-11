@@ -615,9 +615,6 @@ class HostContext : ApplicationContext
             case "openShare":
                 if (lastShare != null && File.Exists(lastShare)) Process.Start(lastShare);
                 break;
-            case "openWebsite":                             // the locked themes belong to the Deskland Wallpaper edition: their info points to the Deskland website
-                Process.Start("https://deskland.app/");
-                break;
             case "revealShare":
                 if (lastShare != null && File.Exists(lastShare)) Process.Start("explorer.exe", "/select,\"" + lastShare + "\"");
                 break;

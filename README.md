@@ -33,7 +33,7 @@ Added in IconScape:
 | ![Steampunk theme](prototype/thumbs/steampunk.webp) | ![Cosmos theme](prototype/thumbs/cosmos.webp) |
 | Riveted metal plates, meshing gears, copper pipes with pressure gauges and steam, and a passing airship. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
 
-The theme list also shows 11 locked themes from the Deskland Wallpaper edition. **They are Deskland's paid themes: IconScape includes only their names, descriptions and thumbnails — not their page code, parameters or implementation — and does not sell them.** Clicking one points to the Deskland website.
+The theme list contains only these six themes. The locked preview cards of Deskland's paid Wallpaper edition, which Deskland Preview shows, are not part of IconScape.
 
 ## Features
 
@@ -112,7 +112,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 | `prototype/steam.html` | Steampunk theme |
 | `prototype/cosmos.html` | Cosmos theme |
 | `prototype/settings.html` | Settings interface |
-| `prototype/themes.json` | Full free-theme definitions and locked-theme display metadata |
+| `prototype/themes.json` | Theme definitions: pages, parameters, defaults and thumbnails |
 | `prototype/share.js` | Privacy-preserving image and animation sharing |
 | `prototype/i18n/` | Interface and theme texts: English, Italian and the interface texts in Simplified Chinese |
 | `prototype/assets/` | Images used by the included themes |
@@ -129,6 +129,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 Version 0.1.4, on top of Deskland Preview 0.1.3:
 
 - **New name and icon:** IconScape, with its own executable, data folder, startup entry, install directory and instance identity.
+- **Only included themes:** the 11 locked cards of the Deskland Wallpaper edition, with their purchase dialog and thumbnails, have been removed.
 - **Multi-monitor:** one wallpaper window per monitor instead of the primary monitor only; windows are created, moved or closed when the monitor layout changes.
 - **Pause per monitor:** a monitor pauses when any maximized or full-screen window hides it, not only the foreground window; overlays that cover the screen without hiding anything are ignored.
 - **Italian interface:** settings, tray menu, messages and theme texts; the share buttons and share error messages now follow the interface language.
@@ -176,7 +177,7 @@ Aggiunti in IconScape:
 | ![Tema Steampunk](prototype/thumbs/steampunk.webp) | ![Tema Universo](prototype/thumbs/cosmos.webp) |
 | Piastre di metallo rivettate, ingranaggi che ingranano davvero, tubi di rame con manometri e vapore, e un dirigibile di passaggio. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
 
-L'elenco dei temi mostra anche 11 temi bloccati dell'edizione Wallpaper di Deskland. **Sono temi a pagamento di Deskland: IconScape ne include solo nome, descrizione e miniatura, non il codice delle pagine, i parametri o l'implementazione, e non li vende.** Facendo clic su uno di essi si viene rimandati al sito di Deskland.
+L'elenco dei temi contiene solo questi sei. Le schede bloccate dell'edizione Wallpaper a pagamento di Deskland, presenti in Deskland Preview, non fanno parte di IconScape.
 
 ### Funzioni
 
@@ -255,7 +256,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 | `prototype/steam.html` | Tema Steampunk |
 | `prototype/cosmos.html` | Tema Universo |
 | `prototype/settings.html` | Interfaccia delle impostazioni |
-| `prototype/themes.json` | Definizione completa dei temi gratuiti e dati da mostrare per i temi bloccati |
+| `prototype/themes.json` | Definizione dei temi: pagine, parametri, valori predefiniti e miniature |
 | `prototype/share.js` | Condivisione di immagini e animazioni rispettosa della privacy |
 | `prototype/i18n/` | Testi dell'interfaccia e dei temi: inglese, italiano e testi dell'interfaccia in cinese semplificato |
 | `prototype/assets/` | Immagini usate dai temi inclusi |
@@ -272,6 +273,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 Versione 0.1.4, basata su Deskland Preview 0.1.3:
 
 - **Nome e icona nuovi:** IconScape, con eseguibile, cartella dei dati, voce di avvio, cartella di installazione e identità dell'istanza propri.
+- **Solo i temi inclusi:** sono state tolte le 11 schede bloccate dell'edizione Wallpaper di Deskland, con la finestra di acquisto e le miniature.
 - **Multi monitor:** una finestra di sfondo per ogni monitor invece del solo monitor principale; le finestre vengono create, spostate o chiuse quando cambia la disposizione dei monitor.
 - **Pausa per monitor:** un monitor va in pausa quando lo nasconde una qualsiasi finestra massimizzata o a schermo intero, non solo quella in primo piano; le sovrapposizioni che coprono lo schermo senza nascondere nulla vengono ignorate.
 - **Interfaccia in italiano:** impostazioni, menu dell'icona, messaggi e testi dei temi; anche i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
@@ -319,7 +321,7 @@ IconScape 新增：
 | ![蒸汽朋克主题](prototype/thumbs/steampunk.webp) | ![宇宙主题](prototype/thumbs/cosmos.webp) |
 | 铆接的金属板、咬合转动的齿轮、带压力表和蒸汽的铜管，以及偶尔飘过的飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
 
-主题列表还展示 Deskland 壁纸版的 11 个锁定主题。**这些是 Deskland 的付费主题：IconScape 只包含它们的名称、简介和缩略图，不包含页面源码、参数或其他实现，也不出售它们。**点击后会指向 Deskland 官网。
+主题列表只包含这六个主题。Deskland Preview 中展示的 Deskland 付费壁纸版锁定主题卡片不属于 IconScape。
 
 ### 功能
 
@@ -396,7 +398,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 | `prototype/steam.html` | 蒸汽朋克主题 |
 | `prototype/cosmos.html` | 宇宙主题 |
 | `prototype/settings.html` | 设置界面 |
-| `prototype/themes.json` | 免费主题完整定义及锁定主题展示信息 |
+| `prototype/themes.json` | 主题定义：页面、参数、默认值和缩略图 |
 | `prototype/share.js` | 隐私保护的图片和动画分享 |
 | `prototype/i18n/` | 界面与主题文字：英文、意大利语，以及简体中文界面文字 |
 | `prototype/assets/` | 随附主题图片素材 |
@@ -413,6 +415,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 版本 0.1.4，基于 Deskland Preview 0.1.3：
 
 - **新名称和图标：**IconScape，拥有独立的可执行文件、数据目录、启动项、安装目录和实例标识。
+- **只保留包含的主题：**移除了 Deskland 壁纸版的 11 个锁定主题卡片、购买窗口和缩略图。
 - **多显示器：**每个显示器一个壁纸窗口，不再只覆盖主显示器；显示器布局变化时自动创建、移动或关闭窗口。
 - **按显示器暂停：**任何最大化或全屏窗口遮住某个显示器时暂停该显示器，不只看前台窗口；覆盖整个屏幕但不遮挡内容的悬浮层不会触发暂停。
 - **意大利语界面：**设置、托盘菜单、提示和主题文字；分享按钮和分享错误信息也跟随界面语言。

@@ -43,13 +43,10 @@ $themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam
     'assets\beach-coconut-palm-v2.png', 'assets\beach-coconut-palm-curved.png', 'assets\beach-coconut-palm-airy.png', 'assets\beach-coconut-palm-windswept.png', 'assets\beach-coconut-palm-arch.png',
     'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png')
 $themes = (Get-Content -LiteralPath (Join-Path $root 'prototype\themes.json') -Raw -Encoding UTF8 | ConvertFrom-Json).themes
-$ready = @($themes | Where-Object { $_.status -eq 'ready' })
-$locked = @($themes | Where-Object { $_.locked -eq $true })
-if ($themes.Count -ne 17 -or $ready.Count -ne 6 -or $locked.Count -ne 11 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,meadow,steampunk')) {
-    throw 'Expected six usable themes and eleven locked preview cards'
-}
-foreach ($theme in $locked) {
-    if ($theme.page -or $theme.groups) { throw 'Locked themes must not contain page source or settings' }
+$ready = @($themes | Where-Object { $_.status -eq 'ready' -and $_.locked -ne $true -and $_.page })
+# IconScape lists only the themes it includes: no locked or paid preview cards
+if ($themes.Count -ne 6 -or $ready.Count -ne 6 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,meadow,steampunk')) {
+    throw 'Expected exactly six usable themes and no locked ones'
 }
 foreach ($theme in $themes) {
     $match = [regex]::Match([string]$theme.thumb, 'url\(thumbs/([^\)?]+)')

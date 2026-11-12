@@ -721,11 +721,11 @@
       "id": "ninja",
       "adaptive": true,
       "name": "忍者之村",
-      "desc": "俯瞰日本村落：图标落在瓦屋顶上，周围的枯山水沙纹顺着屋顶的形状铺开；石灯笼、樱花或红叶，忍者在烟雾中现身，在屋顶间跳跃，掷出手里剑后消失",
+      "desc": "七十年代日本动画风格的忍者之村：俯瞰的瓦顶房屋有白墙和木梁，四周是枯山水沙纹；平涂上色、黑色描线、硬朗的阴影和胶片颗粒；石灯笼、樱花或红叶，忍者在烟雾中现身，在屋顶间跳跃，掷出手里剑后消失",
       "page": "ninja.html",
       "status": "ready",
       "product": "free",
-      "thumb": "url(thumbs/ninja.webp?v=3b896c6482) center / cover no-repeat, radial-gradient(ellipse 20% 30% at 25% 40%, #262b38 80%, #7f8899 84%, transparent 90%), radial-gradient(ellipse 14% 20% at 70% 62%, #262b38 80%, #7f8899 84%, transparent 90%), linear-gradient(160deg, #2f4a35 0%, #1f3127 100%)",
+      "thumb": "url(thumbs/ninja.webp?v=bd4093e48c) center / cover no-repeat, radial-gradient(ellipse 20% 30% at 25% 40%, #262b38 80%, #7f8899 84%, transparent 90%), radial-gradient(ellipse 14% 20% at 70% 62%, #262b38 80%, #7f8899 84%, transparent 90%), linear-gradient(160deg, #2f4a35 0%, #1f3127 100%)",
       "thumbSource": "custom",
       "groups": [
         {
@@ -818,12 +818,22 @@
             {
               "key": "flow",
               "label": "速度",
-              "hint": "花瓣和云影飘动的速度",
+              "hint": "花瓣和叶子飘落的速度",
               "min": 0,
               "max": 3,
               "step": 0.05,
               "default": 1,
               "format": "times"
+            },
+            {
+              "key": "film",
+              "label": "胶片效果",
+              "hint": "七十年代动画胶片的颗粒、划痕和暗角",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
             }
           ]
         },
@@ -839,6 +849,113 @@
                 "显示"
               ],
               "default": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "woodland",
+      "adaptive": true,
+      "name": "童话森林",
+      "desc": "经典卡通风格的童话森林：图标浮在长满睡莲的池塘上，有青蛙和一家小鸭子；周围是圆圆的树、红色蘑菇和小花，小兔子、狐狸和刺猬在散步，还有小蓝鸟和蝴蝶；可选白天、黄昏或有萤火虫的夜晚",
+      "page": "woodland.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/woodland.webp?v=71937245cd) center / cover no-repeat, radial-gradient(ellipse 18% 30% at 22% 40%, #3b92c0 80%, #d9b97a 84%, transparent 90%), radial-gradient(ellipse 14% 20% at 70% 62%, #3b92c0 80%, #d9b97a 84%, transparent 90%), linear-gradient(160deg, #9ad267 0%, #79b94f 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "池塘",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "池塘大小",
+              "hint": "图标下的池塘从图标往外铺多远",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 70,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "岸线曲折",
+              "hint": "池塘岸线的不规则程度",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 34
+            }
+          ]
+        },
+        {
+          "name": "森林",
+          "params": [
+            {
+              "key": "trees",
+              "label": "树木",
+              "hint": "草地上的树和灌木有多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "flowers",
+              "label": "花朵",
+              "hint": "草地上的花和蘑菇有多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "time",
+              "label": "时间",
+              "options": [
+                "白天",
+                "黄昏",
+                "夜晚"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "动物",
+          "params": [
+            {
+              "key": "animals",
+              "label": "小动物",
+              "hint": "每个显示器上散步的小动物数量（小兔子、狐狸、刺猬）",
+              "min": 0,
+              "max": 6,
+              "step": 1,
+              "default": 3,
+              "unit": "只"
+            },
+            {
+              "key": "birds",
+              "label": "小蓝鸟",
+              "hint": "偶尔从天上飞过的小蓝鸟",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            },
+            {
+              "key": "flow",
+              "label": "速度",
+              "hint": "动物、小鸭子和蝴蝶移动的速度",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
             }
           ]
         }

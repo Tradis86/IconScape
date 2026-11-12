@@ -603,11 +603,11 @@
       "id": "manga",
       "adaptive": true,
       "name": "漫画",
-      "desc": "黑白漫画的一页：图标落在浓墨上，四周迸出集中线；分镜格里有网点、速度线、夜景和拟声词，樱花飘落，偶尔有乌鸦飞过",
+      "desc": "黑白漫画的一页：图标落在迸出集中线的浓墨上；分镜格是用钢笔线和排线画的背景：透视商店街、夜晚的城市、积雨云和电线杆、层叠的山与松树、大海与礁石、竹林、神社石阶与鸟居、月下的屋顶与五重塔，还有拟声词，樱花飘落，偶尔有乌鸦飞过",
       "page": "manga.html",
       "status": "ready",
       "product": "free",
-      "thumb": "url(thumbs/manga.webp?v=e3ce324b10) center / cover no-repeat, radial-gradient(ellipse 18% 30% at 22% 40%, #121212 80%, transparent 84%), radial-gradient(ellipse 14% 20% at 70% 60%, #121212 80%, transparent 84%), repeating-linear-gradient(90deg, #f6f2e9 0 31%, #121212 31% 32%), linear-gradient(160deg, #f6f2e9 0%, #d9d4c9 100%)",
+      "thumb": "url(thumbs/manga.webp?v=e85b5b7215) center / cover no-repeat, radial-gradient(ellipse 18% 30% at 22% 40%, #121212 80%, transparent 84%), radial-gradient(ellipse 14% 20% at 70% 60%, #121212 80%, transparent 84%), repeating-linear-gradient(90deg, #f6f2e9 0 31%, #121212 31% 32%), linear-gradient(160deg, #f6f2e9 0%, #d9d4c9 100%)",
       "thumbSource": "custom",
       "groups": [
         {
@@ -707,6 +707,133 @@
               "key": "crow",
               "label": "显示乌鸦",
               "hint": "偶尔从画面上飞过的乌鸦",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ninja",
+      "adaptive": true,
+      "name": "忍者之村",
+      "desc": "俯瞰日本村落：图标落在瓦屋顶上，周围的枯山水沙纹顺着屋顶的形状铺开；石灯笼、樱花或红叶，忍者在烟雾中现身，在屋顶间跳跃，掷出手里剑后消失",
+      "page": "ninja.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/ninja.webp?v=3b896c6482) center / cover no-repeat, radial-gradient(ellipse 20% 30% at 25% 40%, #262b38 80%, #7f8899 84%, transparent 90%), radial-gradient(ellipse 14% 20% at 70% 62%, #262b38 80%, #7f8899 84%, transparent 90%), linear-gradient(160deg, #2f4a35 0%, #1f3127 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "村落",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "屋顶大小",
+              "hint": "图标下的屋顶从图标往外铺多远",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 70,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "屋顶轮廓",
+              "hint": "屋顶轮廓的不规则程度",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 30
+            },
+            {
+              "key": "rake",
+              "label": "枯山水沙纹",
+              "hint": "屋顶和岩石周围耙出的沙纹圈数，设为 0 不显示沙地",
+              "min": 0,
+              "max": 12,
+              "step": 1,
+              "default": 4,
+              "unit": "圈"
+            },
+            {
+              "key": "trees",
+              "label": "树木",
+              "hint": "苔地上的树和竹子有多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "lanterns",
+              "label": "石灯笼",
+              "hint": "每个显示器上沙地边的石灯笼数量",
+              "min": 0,
+              "max": 10,
+              "step": 1,
+              "default": 3,
+              "unit": "座"
+            }
+          ]
+        },
+        {
+          "name": "氛围",
+          "params": [
+            {
+              "key": "time",
+              "label": "时间",
+              "options": [
+                "夜晚",
+                "黄昏",
+                "白天"
+              ],
+              "default": 0
+            },
+            {
+              "key": "season",
+              "label": "季节",
+              "hint": "春天是樱花和花瓣，秋天是红叶和落叶",
+              "options": [
+                "春",
+                "秋"
+              ],
+              "default": 0
+            },
+            {
+              "key": "leaves",
+              "label": "飘落的花瓣",
+              "hint": "每个显示器上飘落的花瓣或叶子数量",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 16,
+              "unit": "片"
+            },
+            {
+              "key": "flow",
+              "label": "速度",
+              "hint": "花瓣和云影飘动的速度",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        },
+        {
+          "name": "忍者",
+          "params": [
+            {
+              "key": "ninja",
+              "label": "显示忍者",
+              "hint": "忍者偶尔在烟雾中现身，在屋顶间跳跃",
               "options": [
                 "隐藏",
                 "显示"

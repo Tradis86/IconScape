@@ -127,9 +127,75 @@
     "errStart": "Impossibile avviare: {msg}"
   },
   "themes": {
+    "ninja": {
+      "name": "Villaggio ninja",
+      "desc": "Un villaggio giapponese visto dall'alto: le icone poggiano su tetti di tegole circondati da giardini zen di sabbia rastrellata; lanterne di pietra, ciliegi in fiore o aceri rossi e un ninja che compare in uno sbuffo di fumo, salta di tetto in tetto, lancia uno shuriken e svanisce",
+      "groups": [
+        "Villaggio",
+        "Atmosfera",
+        "Ninja"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione dei tetti",
+          "hint": "Quanto si estendono i tetti intorno alle tue icone"
+        },
+        "warp": {
+          "label": "Contorno dei tetti",
+          "hint": "Quanto è irregolare il profilo dei tetti"
+        },
+        "rake": {
+          "label": "Sabbia rastrellata",
+          "hint": "Quanti solchi di sabbia circondano tetti e rocce; con 0 la sabbia sparisce",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Alberi",
+          "hint": "Quanti alberi e bambù crescono sul muschio"
+        },
+        "lanterns": {
+          "label": "Lanterne di pietra",
+          "hint": "Lanterne accese ai bordi della sabbia, per ogni monitor",
+          "unit": ""
+        },
+        "time": {
+          "label": "Momento del giorno",
+          "options": [
+            "Notte",
+            "Tramonto",
+            "Giorno"
+          ]
+        },
+        "season": {
+          "label": "Stagione",
+          "hint": "In primavera ciliegi e petali, in autunno aceri e foglie rosse",
+          "options": [
+            "Primavera",
+            "Autunno"
+          ]
+        },
+        "leaves": {
+          "label": "Petali e foglie",
+          "hint": "Quanti petali o foglie cadono su ogni monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocità",
+          "hint": "Quanto velocemente si muovono petali, foglie e ombre delle nuvole"
+        },
+        "ninja": {
+          "label": "Mostra il ninja",
+          "hint": "Un ninja che ogni tanto compare e salta di tetto in tetto",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        }
+      }
+    },
     "manga": {
       "name": "Manga",
-      "desc": "Una tavola di manga in bianco e nero: le icone poggiano su macchie d'inchiostro da cui esplodono linee d'impatto; intorno vignette con retini, linee cinetiche, città notturne e onomatopee, petali di ciliegio e, ogni tanto, un corvo di passaggio",
+      "desc": "Una tavola di manga in bianco e nero: le icone poggiano su macchie d'inchiostro da cui esplodono linee d'impatto; le vignette sono fondali a pennino e tratteggio: strade in prospettiva, la città di notte, cumulonembi e pali della luce, montagne e pini, mare e scogli, bambù, la scalinata di un santuario, tetti e pagoda sotto la luna, con onomatopee, petali di ciliegio e, ogni tanto, un corvo di passaggio",
       "groups": [
         "Inchiostro",
         "Tavola",

@@ -17,9 +17,16 @@ if (-not $NsisCompiler) {
     $nsisArchive = Join-Path $cache 'nsis-3.13.zip'
     $NsisCompiler = Join-Path $cache 'nsis-3.13\makensis.exe'
     if (-not (Test-Path -LiteralPath $NsisCompiler)) {
-        Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip' -OutFile $nsisArchive -UseBasicParsing
-        if ((Get-FileHash -LiteralPath $nsisArchive -Algorithm SHA256).Hash -ne 'BA63DFFC4410EE89193E1CB5A41989991BD77C61068DA17E3156D136B7B0B3D8') { throw 'NSIS archive checksum mismatch' }
-        Expand-Archive -LiteralPath $nsisArchive -DestinationPath $cache -Force
+		$expectedHash = 'BA63DFFC4410EE89193E1CB5A41989991BD77C61068DA17E3156D136B7B0B3D8'
+		if (-not (Test-Path -LiteralPath $nsisArchive)) {
+			Write-Host "File non trovato in locale. Scaricalo manualmente dal browser e salvalo in: $nsisArchive" -ForegroundColor Yellow
+			Start-Process "https://sourceforge.net"
+			throw "Download automatico bloccato da Cloudflare. Copia il file scaricato nel percorso indicato e rilancia lo script."
+		}
+		if ((Get-FileHash -LiteralPath $nsisArchive -Algorithm SHA256).Hash -ne $expectedHash) { 
+			throw 'NSIS archive checksum mismatch' 
+		}
+		Expand-Archive -LiteralPath $nsisArchive -DestinationPath $cache -Force
     }
 }
 if (-not $WebView2Bootstrapper) {
@@ -38,15 +45,15 @@ $WebView2Bootstrapper = [IO.Path]::GetFullPath($WebView2Bootstrapper)
 $sources = @('.gitattributes', '.gitignore', 'AGENTS.md', 'LICENSE', 'NOTICE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
     'host\DesktopHost.cs', 'host\Themes.cs', 'host\IconScape.ico', 'host\README.md', 'host\app.manifest', 'host\build.ps1', 'host\inspect.ps1',
     'tools\build-installer.ps1', 'tools\installer.nsi', 'tools\version.json', 'tools\make-icon.ps1', 'tools\serve.ps1')
-$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'manga.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
+$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'manga.html', 'ninja.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
     'i18n\en.json', 'i18n\it.json', 'i18n\zh-CN.json', 'thumbs\beach.webp', 'thumbs\meadow.webp',
     'assets\beach-coconut-palm-v2.png', 'assets\beach-coconut-palm-curved.png', 'assets\beach-coconut-palm-airy.png', 'assets\beach-coconut-palm-windswept.png', 'assets\beach-coconut-palm-arch.png',
     'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png')
 $themes = (Get-Content -LiteralPath (Join-Path $root 'prototype\themes.json') -Raw -Encoding UTF8 | ConvertFrom-Json).themes
 $ready = @($themes | Where-Object { $_.status -eq 'ready' -and $_.locked -ne $true -and $_.page })
 # IconScape lists only the themes it includes: no locked or paid preview cards
-if ($themes.Count -ne 7 -or $ready.Count -ne 7 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,manga,meadow,steampunk')) {
-    throw 'Expected exactly seven usable themes and no locked ones'
+if ($themes.Count -ne 8 -or $ready.Count -ne 8 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,manga,meadow,ninja,steampunk')) {
+    throw 'Expected exactly eight usable themes and no locked ones'
 }
 foreach ($theme in $themes) {
     $match = [regex]::Match([string]$theme.thumb, 'url\(thumbs/([^\)?]+)')

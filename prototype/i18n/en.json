@@ -126,9 +126,75 @@
     "errStart": "Couldn't start: {msg}"
   },
   "themes": {
+    "ninja": {
+      "name": "Ninja Village",
+      "desc": "A Japanese village seen from above: your icons rest on tiled roofs ringed by raked zen-garden sand; stone lanterns, cherry blossoms or red maples, and a ninja who appears in a puff of smoke, leaps from roof to roof, throws a shuriken and vanishes",
+      "groups": [
+        "Village",
+        "Atmosphere",
+        "Ninja"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Roof size",
+          "hint": "How far the roofs extend around your icons"
+        },
+        "warp": {
+          "label": "Roof outline",
+          "hint": "How irregular the outline of the roofs is"
+        },
+        "rake": {
+          "label": "Raked sand",
+          "hint": "How many sand grooves ring the roofs and rocks; 0 removes the sand",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Trees",
+          "hint": "How many trees and bamboo clumps grow on the moss"
+        },
+        "lanterns": {
+          "label": "Stone lanterns",
+          "hint": "Lit lanterns at the edge of the sand, per monitor",
+          "unit": ""
+        },
+        "time": {
+          "label": "Time of day",
+          "options": [
+            "Night",
+            "Sunset",
+            "Day"
+          ]
+        },
+        "season": {
+          "label": "Season",
+          "hint": "Spring brings cherry blossoms and petals, autumn red maples and leaves",
+          "options": [
+            "Spring",
+            "Autumn"
+          ]
+        },
+        "leaves": {
+          "label": "Petals and leaves",
+          "hint": "How many petals or leaves fall on each monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Speed",
+          "hint": "How fast the petals, leaves and cloud shadows move"
+        },
+        "ninja": {
+          "label": "Show the ninja",
+          "hint": "A ninja who now and then appears and leaps from roof to roof",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        }
+      }
+    },
     "manga": {
       "name": "Manga",
-      "desc": "A black-and-white manga page: your icons sit on ink splashes bursting with impact lines; around them panels with screentone, speed lines, night cities and sound effects, falling cherry petals and, now and then, a crow flying by",
+      "desc": "A black-and-white manga page: your icons sit on ink splashes bursting with impact lines; the panels are pen-and-hatching backgrounds: streets in perspective, the city at night, cumulonimbus and utility poles, mountains and pines, sea and rocks, bamboo, shrine steps, roofs and a pagoda under the moon, with sound effects, cherry petals and, now and then, a passing crow",
       "groups": [
         "Ink",
         "Page",

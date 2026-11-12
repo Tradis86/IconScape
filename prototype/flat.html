@@ -244,7 +244,15 @@ function mineCells() {
 /* ======================================================================
    CPU noise + tileable noise texture
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
+// Where this screen sits in the whole desktop (CSS px), from the host's layout message: the coast's warp noise and the water's textures use desktop
+// coordinates, so the coast continues across monitors; kayaks, birds and palms stay on their own monitor. Without a layout: this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -295,7 +303,7 @@ function buildNoise() {
   const N = Gw * Gh;
   NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
   for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
-    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    const i = gy * Gw + gx, x = gx * STEP + WORLD.x, y = gy * STEP + WORLD.y;   // the warp noise in desktop coordinates: the coast continues across monitors
     NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
     NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
   }
@@ -373,7 +381,8 @@ float hash2(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 float ss(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
-vec4 N(vec2 p, float scale) { return texture(uNoise, p / scale + uSeed * 0.013); }
+uniform vec2 uOff;               // this screen's top-left corner in the whole desktop: noise is sampled in desktop coordinates, so it continues across monitors
+vec4 N(vec2 p, float scale) { return texture(uNoise, (p + uOff) / scale + uSeed * 0.013); }
 float fieldS(sampler2D t, vec2 p) { return texture(t, (p / uStep + 0.5) / uGrid).r; }
 
 vec3 seaRamp(float v) {
@@ -580,7 +589,7 @@ void main() {
     const vec3 FILM = WETSAND, MARK = WETSAND * 0.97;
     float onSand = step(s, 4.0);                                                  // the white front edge is drawn only on the beach
     // the net of foam left as the wash recedes (drifting seaward with the backwash)
-    vec2 wl = worley((p - nrm * fu * 8.0) / 7.0);
+    vec2 wl = worley((p + uOff - nrm * fu * 8.0) / 7.0);
     float laceNet = (1.0 - ss(0.03, 0.1, wl.y - wl.x)) * ss(0.4, 0.62, N(p + vec2(t * 2.0, 0.0), 120.0).g);
     float wetMem = 0.0, filmA = 0.0;
     vec4 layers[3];
@@ -1031,8 +1040,17 @@ function resize() {
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
   Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
   buildNoise();
   allocField();
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed)
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise();
+  if (FB) refresh();
 }
 
 const T0 = performance.now();
@@ -1080,6 +1098,7 @@ function configureBeachPass(now, pass) {
   gl.uniform2f(U.uGrid, Gw, Gh);
   gl.uniform1f(U.uScale, cv._scale);
   gl.uniform1f(U.uSeed, (seed % 997) * 0.37);
+  gl.uniform2f(U.uOff, WORLD.x, WORLD.y);
   gl.uniform1f(U.uStep, STEP);
   gl.uniform1f(U.uMix, curMix);
   gl.uniform1f(U.uTime, (now - T0) / 1000);
@@ -1255,6 +1274,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

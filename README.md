@@ -39,7 +39,7 @@ The theme list contains only these six themes. The locked preview cards of Deskl
 
 - **Adaptive scenery:** uses the real positions of desktop icons and transitions smoothly when they move.
 - **Six complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk and Cosmos is included and saved between sessions.
-- **Every monitor:** one wallpaper per monitor, each following the icons on its own screen; monitors can be added, removed or rearranged while IconScape runs.
+- **Every monitor, one landscape:** the scene is computed over the whole desktop as your monitors are arranged, and each monitor shows its part: islands, coasts, clouds, boards and orbits continue from one monitor to the next, and a dragon, an airship or a comet crosses from one to the other. Monitors can be added, removed or rearranged while IconScape runs.
 - **Made for the desktop:** tray controls, startup on sign-in and automatic pause of each monitor that a maximized or full-screen window covers, even when that window is not in the foreground.
 - **Private sharing:** image and animation exports use sample icons and color blocks, never a screenshot of your desktop or real file names.
 - **Independent installation:** IconScape uses its own install directory, settings, startup entry and instance identity, so it can coexist with Deskland.
@@ -121,6 +121,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 ## Known limitations
 
 - All monitors show the same theme and parameters; the settings preview and sharing use the primary monitor.
+- The landscape is continuous across monitors with the same display scaling; with different scaling (for example 100% and 150%) things meet at the edge but their sizes differ. The boy and the cat (Meadow), kayaks, seabirds and palms (Beach), magic motes, steam, shooting stars and data pulses belong to a single monitor.
 - Windows Spotlight or a wallpaper slideshow can briefly flash when Windows changes the background image.
 - No account sign-in, entitlement restoration or automatic updates.
 
@@ -130,7 +131,7 @@ Version 0.1.4, on top of Deskland Preview 0.1.3:
 
 - **New name and icon:** IconScape, with its own executable, data folder, startup entry, install directory and instance identity.
 - **Only included themes:** the 11 locked cards of the Deskland Wallpaper edition, with their purchase dialog and thumbnails, have been removed.
-- **Multi-monitor:** one wallpaper window per monitor instead of the primary monitor only; windows are created, moved or closed when the monitor layout changes.
+- **Multi-monitor:** one wallpaper window per monitor instead of the primary monitor only, showing its part of one landscape computed over the whole desktop; windows are created, moved or closed when the monitor layout changes.
 - **Pause per monitor:** a monitor pauses when any maximized or full-screen window hides it, not only the foreground window; overlays that cover the screen without hiding anything are ignored.
 - **Italian interface:** settings, tray menu, messages and theme texts; the share buttons and share error messages now follow the interface language.
 - **Four themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk and Cosmos. Their thumbnails are rendered from the themes themselves.
@@ -183,7 +184,7 @@ L'elenco dei temi contiene solo questi sei. Le schede bloccate dell'edizione Wal
 
 - **Paesaggio adattivo:** usa le posizioni reali delle icone del desktop e passa in modo fluido da una disposizione all'altra quando si spostano.
 - **Sei temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk e Universo sono disponibili e vengono salvate.
-- **Tutti i monitor:** uno sfondo per ogni monitor, ognuno con le icone del proprio schermo; i monitor si possono collegare, scollegare o ridisporre mentre IconScape è in esecuzione.
+- **Tutti i monitor, un solo paesaggio:** la scena è calcolata sull'intero desktop, così come sono disposti i monitor, e ogni monitor ne mostra la sua parte: isole, coste, nuvole, circuiti e orbite continuano da un monitor all'altro, e un drago, un dirigibile o una cometa passano dall'uno all'altro. I monitor si possono collegare, scollegare o ridisporre mentre IconScape è in esecuzione.
 - **Pensato per il desktop:** controlli nell'area di notifica, avvio all'accesso e pausa automatica di ogni monitor coperto da una finestra massimizzata o a schermo intero, anche se quella finestra non è in primo piano.
 - **Condivisione rispettosa della privacy:** immagini e animazioni usano icone di esempio e blocchi di colore, mai una cattura del desktop o i nomi veri dei file.
 - **Installazione indipendente:** IconScape ha cartella di installazione, impostazioni, voce di avvio e identità dell'istanza proprie, quindi può convivere con Deskland.
@@ -265,6 +266,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 ### Limiti noti
 
 - Tutti i monitor mostrano lo stesso tema con gli stessi parametri; l'anteprima delle impostazioni e la condivisione usano il monitor principale.
+- Il paesaggio è continuo tra monitor con la stessa scala di visualizzazione; con scale diverse (per esempio 100% e 150%) le cose si incontrano sul bordo ma con dimensioni diverse. Il bambino e il gatto (Prato), kayak, gabbiani e palme (Spiaggia), lucciole magiche, vapore, stelle cadenti e impulsi di dati restano propri di ogni monitor.
 - Con Windows Spotlight o una presentazione di sfondi, il cambio di immagine può causare un breve sfarfallio.
 - Nessun accesso con account, ripristino degli acquisti o aggiornamento automatico.
 
@@ -274,7 +276,7 @@ Versione 0.1.4, basata su Deskland Preview 0.1.3:
 
 - **Nome e icona nuovi:** IconScape, con eseguibile, cartella dei dati, voce di avvio, cartella di installazione e identità dell'istanza propri.
 - **Solo i temi inclusi:** sono state tolte le 11 schede bloccate dell'edizione Wallpaper di Deskland, con la finestra di acquisto e le miniature.
-- **Multi monitor:** una finestra di sfondo per ogni monitor invece del solo monitor principale; le finestre vengono create, spostate o chiuse quando cambia la disposizione dei monitor.
+- **Multi monitor:** una finestra di sfondo per ogni monitor invece del solo monitor principale, che mostra la propria parte di un unico paesaggio calcolato sull'intero desktop; le finestre vengono create, spostate o chiuse quando cambia la disposizione dei monitor.
 - **Pausa per monitor:** un monitor va in pausa quando lo nasconde una qualsiasi finestra massimizzata o a schermo intero, non solo quella in primo piano; le sovrapposizioni che coprono lo schermo senza nascondere nulla vengono ignorate.
 - **Interfaccia in italiano:** impostazioni, menu dell'icona, messaggi e testi dei temi; anche i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
 - **Quattro temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk e Universo. Le loro miniature sono generate dai temi stessi.
@@ -327,7 +329,7 @@ IconScape 新增：
 
 - **图标自适应：**读取真实桌面图标的位置，在移动、添加或删除时平滑调整场景。
 - **六个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克和宇宙的全部参数均可调整并自动保存。
-- **覆盖所有显示器：**每个显示器一张壁纸，各自跟随该屏幕上的图标；运行中增减或重新排列显示器会自动调整。
+- **所有显示器，一片风景：**场景按显示器的实际排列在整个桌面上计算，每个显示器显示其中的一部分：岛屿、海岸、云、电路和轨道从一个显示器延续到另一个，龙、飞艇或彗星会从一个显示器飞到另一个。运行中增减或重新排列显示器会自动调整。
 - **适合常驻桌面：**托盘控制、开机自动启动；某个显示器被最大化或全屏窗口遮住时（即使该窗口不在前台）只暂停这个显示器。
 - **隐私分享：**图片和动画使用示例图标与名字色块，不截取桌面窗口或真实文件名。
 - **独立安装：**安装目录、用户数据、启动项和运行实例标识均独立，可与 Deskland 共存。
@@ -407,6 +409,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 ### 已知限制
 
 - 所有显示器使用同一主题和参数；设置预览与分享使用主显示器。
+- 显示缩放相同的显示器之间风景是连续的；缩放不同（例如 100% 和 150%）时，边缘处能对上位置，但大小不同。男孩和小猫（草地）、皮划艇、海鸟和椰子树（沙滩）、萤火、蒸汽、流星和数据脉冲各属于一个显示器。
 - 使用 Windows 聚焦或壁纸幻灯片时，系统换图可能造成短暂闪烁。
 - 不提供账号登录、购买恢复或自动更新。
 
@@ -416,7 +419,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 
 - **新名称和图标：**IconScape，拥有独立的可执行文件、数据目录、启动项、安装目录和实例标识。
 - **只保留包含的主题：**移除了 Deskland 壁纸版的 11 个锁定主题卡片、购买窗口和缩略图。
-- **多显示器：**每个显示器一个壁纸窗口，不再只覆盖主显示器；显示器布局变化时自动创建、移动或关闭窗口。
+- **多显示器：**每个显示器一个壁纸窗口，不再只覆盖主显示器，各自显示在整个桌面上计算的同一片风景的一部分；显示器布局变化时自动创建、移动或关闭窗口。
 - **按显示器暂停：**任何最大化或全屏窗口遮住某个显示器时暂停该显示器，不只看前台窗口；覆盖整个屏幕但不遮挡内容的悬浮层不会触发暂停。
 - **意大利语界面：**设置、托盘菜单、提示和主题文字；分享按钮和分享错误信息也跟随界面语言。
 - **四个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克和宇宙，缩略图由主题本身渲染生成。

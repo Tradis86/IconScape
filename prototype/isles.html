@@ -36,11 +36,21 @@
    ====================================================================== */
 const CELL_W = 76, CELL_H = 100, GRID_X0 = 4, GRID_Y0 = 6, TASKBAR = 48;   // desktop grid (also used by share.js)
 const STEP = 6;                                  // field grid (CSS px)
+const MARGIN = 220;                              // the field reaches this far beyond the desktop, so coasts and shadows close off-screen
 const MORPH_MS = 1600;
 
 const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the scene is computed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: things that cross from one monitor to another stay in step
 // Defaults must match the "default" values of the isles theme in themes.json
 const P = { sigma: 70, warp: 40, islets: 5, trees: 0.5, sky: 0, crystals: 5, motes: 30, flow: 1, dragon: 1, adaptive: 1, cap30: true };
 const DEFAULTS = Object.assign({}, P);
@@ -64,7 +74,7 @@ const GEOMETRY_KEYS = ['sigma', 'warp', 'islets', 'trees', 'crystals', 'adaptive
 /* ======================================================================
    Random numbers and noise (seeded: desktop and preview show the same scene)
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -90,13 +100,15 @@ const mix = (a, b, t, alpha = 1) => `rgba(${a.map((v, i) => Math.round(v + (b[i]
 
 /* ======================================================================
    Island field (CPU): s = signed distance to the coast (<0 is land), as in the other themes
+   Desktop coordinates; grid point (gx, gy) is at (gx * STEP - MARGIN, gy * STEP - MARGIN)
    ====================================================================== */
-let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;   // W, H: this screen (share.js uses them too)
 function buildNoise() {
+  Gw = Math.ceil((WORLD.w + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((WORLD.h + 2 * MARGIN) / STEP) + 2;
   const N = Gw * Gh;
   NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
   for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
-    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    const i = gy * Gw + gx, x = gx * STEP - MARGIN, y = gy * STEP - MARGIN;
     NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
     NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
   }
@@ -108,12 +120,12 @@ function computeField(rects) {
   const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
   for (const r of rects) {
     const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
-    const gx0 = Math.max(0, Math.floor((r.cx - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + R) / STEP));
-    const gy0 = Math.max(0, Math.floor((r.cy - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + R) / STEP));
+    const gx0 = Math.max(0, Math.floor((r.cx + MARGIN - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + MARGIN + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy + MARGIN - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + MARGIN + R) / STEP));
     const chw = r.hw * 0.5, chh = r.hh * 0.5, w = r.w || 1;
     for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
       const i = gy * Gw + gx;
-      const qx = gx * STEP + NZ.wx[i] * wa, qy = gy * STEP + NZ.wy[i] * wa;
+      const qx = gx * STEP - MARGIN + NZ.wx[i] * wa, qy = gy * STEP - MARGIN + NZ.wy[i] * wa;
       let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
       if (dx < 0) dx = 0; if (dy < 0) dy = 0;
       f1[i] += w * Math.exp(-(dx * dx + dy * dy) * is1);
@@ -127,7 +139,7 @@ function computeField(rects) {
   return s;
 }
 function sampleArr(a, x, y) {
-  const fx = Math.min(Math.max(x / STEP, 0), Gw - 1.001), fy = Math.min(Math.max(y / STEP, 0), Gh - 1.001);
+  const fx = Math.min(Math.max((x + MARGIN) / STEP, 0), Gw - 1.001), fy = Math.min(Math.max((y + MARGIN) / STEP, 0), Gh - 1.001);
   const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, i = iy * Gw + ix;
   return (a[i] * (1 - tx) + a[i + 1] * tx) * (1 - ty) + (a[i + Gw] * (1 - tx) + a[i + Gw + 1] * tx) * ty;
 }
@@ -141,12 +153,12 @@ function contours(s, lv) {
   const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
   const hk = (i, j) => {                          // point on the edge (i, j)–(i+1, j)
     const k = (j * gw + i) * 2;
-    if (!pos.has(k)) { const a = V[j * gw + i], b = V[j * gw + i + 1]; pos.set(k, [(i - 1 + a / (a - b)) * STEP, (j - 1) * STEP]); }
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[j * gw + i + 1]; pos.set(k, [(i - 1 + a / (a - b)) * STEP - MARGIN, (j - 1) * STEP - MARGIN]); }
     return k;
   };
   const vk = (i, j) => {                          // point on the edge (i, j)–(i, j+1)
     const k = (j * gw + i) * 2 + 1;
-    if (!pos.has(k)) { const a = V[j * gw + i], b = V[(j + 1) * gw + i]; pos.set(k, [(i - 1) * STEP, (j - 1 + a / (a - b)) * STEP]); }
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[(j + 1) * gw + i]; pos.set(k, [(i - 1) * STEP - MARGIN, (j - 1 + a / (a - b)) * STEP - MARGIN]); }
     return k;
   };
   for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) {
@@ -203,34 +215,43 @@ function loopsPath(loops) {
    Scene geometry (CSS px; independent of the canvas resolution): islands, trees, towers, crystals
    Positions come from fixed per-cell random numbers, so things stay put when only some icons move
    ====================================================================== */
-let icons = [];
-const iconRects = () => icons.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
 function nearIcon(x, y, m) {
-  for (const ic of icons) if (x > ic.x - m && x < ic.x + ic.w + m && y > ic.y - m && y < ic.y + ic.h + m) return true;
+  for (const ic of iconsW) if (x > ic.x - m && x < ic.x + ic.w + m && y > ic.y - m && y < ic.y + ic.h + m) return true;
   return false;
+}
+// a random point inside one of the monitors (desktop coordinates), keeping `m` from its edges and the taskbar
+function pointOnMonitors(rnd, m) {
+  const mon = WORLD.mons[(rnd() * WORLD.mons.length) | 0];
+  return [mon[0] + m + (mon[2] - 2 * m) * rnd(), mon[1] + m + (mon[3] - TASKBAR - 2 * m) * rnd()];
 }
 function fieldRects() {
   const rnd = mulberry32(seed * 7 + 3), out = [];
   const own = P.adaptive ? iconRects() : [];
-  if (!P.adaptive) {                               // not adapting: a few large islands of their own
-    for (let i = 0; i < 4; i++) out.push({ cx: W * (0.12 + 0.76 * rnd()), cy: (H - TASKBAR) * (0.15 + 0.7 * rnd()), hw: 60 + 120 * rnd(), hh: 50 + 90 * rnd(), w: 1 });
+  if (!P.adaptive) {                               // not adapting: a few large islands of their own (4 per monitor)
+    for (let i = 0; i < 4 * WORLD.mons.length; i++) { const [x, y] = pointOnMonitors(rnd, 120); out.push({ cx: x, cy: y, hw: 60 + 120 * rnd(), hh: 50 + 90 * rnd(), w: 1 }); }
   }
-  const isl = [];
-  for (let t = 0; t < 90 && isl.length < P.islets; t++) {
-    const x = 40 + (W - 80) * rnd(), y = 40 + (H - TASKBAR - 80) * rnd(), r = rnd();
+  // Islets: P.islets per monitor, anywhere on the desktop, so one near a monitor's edge simply continues on the next monitor
+  const isl = [], want = P.islets * WORLD.mons.length;
+  for (let t = 0; t < 90 * WORLD.mons.length && isl.length < want; t++) {
+    const [x, y] = pointOnMonitors(rnd, 40), r = rnd(), r2 = rnd();
     if (own.concat(out).some(o => Math.hypot(o.cx - x, o.cy - y) < P.sigma * 2.4 + Math.max(o.hw, o.hh) + 40)) continue;
     if (isl.some(o => Math.hypot(o.cx - x, o.cy - y) < P.sigma * 2.2)) continue;
-    isl.push({ cx: x, cy: y, hw: 6 + 26 * r, hh: 6 + 20 * rnd(), w: 0.55 + 0.25 * r });
+    isl.push({ cx: x, cy: y, hw: 6 + 26 * r, hh: 6 + 20 * r2, w: 0.55 + 0.25 * r });
   }
   return own.concat(out, isl);
 }
 function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
   const s = computeField(fieldRects());
   const geo = { s, levels: [0, -10, -20, -32].map(lv => loopsPath(contours(s, lv))), trees: [], towers: [], crystals: [], rasters: [] };
-  const inLand = (x, y, m) => x > 0 && y > 0 && x < W && y < H && sampleArr(s, x, y) < -m;
+  const DW = WORLD.w, DH = WORLD.h, nMon = WORLD.mons.length;
+  const inLand = (x, y, m) => x > -MARGIN && y > -MARGIN && x < DW + MARGIN && y < DH + MARGIN && sampleArr(s, x, y) < -m;
   // Trees: one candidate per 26px cell; density from the parameter and from large patches (groves and meadows)
   const G = 26;
-  for (let cy = 0; cy * G < H; cy++) for (let cx = 0; cx * G < W; cx++) {
+  for (let cy = 0; cy * G < DH; cy++) for (let cx = 0; cx * G < DW; cx++) {
     const h = hash2(cx, cy, 11), grove = ss(0.3, 0.62, vnoise(cx * 0.16, cy * 0.16, 5));
     if (h > P.trees * (0.45 + 1.1 * grove)) continue;
     const x = (cx + 0.15 + 0.7 * hash2(cx, cy, 12)) * G, y = (cy + 0.15 + 0.7 * hash2(cx, cy, 13)) * G;
@@ -240,30 +261,30 @@ function buildGeometry() {
     geo.trees.push({ x, y, r, kind: k < 0.14 ? 2 : k < 0.42 ? 1 : 0 });   // 0 round, 1 pine, 2 blossom
   }
   geo.trees.sort((a, b) => a.y - b.y);
-  // Towers: at most 2, deep inside big islands and well away from the icons
+  // Towers: at most 2 per monitor, deep inside big islands and well away from the icons
   const cands = [];
-  for (let cy = 0; cy * 60 < H; cy++) for (let cx = 0; cx * 60 < W; cx++) {
+  for (let cy = 0; cy * 60 < DH; cy++) for (let cx = 0; cx * 60 < DW; cx++) {
     const x = (cx + 0.5) * 60, y = (cy + 0.5) * 60;
     if (inLand(x, y, 62) && !nearIcon(x, y, 46)) cands.push({ x, y, h: hash2(cx, cy, 21) });
   }
   cands.sort((a, b) => a.h - b.h);
   for (const c of cands) {
-    if (geo.towers.length >= 2) break;
+    if (geo.towers.length >= 2 * nMon) break;
     if (geo.towers.some(t => Math.hypot(t.x - c.x, t.y - c.y) < 420)) continue;
     geo.towers.push(c);
     geo.trees = geo.trees.filter(t => Math.hypot(t.x - c.x, t.y - c.y) > 24 + t.r);
   }
-  // Crystals: near the coast, apart from each other
+  // Crystals: near the coast, apart from each other; P.crystals per monitor
   const cc = [];
-  for (let cy = 0; cy * 36 < H; cy++) for (let cx = 0; cx * 36 < W; cx++) {
+  for (let cy = 0; cy * 36 < DH; cy++) for (let cx = 0; cx * 36 < DW; cx++) {
     const x = (cx + 0.2 + 0.6 * hash2(cx, cy, 31)) * 36, y = (cy + 0.2 + 0.6 * hash2(cx, cy, 32)) * 36;
-    const d = x > 0 && y > 0 && x < W && y < H ? sampleArr(s, x, y) : 1;
+    const d = sampleArr(s, x, y);
     if (d < -34 || d > -12 || nearIcon(x, y, 22)) continue;
     cc.push({ x, y, h: hash2(cx, cy, 33), hue: hash2(cx, cy, 34) < 0.55 ? 0 : 1, ph: hash2(cx, cy, 35) * 6.28, sz: 0.8 + 0.5 * hash2(cx, cy, 36) });
   }
   cc.sort((a, b) => a.h - b.h);
   for (const c of cc) {
-    if (geo.crystals.length >= P.crystals) break;
+    if (geo.crystals.length >= P.crystals * nMon) break;
     if (geo.crystals.some(o => Math.hypot(o.x - c.x, o.y - c.y) < 140)) continue;
     geo.crystals.push(c);
   }
@@ -320,21 +341,23 @@ function grassPattern(x, s) {
 // Sky far below: dusk gradient, faint nebula and stars between the clouds
 const baseCache = [];
 function buildBase(cw, ch, s) {
-  const c = makeCanvas(cw, ch), x = c.getContext('2d'), sky = SKIES[P.sky];
-  x.setTransform(s, 0, 0, s, 0, 0);
-  const g = x.createRadialGradient(W * 0.22, H * 0.15, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.95);
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), sky = SKIES[P.sky], DW = WORLD.w, DH = WORLD.h;
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);   // desktop coordinates: the gradient, the nebula and the stars continue across monitors
+  const g = x.createRadialGradient(DW * 0.22, DH * 0.15, 0, DW * 0.45, DH * 0.45, Math.max(DW, DH) * 0.95);
   g.addColorStop(0, sky.glow); g.addColorStop(0.35, sky.mid); g.addColorStop(1, sky.deep);
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = g; x.fillRect(WORLD.x, WORLD.y, W, H);
   if (sky.nebula > 0) {
     x.globalCompositeOperation = 'screen'; x.globalAlpha = sky.nebula; x.imageSmoothingQuality = 'high';
     x.filter = 'hue-rotate(150deg) saturate(1.6)';
-    x.drawImage(tone(), 0, 0, W, H);
+    x.drawImage(tone(), -MARGIN, -MARGIN, Gw * STEP, Gh * STEP);
     x.filter = 'none'; x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
   }
   const r = mulberry32(seed + 5);
-  for (let i = 0, n = Math.round(W * H / 2600 * sky.stars); i < n; i++) {
-    x.fillStyle = `rgba(255,240,255,${0.15 + 0.5 * r() * r()})`;
-    x.beginPath(); x.arc(r() * W, r() * H, 0.4 + r() * 0.9, 0, 6.29); x.fill();
+  for (let i = 0, n = Math.round(DW * DH / 2600 * sky.stars); i < n; i++) {
+    const a = 0.15 + 0.5 * r() * r(), sx = r() * DW, sy = r() * DH, sr = 0.4 + r() * 0.9;
+    if (sx < WORLD.x - 2 || sy < WORLD.y - 2 || sx > WORLD.x + W + 2 || sy > WORLD.y + H + 2) continue;
+    x.fillStyle = `rgba(255,240,255,${a})`;
+    x.beginPath(); x.arc(sx, sy, sr, 0, 6.29); x.fill();
   }
   return c;
 }
@@ -401,7 +424,8 @@ function drawCrystal(x, c) {
 // Islands of one geometry: shadow on the clouds, rocky underside, grass, details
 function buildIslands(geo, cw, ch, s) {
   const c = makeCanvas(cw, ch), x = c.getContext('2d'), top = geo.levels[0];
-  x.setTransform(s, 0, 0, s, 0, 0);
+  const VX = WORLD.x, VY = WORLD.y;                // this screen inside the desktop: the islands are in desktop coordinates
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);
   x.save(); x.filter = `blur(${Math.max(1, Math.round(12 * s))}px)`; x.translate(84, 132);
   x.fillStyle = SKIES[P.sky].shadow; x.fill(geo.levels[1], 'evenodd'); x.restore();
   // Underside: deeper contours of the same field, pushed further down, so the rock narrows toward the bottom
@@ -415,25 +439,25 @@ function buildIslands(geo, cw, ch, s) {
   x.fillStyle = 'rgba(60,40,30,1)'; x.save(); x.translate(0, 2.5); x.fill(top, 'evenodd'); x.restore();
   // Grass
   x.save(); x.clip(top, 'evenodd');
-  x.imageSmoothingQuality = 'high'; x.drawImage(tone(), 0, 0, Gw * STEP, Gh * STEP);
-  x.fillStyle = grassPattern(x, s); x.fillRect(0, 0, W, H);
-  const light = x.createLinearGradient(0, 0, W, H);
+  x.imageSmoothingQuality = 'high'; x.drawImage(tone(), -MARGIN, -MARGIN, Gw * STEP, Gh * STEP);
+  x.fillStyle = grassPattern(x, s); x.fillRect(VX, VY, W, H);
+  const light = x.createLinearGradient(0, 0, WORLD.w, WORLD.h);
   light.addColorStop(0, SKIES[P.sky].light[0]); light.addColorStop(1, SKIES[P.sky].light[1]);
-  x.fillStyle = light; x.fillRect(0, 0, W, H);
+  x.fillStyle = light; x.fillRect(VX, VY, W, H);
   const band = (dx, dy, color) => {                // the part of the island not covered by itself shifted by (dx, dy): a rim on the opposite side
-    const p = new Path2D(); p.rect(-60, -60, W + 120, H + 120);
+    const p = new Path2D(); p.rect(VX - 60, VY - 60, W + 120, H + 120);
     p.addPath(top, new DOMMatrix([1, 0, 0, 1, dx, dy]));
     x.fillStyle = color; x.fill(p, 'evenodd');
   };
   band(9, 11, 'rgba(225,255,175,0.14)'); band(4, 5, 'rgba(225,255,175,0.22)'); band(1.6, 2, 'rgba(240,255,205,0.55)');
   band(-10, -12, 'rgba(14,34,44,0.16)'); band(-4, -5, 'rgba(14,34,44,0.3)');
-  const r = mulberry32(seed + 17), FL = ['#ffd6f0', '#fff6c2', '#e9e3ff', '#ff9ec8'];   // flowers in small clumps
-  for (let cy = 0; cy * 9 < H; cy++) for (let cx = 0; cx * 9 < W; cx++) {
+  const FL = ['#ffd6f0', '#fff6c2', '#e9e3ff', '#ff9ec8'];   // flowers in small clumps, one candidate per 9px desktop cell (only this screen's cells)
+  for (let cy = Math.floor(VY / 9) - 1; cy * 9 < VY + H + 9; cy++) for (let cx = Math.floor(VX / 9) - 1; cx * 9 < VX + W + 9; cx++) {
     if (hash2(cx, cy, 41) > 0.16 * ss(0.5, 0.75, vnoise(cx * 0.09, cy * 0.09, 42))) continue;
-    const fx = cx * 9 + 9 * r(), fy = cy * 9 + 9 * r();
+    const fx = (cx + hash2(cx, cy, 44)) * 9, fy = (cy + hash2(cx, cy, 45)) * 9;
     if (sampleArr(geo.s, fx, fy) > -5) continue;
     x.fillStyle = FL[(hash2(cx >> 3, cy >> 3, 43) * FL.length) | 0];
-    x.beginPath(); x.arc(fx, fy, 1 + r() * 0.7, 0, 6.29); x.fill();
+    x.beginPath(); x.arc(fx, fy, 1 + hash2(cx, cy, 46) * 0.7, 0, 6.29); x.fill();
   }
   x.restore();
   x.lineWidth = 1; x.strokeStyle = 'rgba(30,22,40,0.55)'; x.stroke(top);
@@ -473,60 +497,60 @@ function puffSprite(k, cols) {
 }
 const puffSets = [];                             // per sky color: three cloud shapes, drawn the first time that sky is used
 const puffSet = () => puffSets[P.sky] || (puffSets[P.sky] = [0, 1, 2].map(k => puffSprite(k, SKIES[P.sky].puff)));
+// Cloud puffs: spread over the whole desktop; their position is a function of the shared clock, so a puff leaving one monitor enters the next
 let puffs = [], motes = [];
 function initMovers() {
   const r = mulberry32(seed + 77);
   puffs = [];
-  for (let i = 0, n = Math.round(W * H / 60000) + 4; i < n; i++) {
+  for (let i = 0, n = Math.round(WORLD.w * WORLD.h / 60000) + 4 * WORLD.mons.length; i < n; i++) {
     const depth = r();
-    puffs.push({ x: r() * (W + 600) - 300, y: r() * (H + 400) - 200, w: 260 + 340 * depth, k: i % 3, depth, a: 0.55 + 0.4 * depth });
+    puffs.push({ x0: r(), y0: r(), w: 260 + 340 * depth, k: i % 3, depth, a: 0.55 + 0.4 * depth });
   }
   puffs.sort((a, b) => a.depth - b.depth);
   syncMotes();
 }
+function puffAt(p, T, out) {                     // desktop coordinates at time T (the puffs wrap around a band 300px wider than the desktop)
+  const spanX = WORLD.w + 600, spanY = WORLD.h + 400, f = P.flow;
+  const x = p.x0 * spanX + (6 + 10 * p.depth) * f * T, y = p.y0 * spanY + (2 + 3 * p.depth) * f * T;
+  out[0] = ((x % spanX) + spanX) % spanX - 300; out[1] = ((y % spanY) + spanY) % spanY - 200;
+}
+// Magic motes: small and short-lived, so each monitor keeps its own
 function syncMotes() {
   while (motes.length > P.motes) motes.pop();
   while (motes.length < P.motes) motes.push({ x: Math.random() * W, y: Math.random() * H, vy: 5 + Math.random() * 9, ph: Math.random() * 6.28, sz: 9 + Math.random() * 10 });
 }
 function stepMovers(dt) {
   const f = P.flow;
-  for (const p of puffs) {
-    p.x += (6 + 10 * p.depth) * f * dt; p.y += (2 + 3 * p.depth) * f * dt;
-    if (p.x - p.w / 2 > W + 40) { p.x = -p.w / 2 - 40; p.y = Math.random() * (H + 200) - 100; }
-    if (p.y - p.w / 3 > H + 40) { p.y = -p.w / 3 - 40; }
-  }
   for (const m of motes) {
     m.ph += dt * (0.8 + 0.4 * f);
     m.y -= m.vy * (0.4 + 0.6 * f) * dt; m.x += Math.sin(m.ph * 0.7) * 6 * dt;
     if (m.y < -20) { m.y = H + 20; m.x = Math.random() * W; }
   }
-  stepDragon(dt);
 }
 
-// Dragon: crosses the sky now and then along a gentle curve, flapping and gliding; its shadow falls far below
-let dragon = null, dragonWait = PREVIEW ? 3 : 8 + Math.random() * 8;
-function stepDragon(dt) {
-  if (!P.dragon) { dragon = null; return; }
-  if (!dragon) {
-    dragonWait -= dt;
-    if (dragonWait > 0) return;
-    const fromLeft = Math.random() < 0.5, y0 = H * (0.1 + 0.6 * Math.random()), y1 = H * (0.1 + 0.6 * Math.random());
-    const A = [fromLeft ? -180 : W + 180, y0], B = [fromLeft ? W + 180 : -180, y1];
-    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
-    dragon = { A, B, bend: (Math.random() - 0.5) * H * 0.35, t: 0, dur: len / 150, flap: 0, glide: 0, size: 105 + Math.random() * 40, x: A[0], y: A[1], ang: 0 };
+// Dragon: crosses the whole desktop now and then along a gentle curve, flapping and gliding; its shadow falls far below.
+// Everything about a flight follows from the shared clock and the seed, so on every monitor the dragon is in the same place at the same moment
+const DRAGON_PERIOD = PREVIEW ? 26 : 55;         // one possible flight per period
+function dragonAt(T) {
+  if (!P.dragon) return null;
+  for (const slot of [Math.floor(T / DRAGON_PERIOD), Math.floor(T / DRAGON_PERIOD) - 1]) {   // a long flight may run into the next period
+    const r = mulberry32(seed * 31 + slot);
+    if (r() < 0.2 && !PREVIEW) continue;          // now and then a period without a dragon
+    const start = slot * DRAGON_PERIOD + 2 + r() * DRAGON_PERIOD * 0.25;
+    const fromLeft = r() < 0.5, y0 = WORLD.h * (0.1 + 0.6 * r()), y1 = WORLD.h * (0.1 + 0.6 * r());
+    const A = [fromLeft ? -180 : WORLD.w + 180, y0], B = [fromLeft ? WORLD.w + 180 : -180, y1];
+    const bend = (r() - 0.5) * WORLD.h * 0.35, size = 105 + 40 * r(), dur = Math.hypot(B[0] - A[0], B[1] - A[1]) / 150;
+    const u = (T - start) / dur;
+    if (u < 0 || u >= 1) continue;
+    const at = t => {
+      const nx = -(B[1] - A[1]), ny = B[0] - A[0], nl = Math.hypot(nx, ny), b = Math.sin(Math.PI * t) * bend;
+      return [A[0] + (B[0] - A[0]) * t + nx / nl * b, A[1] + (B[1] - A[1]) * t + ny / nl * b];
+    };
+    const p = at(u), q = at(Math.min(1, u + 0.01));
+    const f = (T - start) % 4;                    // three flaps (2.7 s), then a glide with the wings spread
+    return { x: p[0], y: p[1], ang: Math.atan2(q[1] - p[1], q[0] - p[0]), flap: f < 2.69 ? f * 7 : 0, size };
   }
-  const d = dragon;
-  d.t += dt / d.dur;
-  if (d.t >= 1) { dragon = null; dragonWait = PREVIEW ? 12 + Math.random() * 10 : 30 + Math.random() * 45; return; }
-  const at = t => {
-    const nx = -(d.B[1] - d.A[1]), ny = d.B[0] - d.A[0], nl = Math.hypot(nx, ny), b = Math.sin(Math.PI * t) * d.bend;
-    return [d.A[0] + (d.B[0] - d.A[0]) * t + nx / nl * b, d.A[1] + (d.B[1] - d.A[1]) * t + ny / nl * b];
-  };
-  const p = at(d.t), q = at(Math.min(1, d.t + 0.01));
-  d.x = p[0]; d.y = p[1]; d.ang = Math.atan2(q[1] - p[1], q[0] - p[0]);
-  d.glide -= dt;
-  if (d.glide > 0) d.flap = d.flap * 0.9;                 // gliding: the wings ease back to fully spread
-  else { d.flap += dt * 7; if (d.flap > 6.283 * 3) { d.flap = 0; d.glide = 1.4 + Math.random(); } }
+  return null;
 }
 function drawDragon(x, d, shadow, tm) {
   const k = d.size / 120, span = 0.42 + 0.58 * (0.5 + 0.5 * Math.cos(d.flap));
@@ -589,9 +613,17 @@ function resize() {
   // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
-  Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
   buildNoise();
   baseCache.length = 0;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): recompute the scene over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise(); baseCache.length = 0; initMovers();
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
 }
 
 const T0 = performance.now();
@@ -607,36 +639,45 @@ function frame(now) {
   draw(now);
   frameN++;
 }
+const pp = [0, 0];
 function draw(now) {
-  const s = cv._scale, t = (now - T0) / 1000, e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1);
+  const s = cv._scale, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1);
+  const VX = WORLD.x, VY = WORLD.y, world = () => ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);   // desktop coordinates
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(cached(baseCache, buildBase), 0, 0);
-  ctx.setTransform(s, 0, 0, s, 0, 0);
+  world();
   const set = puffSet();
-  for (const p of puffs) { ctx.globalAlpha = p.a; ctx.drawImage(set[p.k], p.x - p.w / 2, p.y - p.w / 3, p.w, p.w * 0.66); }
-  if (dragon) { ctx.globalAlpha = 1; const d = dragon, sh = { ...d, x: d.x + 150, y: d.y + 230, size: d.size * 1.1 }; drawDragon(ctx, sh, true, t); }
+  for (const p of puffs) {
+    puffAt(p, T, pp);
+    if (pp[0] + p.w / 2 < VX || pp[0] - p.w / 2 > VX + W || pp[1] + p.w / 3 < VY || pp[1] - p.w / 3 > VY + H) continue;
+    ctx.globalAlpha = p.a; ctx.drawImage(set[p.k], pp[0] - p.w / 2, pp[1] - p.w / 3, p.w, p.w * 0.66);
+  }
+  const dragon = dragonAt(T);
+  if (dragon) { ctx.globalAlpha = 1; drawDragon(ctx, { ...dragon, x: dragon.x + 150, y: dragon.y + 230, size: dragon.size * 1.1 }, true, T); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const aOld = geoOld && e < 1 ? 1 - ss(0.35, 1, e) : 0, aNew = geoNew ? (geoOld ? ss(0, 0.65, e) : ss(0, 1, e)) : 0;
   if (aOld > 0) { ctx.globalAlpha = aOld; ctx.drawImage(cached(geoOld.rasters, (w, h, k) => buildIslands(geoOld, w, h, k)), 0, 0); }
   if (aNew > 0) { ctx.globalAlpha = aNew; ctx.drawImage(cached(geoNew.rasters, (w, h, k) => buildIslands(geoNew, w, h, k)), 0, 0); }
-  ctx.setTransform(s, 0, 0, s, 0, 0);
+  world();
   ctx.globalCompositeOperation = 'lighter';
   for (const [g, a] of [[geoOld, aOld], [geoNew, aNew]]) {
     if (!g || a <= 0) continue;
     for (const c of g.crystals) {
-      const pulse = 0.55 + 0.45 * Math.sin(t * 1.3 + c.ph), sz = (58 + 22 * pulse) * c.sz;
+      if (c.x < VX - 80 || c.x > VX + W + 80 || c.y < VY - 80 || c.y > VY + H + 80) continue;
+      const pulse = 0.55 + 0.45 * Math.sin(T * 1.3 + c.ph), sz = (58 + 22 * pulse) * c.sz;
       ctx.globalAlpha = a * (0.35 + 0.3 * pulse);
       ctx.drawImage(GLOW[c.hue], c.x - 4 - sz / 2, c.y - 8 - sz / 2, sz, sz);
     }
   }
+  ctx.setTransform(s, 0, 0, s, 0, 0);              // the motes belong to this screen
   for (const m of motes) {
     const tw = 0.5 + 0.5 * Math.sin(m.ph * 2.3);
     ctx.globalAlpha = 0.3 + 0.6 * tw;
     ctx.drawImage(MOTE, m.x - m.sz / 2, m.y - m.sz / 2, m.sz, m.sz);
   }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  if (dragon) drawDragon(ctx, dragon, false, t);
+  if (dragon) { world(); drawDragon(ctx, dragon, false, T); }
 }
 
 /* ======================================================================
@@ -662,7 +703,6 @@ function applySettings(v) {
     if (GEOMETRY_KEYS.includes(k)) geometry = true;
     if (k === 'motes') syncMotes();
     if (k === 'sky') redraw = true;                // the cached layers are kept per sky color: nothing to rebuild
-    if (k === 'dragon' && val) dragonWait = Math.min(dragonWait, 2);   // just switched on: show it soon
   }
   if (geometry && iconsSeen) rebuildSoon();
   else if (redraw && paused && iconsSeen) draw(performance.now());
@@ -678,6 +718,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

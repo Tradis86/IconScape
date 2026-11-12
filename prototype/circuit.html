@@ -44,6 +44,15 @@ const MORPH_MS = 1200;
 const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the board is routed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: the scan band and the LEDs stay in step across monitors
 // Defaults must match the "default" values of the circuit theme in themes.json
 const P = { sigma: 46, density: 0.6, color: 1, pulses: 24, speed: 1, rain: 0.3, scan: 1, adaptive: 1, cap30: true };
 const DEFAULTS = Object.assign({}, P);
@@ -61,7 +70,7 @@ const PALETTES = [
 /* ======================================================================
    Random numbers and noise (seeded: desktop and preview show the same board)
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -74,7 +83,7 @@ function mulberry32(a) {
 /* ======================================================================
    Icon field (CPU): s = signed distance to the edge of the copper pour (<0 is inside), as in the other themes
    ====================================================================== */
-let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1;
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1;   // W, H: this screen (share.js uses them too); the field grid covers the whole desktop
 function computeField(rects) {
   const N = Gw * Gh, f1 = new Float32Array(N), sig = P.sigma, is1 = 1 / (sig * sig);
   for (const r of rects) {
@@ -103,7 +112,7 @@ function sampleArr(a, x, y) {
 // Outline of the pour: marching squares over inside/outside values on the coarse grid; crossing points are always edge midpoints,
 // so the outline only has horizontal, vertical and 45° runs. The grid is padded with "outside", so every outline is closed
 function pourPath(s) {
-  const gw = Math.ceil(W / ZG) + 3, gh = Math.ceil(H / ZG) + 3, V = new Int8Array(gw * gh);
+  const gw = Math.ceil(WORLD.w / ZG) + 3, gh = Math.ceil(WORLD.h / ZG) + 3, V = new Int8Array(gw * gh);
   for (let j = 1; j < gh - 1; j++) for (let i = 1; i < gw - 1; i++) V[j * gw + i] = sampleArr(s, (i - 1) * ZG, (j - 1) * ZG) < 0 ? 1 : 0;
   const pos = new Map(), adj = new Map();
   const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
@@ -145,13 +154,16 @@ function pourPath(s) {
 /* ======================================================================
    Board geometry (CSS px; independent of the canvas resolution): pour, chips, traces, vias, small parts, labels
    ====================================================================== */
-let icons = [];
-const iconRects = () => icons.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
 const DX = [1, 1, 0, -1, -1, -1, 0, 1], DY = [0, 1, 1, 1, 0, -1, -1, -1];   // E, SE, S, SW, W, NW, N, NE
 const BLOCK = 65535;
+// The whole board is routed over the whole desktop on every monitor, so a trace leaving one monitor carries on into the next
 function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
   const s = computeField(P.adaptive ? iconRects() : []);
-  const cols = Math.ceil(W / G) + 1, rows = Math.ceil(H / G) + 1, occ = new Uint16Array(cols * rows);
+  const cols = Math.ceil(WORLD.w / G) + 1, rows = Math.ceil(WORLD.h / G) + 1, occ = new Uint16Array(cols * rows);
   const geo = { s, pour: pourPath(s), traces: [], vias: [], pads: [], chips: [], parts: [], labels: [], rasters: [], glows: [], total: 0 };
   const X = c => c * G + G / 2, Y = r => r * G + G / 2;
   const inside = (c, r) => c >= 0 && r >= 0 && c < cols && r < rows;
@@ -211,7 +223,7 @@ function buildGeometry() {
 
   // 1. Chips in the large free areas; a bundle of parallel traces leaves each side
   const chipRnd = mulberry32(seed * 13 + 1);
-  for (let t = 0, want = Math.round(1 + 4 * D); t < 60 && geo.chips.length < want; t++) {
+  for (let t = 0, want = Math.round(1 + 4 * D) * WORLD.mons.length; t < 60 * WORLD.mons.length && geo.chips.length < want; t++) {
     const wc = 6 + (chipRnd() * 5 | 0), hc = 6 + (chipRnd() * 5 | 0);
     const c0 = 4 + (chipRnd() * (cols - wc - 8) | 0), r0 = 4 + (chipRnd() * (rows - hc - 8 - Math.ceil(TASKBAR / G)) | 0);
     let free = c0 > 3 && r0 > 3;
@@ -270,6 +282,14 @@ function buildGeometry() {
     if (hash2(i, 8, 8) < 0.7) geo.labels.push({ x: part.x + (vert ? 9 : -16), y: part.y + (vert ? 3 : -8), text: kind + (++count[kind]) });
   }
   geo.leds = geo.parts.filter(p => p.kind === 'D');
+  // the traces that reach this screen: only those carry this monitor's pulses
+  const VX = WORLD.x, VY = WORLD.y;
+  geo.vis = geo.traces.filter(tr => {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let i = 0; i < tr.pts.length; i += 2) { x0 = Math.min(x0, tr.pts[i]); x1 = Math.max(x1, tr.pts[i]); y0 = Math.min(y0, tr.pts[i + 1]); y1 = Math.max(y1, tr.pts[i + 1]); }
+    return x1 > VX - 20 && x0 < VX + W + 20 && y1 > VY - 20 && y0 < VY + H + 20;
+  });
+  geo.visTotal = geo.vis.reduce((a, tr) => a + tr.len, 0);
   return geo;
 }
 
@@ -300,27 +320,28 @@ function strokeTraces(x, geo) {
 }
 function buildBoard(geo, cw, ch, s) {
   const pal = PALETTES[P.color], c = makeCanvas(cw, ch), x = c.getContext('2d');
-  x.setTransform(s, 0, 0, s, 0, 0);
-  const bg = x.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, Math.max(W, H) * 0.75);
+  const VX = WORLD.x, VY = WORLD.y, DW = WORLD.w, DH = WORLD.h;   // the board is in desktop coordinates; this canvas shows the rectangle (VX, VY, W, H)
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);
+  const bg = x.createRadialGradient(DW * 0.5, DH * 0.45, 0, DW * 0.5, DH * 0.45, Math.max(DW, DH) * 0.75);
   bg.addColorStop(0, pal.bg); bg.addColorStop(1, pal.bg2);
-  x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  x.fillStyle = bg; x.fillRect(VX, VY, W, H);
   // glass-fibre weave and a faint dot grid on the routing pitch
   x.fillStyle = sharpPattern(x, s, 6, (g, S) => { g.strokeStyle = 'rgba(255,255,255,0.028)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0.5); g.lineTo(S, 0.5); g.moveTo(0.5, 0); g.lineTo(0.5, S); g.stroke(); });
-  x.fillRect(0, 0, W, H);
+  x.fillRect(VX, VY, W, H);
   x.fillStyle = sharpPattern(x, s, 2 * G, (g, S) => { g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(Math.round(S / 4), Math.round(S / 4), Math.max(1, Math.round(s)), Math.max(1, Math.round(s))); });
-  x.fillRect(0, 0, W, H);
+  x.fillRect(VX, VY, W, H);
 
   // copper pour under the icons: solid fill, 45° hatching, bright outline
   x.fillStyle = pal.pour; x.fill(geo.pour, 'evenodd');
   x.save(); x.clip(geo.pour, 'evenodd');
   x.fillStyle = sharpPattern(x, s, 8, (g, S) => { g.strokeStyle = 'rgba(255,255,255,0.05)'; g.lineWidth = Math.max(1, s * 0.8); g.beginPath(); g.moveTo(-S, S); g.lineTo(S, -S); g.moveTo(0, S); g.lineTo(S, 0); g.moveTo(0, 2 * S); g.lineTo(2 * S, 0); g.stroke(); });
-  x.fillRect(0, 0, W, H);
+  x.fillRect(VX, VY, W, H);
   x.lineWidth = 9; x.strokeStyle = rgba(pal.glow, 0.07); x.stroke(geo.pour);
   x.restore();
   x.lineWidth = 1.5; x.lineJoin = 'miter'; x.strokeStyle = pal.pad; x.globalAlpha = 0.75; x.stroke(geo.pour); x.globalAlpha = 1;
   if (P.adaptive) {                                // silkscreen corner marks around every icon
     x.strokeStyle = pal.silk; x.globalAlpha = 0.2; x.lineWidth = 1; x.beginPath();
-    for (const ic of icons) {
+    for (const ic of iconsW) {
       const l = ic.x + 3, t = ic.y + 3, r = ic.x + ic.w - 3, b = ic.y + ic.h - 3, k = 7;
       x.moveTo(l, t + k); x.lineTo(l, t); x.lineTo(l + k, t); x.moveTo(r - k, t); x.lineTo(r, t); x.lineTo(r, t + k);
       x.moveTo(r, b - k); x.lineTo(r, b); x.lineTo(r - k, b); x.moveTo(l + k, b); x.lineTo(l, b); x.lineTo(l, b - k);
@@ -369,15 +390,16 @@ function buildBoard(geo, cw, ch, s) {
   x.font = '8px Consolas, "Cascadia Mono", monospace'; x.textAlign = 'left'; x.fillStyle = pal.silk; x.globalAlpha = 0.42;
   for (const l of geo.labels) x.fillText(l.text, l.x, l.y);
   x.globalAlpha = 1;
-  const vg = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.8);
+  // vignette over the whole desktop: the outer edges darken, the edges between monitors do not
+  const vg = x.createRadialGradient(DW / 2, DH / 2, Math.min(DW, DH) * 0.45, DW / 2, DH / 2, Math.max(DW, DH) * 0.8);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-  x.fillStyle = vg; x.fillRect(0, 0, W, H);
+  x.fillStyle = vg; x.fillRect(VX, VY, W, H);
   return c;
 }
 // The same traces in the signal color on a transparent layer: strips of it are added on top for the scan band
 function buildGlow(geo, cw, ch, s) {
   const pal = PALETTES[P.color], c = makeCanvas(cw, ch), x = c.getContext('2d');
-  x.setTransform(s, 0, 0, s, 0, 0);
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);
   x.lineCap = 'round'; x.lineJoin = 'round';
   x.lineWidth = 7; x.strokeStyle = rgba(pal.glow, 0.22); strokeTraces(x, geo);
   x.lineWidth = 2.5; x.strokeStyle = rgba(pal.glow, 0.9); strokeTraces(x, geo);
@@ -417,10 +439,11 @@ function atlas() {
 }
 
 let pulses = [], flashes = [], rain = [];
-function pickTrace(geo) {                        // longer traces carry more pulses
-  let d = Math.random() * geo.total;
-  for (const tr of geo.traces) { d -= tr.len; if (d <= 0) return tr; }
-  return geo.traces[geo.traces.length - 1];
+function pickTrace(geo) {                        // a trace that reaches this screen; longer traces carry more pulses
+  const list = geo.vis.length ? geo.vis : geo.traces, total = geo.vis.length ? geo.visTotal : geo.total;
+  let d = Math.random() * total;
+  for (const tr of list) { d -= tr.len; if (d <= 0) return tr; }
+  return list[list.length - 1];
 }
 function newPulse(geo, spread) {
   const tr = pickTrace(geo), back = Math.random() < 0.5;
@@ -489,7 +512,16 @@ function resize() {
   // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
-  Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
+  Gw = Math.ceil(WORLD.w / STEP) + 2; Gh = Math.ceil(WORLD.h / STEP) + 2;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): route the board over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  Gw = Math.ceil(WORLD.w / STEP) + 2; Gh = Math.ceil(WORLD.h / STEP) + 2;
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
 }
 
 const T0 = performance.now();
@@ -507,7 +539,8 @@ function frame(now) {
 }
 const pt = [0, 0];
 function draw(now) {
-  const s = cv._scale, t = (now - T0) / 1000, e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), pal = PALETTES[P.color];
+  const s = cv._scale, t = (now - T0) / 1000, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), pal = PALETTES[P.color];
+  const VX = WORLD.x, VY = WORLD.y;
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (!geoNew) { ctx.fillStyle = pal.bg2; ctx.fillRect(0, 0, cv.width, cv.height); return; }
@@ -521,9 +554,9 @@ function draw(now) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'lighter';
 
-  if (P.scan) {                                    // scan band: strips of the glow layer, brightest in the middle
+  if (P.scan) {                                    // scan band: strips of the glow layer, brightest in the middle; one band for the whole desktop, on the shared clock
     const glow = cached(geoNew.glows, (w, h, k) => buildGlow(geoNew, w, h, k));
-    const yc = ((t * 70 * Math.max(P.speed, 0.15)) % (H + 600)) - 300, N = 9, sh = 18;
+    const yc = ((T * 70 * Math.max(P.speed, 0.15)) % (WORLD.h + 600)) - 300 - VY, N = 9, sh = 18;
     for (let i = 0; i < N; i++) {
       const y0 = Math.round((yc + (i - N / 2) * sh) * s), y1 = Math.round((yc + (i + 1 - N / 2) * sh) * s);
       if (y1 <= 0 || y0 >= cv.height) continue;
@@ -540,7 +573,7 @@ function draw(now) {
       for (let k = 0; k < c.len; k++) {
         const row = head - k, y = row * 16;
         if (y < -16 || y > H) continue;
-        if (sampleArr(geoNew.s, c.x + 8, y + 8) < 12) continue;
+        if (sampleArr(geoNew.s, c.x + 8 + VX, y + 8 + VY) < 12) continue;
         const gi = (row * 7 + c.k + ((t * 1.6 + row * 0.37 + c.k) | 0) * 5) & 15;
         ctx.globalAlpha = k === 0 ? 0.8 : 0.42 * (1 - k / c.len);
         ctx.drawImage(at.c, gi * at.cell, k === 0 ? at.cell : 0, at.cell, at.cell, c.x, y, 16, 16);
@@ -548,6 +581,7 @@ function draw(now) {
     }
   }
   const sp = sprite();
+  ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);  // pulses, flashes and LEDs sit on the board: desktop coordinates
   for (const p of pulses) {                        // a bright head and a short fading tail along the trace
     if (p.wait > 0) continue;
     for (let k = 0; k < 8; k++) {
@@ -566,8 +600,9 @@ function draw(now) {
     ctx.globalAlpha = (1 - age) * (1 - age);
     ctx.drawImage(sp.glow, f.x - sz / 2, f.y - sz / 2, sz, sz);
   }
-  for (const l of geoNew.leds) {                   // LEDs blink, each at its own rate
-    const on = Math.sin(t * l.rate * Math.max(P.speed, 0.2) + l.ph);
+  for (const l of geoNew.leds) {                   // LEDs blink, each at its own rate (shared clock: an LED on the edge blinks the same on both monitors)
+    if (l.x < VX - 20 || l.x > VX + W + 20 || l.y < VY - 20 || l.y > VY + H + 20) continue;
+    const on = Math.sin(T * l.rate * Math.max(P.speed, 0.2) + l.ph);
     if (on < 0.2) continue;
     ctx.globalAlpha = 0.5 + 0.5 * on;
     ctx.drawImage(l.red ? sp.red : sp.glow, l.x - 15, l.y - 15, 30, 30);
@@ -614,6 +649,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

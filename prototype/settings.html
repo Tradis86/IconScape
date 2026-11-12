@@ -11,7 +11,8 @@
   - Live preview: an iframe loads the theme page in ?preview=1 mode, using the real icon positions on your desktop
   - Messages exchanged with the host (JSON strings):
       sent: hello / set {theme,key,value} / reset {theme} / theme {id} / autostart {v} / share / shareVideo / openShare / revealShare / updateProgram
-      received: init {theme,params,screen,autostart,autostartWarn} / icons {vis,r} / autostart {v} / recProgress {p}
+      received: init {theme,params,screen,autostart,autostartWarn} / layout {x,y,w,h,mons} (primary monitor in the whole desktop, forwarded to the preview)
+            / icons {vis,r} / autostart {v} / recProgress {p}
             / shareResult {ok,kind?,thumb,path,url?,msg} (when kind = 'video', url is a directly playable video address)
             / updateState {version,status,progress,error} (in the Store edition the host provides download and install progress)
       autostartWarn: the reminder shown when the autostart launch did not happen this time (blocked by security software); empty string = all good; clicking "Got it" sends autostartWarnSeen
@@ -640,8 +641,9 @@ addEventListener('resize', layoutPreview);
 addEventListener('message', e => {
   if (e.source !== frame.contentWindow) return;
   const m = JSON.parse(e.data);
-  if (m.t === 'ready') {                 // The preview page has loaded: send the settings first, then the icons
+  if (m.t === 'ready') {                 // The preview page has loaded: send the settings first, then where the primary monitor sits in the whole desktop, then the icons
     toPreview({ t: 'settings', v: valuesOf(themeById(state.theme)) });
+    if (state.layout) toPreview(state.layout);
     if (state.icons) toPreview(state.icons);
   }
 });
@@ -777,6 +779,9 @@ function onHost(m) {
     state.langSetting = m.v;
     state.langSys = m.sys || state.langSys;
     setLang(m.eff).then(rerenderTexts);
+  } else if (m.t === 'layout') {                              // where the primary monitor sits in the whole desktop: the preview shows its part of one continuous scene
+    state.layout = m;
+    toPreview(m);
   } else if (m.t === 'icons') {
     state.icons = m;
     toPreview(m);

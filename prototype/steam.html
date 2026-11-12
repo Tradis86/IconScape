@@ -46,6 +46,15 @@ const MORPH_MS = 1400;
 const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the machine is laid out over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: a gear train or the airship crossing monitors stays in step
 // Defaults must match the "default" values of the steampunk theme in themes.json
 const P = { sigma: 50, metal: 0, gears: 0.6, speed: 1, pipes: 6, steam: 0.5, airship: 1, adaptive: 1, cap30: true };
 const DEFAULTS = Object.assign({}, P);
@@ -63,7 +72,7 @@ const METALS = [
 /* ======================================================================
    Random numbers and noise (seeded: desktop and preview show the same machine)
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -76,7 +85,7 @@ function mulberry32(a) {
 /* ======================================================================
    Icon field (CPU): s = signed distance to the edge of the plates (<0 is on a plate), as in the other themes
    ====================================================================== */
-let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1;
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1;   // W, H: this screen (share.js uses them too); the field grid covers the whole desktop
 function computeField(rects) {
   const N = Gw * Gh, f1 = new Float32Array(N), sig = P.sigma, is1 = 1 / (sig * sig);
   for (const r of rects) {
@@ -106,7 +115,7 @@ function sampleArr(a, x, y) {
 // so the outline only has horizontal, vertical and 45° runs, like cut sheet metal. The grid is padded with "outside", so every outline is a closed loop.
 // Returns loops of [x0, y0, x1, y1, …] (CSS px)
 function plateLoops(s) {
-  const gw = Math.ceil(W / ZG) + 3, gh = Math.ceil(H / ZG) + 3, V = new Int8Array(gw * gh).fill(1);
+  const gw = Math.ceil(WORLD.w / ZG) + 3, gh = Math.ceil(WORLD.h / ZG) + 3, V = new Int8Array(gw * gh).fill(1);
   for (let j = 1; j < gh - 1; j++) for (let i = 1; i < gw - 1; i++) if (sampleArr(s, (i - 1) * ZG, (j - 1) * ZG) < 0) V[j * gw + i] = -1;
   const pos = new Map(), adj = new Map();
   const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
@@ -162,12 +171,16 @@ function loopsPath(loops) {                      // straight runs with slightly 
 /* ======================================================================
    Scene geometry (CSS px; independent of the canvas resolution): plates, rivets, gear trains, pipes and their fittings
    ====================================================================== */
-let icons = [];
-const iconRects = () => icons.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
 const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];    // E, S, W, N
 const BLOCK = 255;
 const gearR = n => n * PITCH / (2 * Math.PI);    // pitch radius of a gear with n teeth
+// The whole machine is laid out over the whole desktop on every monitor, so plates, gear trains and pipes carry on across monitors
 function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
+  const W = WORLD.w, H = WORLD.h, nMon = WORLD.mons.length;   // in here W, H are the whole desktop
   const s = computeField(P.adaptive ? iconRects() : []);
   const loops = plateLoops(s);
   const geo = { s, plate: loopsPath(loops), rivets: [], gears: [], pipes: [], gauges: [], valves: [], vents: [], rasters: [] };
@@ -282,7 +295,7 @@ function buildGeometry() {
   starts.sort((a, b) => a[3] - b[3]);
   const taken = [];
   for (const [c, r, dir, h] of starts) {
-    if (geo.pipes.length >= P.pipes) break;
+    if (geo.pipes.length >= P.pipes * nMon) break;
     if (occ[r * cols + c] || taken.some(t => Math.hypot(t[0] - X(c), t[1] - Y(r)) < 150)) continue;
     taken.push([X(c), Y(r)]);
     route(c, r, dir, h, [X(c) - DX[dir] * PG * 2, Y(r) - DY[dir] * PG * 2]);
@@ -320,7 +333,8 @@ function pipePath(x, pts) {                      // rounded elbows
 
 function buildStatic(geo, cw, ch, s) {
   const c = makeCanvas(cw, ch), x = c.getContext('2d'), M = METALS[P.metal], PM = pipeMetal(), brass = METALS[0];
-  x.setTransform(s, 0, 0, s, 0, 0);
+  const W = WORLD.w, H = WORLD.h;                  // in here W, H are the whole desktop: everything is drawn in desktop coordinates, the canvas keeps this screen's part
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);
   // bench: dark wooden planks with grain, a few nails
   for (let p = 0, PH = 62; p * PH < H; p++) {
     const tone = hash2(p, 0, 81), y0 = p * PH;
@@ -485,6 +499,7 @@ function softSprite(inner) {
 }
 const PUFF = softSprite('rgba(255,250,240,0.6)');
 
+// Gear angles come from the shared clock, so a gear train crossing two monitors turns in step on both
 let gearT = 0, puffs = [];
 function stepGears(geo) {                        // seeds turn on their own; a child follows its parent through the tooth counts
   for (const g of geo.gears) {
@@ -492,9 +507,10 @@ function stepGears(geo) {                        // seeds turn on their own; a c
   }
 }
 function step(dt) {
-  gearT += dt * P.speed;
-  if (geoNew) {
-    const vents = geoNew.vents, active = Math.round(P.steam * Math.min(vents.length, 14));
+  if (geoNew) {                                    // steam from the joints on this screen (each monitor puffs on its own)
+    const VX = WORLD.x, VY = WORLD.y;
+    const vents = geoNew.vents.filter(v => v.x > VX - 20 && v.x < VX + W + 20 && v.y > VY - 20 && v.y < VY + H + 20);
+    const active = Math.round(P.steam * Math.min(vents.length, 14));
     for (let i = 0; i < active; i++) {
       const v = vents[i];
       v.next -= dt;
@@ -506,23 +522,24 @@ function step(dt) {
   for (const p of puffs) { p.age += dt; if (p.age > 0) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy *= 1 - 0.6 * dt; } }
   if (puffs.length > 160) puffs.splice(0, puffs.length - 160);
   puffs = puffs.filter(p => p.age < p.life);
-  stepAirship(dt);
 }
 
-// Airship: drifts across now and then, high above everything; its shadow falls on the bench
-let airship = null, airshipWait = PREVIEW ? 4 : 10 + Math.random() * 15;
-function stepAirship(dt) {
-  if (!P.airship) { airship = null; return; }
-  if (!airship) {
-    airshipWait -= dt;
-    if (airshipWait > 0) return;
-    const fromLeft = Math.random() < 0.5, A = [fromLeft ? -220 : W + 220, H * (0.12 + 0.6 * Math.random())], B = [fromLeft ? W + 220 : -220, H * (0.12 + 0.6 * Math.random())];
-    airship = { A, B, t: 0, dur: Math.hypot(B[0] - A[0], B[1] - A[1]) / 46, size: 150 + Math.random() * 60, x: A[0], y: A[1], ang: Math.atan2(B[1] - A[1], B[0] - A[0]) };
+// Airship: drifts across the whole desktop now and then, high above everything; its shadow falls on the bench.
+// A flight follows from the shared clock and the seed, so on every monitor the airship is in the same place at the same moment
+const AIRSHIP_PERIOD = PREVIEW ? 45 : 120;       // one possible flight per period
+function airshipAt(T) {
+  if (!P.airship) return null;
+  const now = Math.floor(T / AIRSHIP_PERIOD);
+  for (const slot of [now, now - 1, now - 2]) {     // a slow flight over a wide desktop may run into the next periods
+    const r = mulberry32(seed * 37 + slot);
+    if (r() < 0.25 && !PREVIEW) continue;         // now and then a period without an airship
+    const start = slot * AIRSHIP_PERIOD + 3 + r() * AIRSHIP_PERIOD * 0.3;
+    const fromLeft = r() < 0.5, A = [fromLeft ? -220 : WORLD.w + 220, WORLD.h * (0.12 + 0.6 * r())], B = [fromLeft ? WORLD.w + 220 : -220, WORLD.h * (0.12 + 0.6 * r())];
+    const size = 150 + 60 * r(), dur = Math.hypot(B[0] - A[0], B[1] - A[1]) / 46, u = (T - start) / dur;
+    if (u < 0 || u >= 1) continue;
+    return { x: A[0] + (B[0] - A[0]) * u, y: A[1] + (B[1] - A[1]) * u + Math.sin(u * 14) * 6, ang: Math.atan2(B[1] - A[1], B[0] - A[0]), size };
   }
-  const a = airship;
-  a.t += dt / a.dur;
-  if (a.t >= 1) { airship = null; airshipWait = PREVIEW ? 14 + Math.random() * 10 : 40 + Math.random() * 60; return; }
-  a.x = a.A[0] + (a.B[0] - a.A[0]) * a.t; a.y = a.A[1] + (a.B[1] - a.A[1]) * a.t + Math.sin(a.t * 14) * 6;
+  return null;
 }
 function drawAirship(x, a, shadow, t) {
   x.save(); x.translate(a.x, a.y); x.rotate(a.ang); const k = a.size / 170; x.scale(k, k);
@@ -573,7 +590,16 @@ function resize() {
   // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
-  Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
+  Gw = Math.ceil(WORLD.w / STEP) + 2; Gh = Math.ceil(WORLD.h / STEP) + 2;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): lay the machine out over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  Gw = Math.ceil(WORLD.w / STEP) + 2; Gh = Math.ceil(WORLD.h / STEP) + 2;
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
 }
 
 const T0 = performance.now();
@@ -592,14 +618,18 @@ function frame(now) {
 function drawGears(geo, alpha, s) {
   stepGears(geo);
   ctx.globalAlpha = alpha;
+  const VX = WORLD.x, VY = WORLD.y;
   for (const g of geo.gears) {
+    if (g.x + g.R + 8 < VX || g.x - g.R - 8 > VX + W || g.y + g.R + 8 < VY || g.y - g.R - 8 > VY + H) continue;   // only this screen's gears (their angles still follow the whole train)
     const sp = gearSprite(g.n, metalOf(g), g.style), cs = Math.cos(g.phi) * s, sn = Math.sin(g.phi) * s;
-    ctx.setTransform(cs, sn, -sn, cs, g.x * s, g.y * s);
+    ctx.setTransform(cs, sn, -sn, cs, (g.x - VX) * s, (g.y - VY) * s);
     ctx.drawImage(sp.c, -sp.half, -sp.half, sp.half * 2, sp.half * 2);
   }
 }
 function draw(now) {
-  const s = cv._scale, t = (now - T0) / 1000, e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), k = e * e * (3 - 2 * e);
+  const s = cv._scale, t = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), k = e * e * (3 - 2 * e);
+  const VX = WORLD.x, VY = WORLD.y, airship = airshipAt(t);
+  gearT = t * P.speed;
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (!geoNew) { ctx.fillStyle = '#24160f'; ctx.fillRect(0, 0, cv.width, cv.height); return; }
@@ -610,13 +640,14 @@ function draw(now) {
     ctx.globalAlpha = k;
   }
   ctx.drawImage(cached(geoNew.rasters, (w, h, q) => buildStatic(geoNew, w, h, q)), 0, 0);
-  if (airship) { ctx.globalAlpha = 1; ctx.setTransform(s, 0, 0, s, 0, 0); drawAirship(ctx, { ...airship, x: airship.x + 70, y: airship.y + 110 }, true, t); }
+  if (airship) { ctx.globalAlpha = 1; ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s); drawAirship(ctx, { ...airship, x: airship.x + 70, y: airship.y + 110 }, true, t); }
   if (geoOld && e < 1) drawGears(geoOld, 1 - k, s);
   drawGears(geoNew, e < 1 ? k : 1, s);
-  ctx.setTransform(s, 0, 0, s, 0, 0);
+  ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);   // gauges, steam and the airship: desktop coordinates
   ctx.globalAlpha = e < 1 ? k : 1;
   ctx.lineCap = 'round';
   for (const g of geoNew.gauges) {               // needles tremble around their level
+    if (g.x < VX - 20 || g.x > VX + W + 20 || g.y < VY - 20 || g.y > VY + H + 20) continue;
     const v = g.level + 0.16 * Math.sin(t * 0.7 * P.speed + g.ph) + 0.035 * Math.sin(t * 9 * P.speed + g.ph * 3);
     const a = Math.PI * 0.8 + Math.min(1, Math.max(0, v)) * Math.PI * 1.4;
     ctx.lineWidth = 1.6; ctx.strokeStyle = '#1a120c';
@@ -655,7 +686,6 @@ function applySettings(v) {
     P[k] = val;
     if (GEOMETRY_KEYS.includes(k)) geometry = true;
     if (k === 'metal') redraw = true;              // the cached layers are kept per metal: nothing to rebuild
-    if (k === 'airship' && val) airshipWait = Math.min(airshipWait, 2);   // just switched on: show it soon
   }
   if (geometry && iconsSeen) rebuildSoon();
   else if (redraw && paused && iconsSeen) draw(performance.now());
@@ -671,6 +701,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

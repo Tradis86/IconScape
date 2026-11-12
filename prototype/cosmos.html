@@ -45,6 +45,15 @@ const MORPH_MS = 1600;
 const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the sky is computed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: planets, comets and galaxies are in the same place on every monitor
 // Defaults must match the "default" values of the cosmos theme in themes.json
 const P = { sigma: 80, palette: 0, stars: 0.6, orbits: 3, planets: 8, speed: 1, galaxy: 1, meteors: 0.5, adaptive: 1, cap30: true };
 const DEFAULTS = Object.assign({}, P);
@@ -62,7 +71,7 @@ const PALETTES = [
 /* ======================================================================
    Random numbers and noise (seeded: desktop and preview show the same sky)
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -89,12 +98,15 @@ const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
    Icon field (CPU): s = signed distance to the edge of a group of icons (<0 inside), as in the other themes;
    grid point (gx, gy) is at (gx * STEP - MARGIN, gy * STEP - MARGIN)
    ====================================================================== */
-let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null, nebNoise = null;
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null, nebNoise = null;   // W, H: this screen (share.js uses them too)
+// Desktop coordinates throughout: the noise, the field, the orbits and the nebula cover the whole desktop, so they continue across monitors
 function buildNoise() {
+  const W = WORLD.w, H = WORLD.h;
+  Gw = Math.ceil((W + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((H + 2 * MARGIN) / STEP) + 2;
   const N = Gw * Gh;
   NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
   for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
-    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    const i = gy * Gw + gx, x = gx * STEP - MARGIN, y = gy * STEP - MARGIN;
     NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
     NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
   }
@@ -190,15 +202,19 @@ function contours(s, lv) {
 /* ======================================================================
    Scene geometry (CSS px; independent of the canvas resolution): orbits, planets, the galaxy's place
    ====================================================================== */
-let icons = [];
-const iconRects = () => icons.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
 const PLANET_TYPES = 7;
 function buildGeometry() {
-  // Not adapting, or an empty desktop: two suns of our own, drawn as stars
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
+  const nMon = WORLD.mons.length;
+  // Not adapting, or an empty desktop: two suns of our own on each monitor, drawn as stars
   const rnd = mulberry32(seed * 5 + 1), suns = [];
-  if (!P.adaptive || !icons.length) for (let i = 0; i < 2; i++) suns.push({ cx: W * (0.2 + 0.6 * rnd()), cy: (H - TASKBAR) * (0.2 + 0.6 * rnd()), hw: 10, hh: 10, ph: rnd() * 6.28 });
+  if (!P.adaptive || !icons.length) for (const [mx, my, mw, mh] of WORLD.mons) for (let i = 0; i < 2; i++)
+    suns.push({ cx: mx + mw * (0.2 + 0.6 * rnd()), cy: my + (mh - TASKBAR) * (0.2 + 0.6 * rnd()), hw: 10, hh: 10, ph: rnd() * 6.28 });
   const s = computeField(P.adaptive && icons.length ? iconRects() : suns);
-  const geo = { s, suns, orbits: [], planets: [], galaxy: null, rasters: [], nebulae: [] };
+  const geo = { s, suns, orbits: [], planets: [], galaxies: [], rasters: [], nebulae: [] };
   const sMax = P.sigma * 4.3;
   for (let k = 0; k < P.orbits; k++) {
     const lv = 32 + k * 46;
@@ -209,24 +225,27 @@ function buildGeometry() {
       if (cum[n] > 320) geo.orbits.push({ pts, cum, total: cum[n], k, n });
     }
   }
-  // Planets: spread over the orbits by length; inner orbits are faster; fixed random numbers per planet index
+  // Planets: P.planets per monitor, spread over the orbits by length; inner orbits are faster; fixed random numbers per planet index.
+  // Where a planet is follows from the shared clock (d0 + v · speed · time), so a planet on an orbit crossing two monitors is in the same place on both
   const all = geo.orbits.reduce((a, o) => a + o.total, 0);
-  for (let i = 0; i < P.planets && geo.orbits.length; i++) {
+  for (let i = 0; i < P.planets * nMon && geo.orbits.length; i++) {
     let d = hash2(i, 1, 41) * all, o = geo.orbits[0];
     for (const q of geo.orbits) { o = q; d -= q.total; if (d <= 0) break; }
     const size = hash2(i, 2, 41), type = (hash2(i, 3, 41) * PLANET_TYPES) | 0, r = 9 + 24 * size * size;
-    geo.planets.push({ o, d: hash2(i, 4, 41) * o.total, v: (hash2(i, 5, 41) < 0.5 ? -1 : 1) * (16 + 20 * hash2(i, 6, 41)) / Math.sqrt(1 + o.k * 0.7),
+    geo.planets.push({ o, d0: hash2(i, 4, 41) * o.total, d: 0, v: (hash2(i, 5, 41) < 0.5 ? -1 : 1) * (16 + 20 * hash2(i, 6, 41)) / Math.sqrt(1 + o.k * 0.7),
       r, type, tilt: (hash2(i, 7, 41) - 0.5) * 1.2, ring: (type === 3 || type === 4 || type === 6) && r > 12 && hash2(i, 8, 41) < 0.6,
       moons: r > 13 ? 1 + (hash2(i, 9, 41) * 2 | 0) : r > 9 && hash2(i, 9, 41) < 0.4 ? 1 : 0, ph: hash2(i, 10, 41) * 6.28, x: 0, y: 0, sun: 0 });
   }
-  // Galaxy: the emptiest of a few fixed places (far from the icons and inside the screen)
-  let best = null;
-  for (let i = 0; i < 40; i++) {
-    const x = W * (0.08 + 0.84 * hash2(i, 1, 51)), y = (H - TASKBAR) * (0.1 + 0.8 * hash2(i, 2, 51));
-    const room = Math.min(sampleArr(s, x, y) - 50, x + 60, y + 60, W - x + 60, H - y + 60);
-    if (!best || room > best.room) best = { x, y, room };
-  }
-  if (best && best.room > 60) geo.galaxy = { x: best.x, y: best.y, R: Math.min(280, best.room * 1.15), tilt: hash2(7, 7, 52) * 3.14, flat: 0.42 + 0.3 * hash2(7, 8, 52) };
+  // Galaxies: one per monitor, in the emptiest of a few fixed places of that monitor (far from the icons, inside the monitor)
+  WORLD.mons.forEach(([mx, my, mw, mh], m) => {
+    let best = null;
+    for (let i = 0; i < 40; i++) {
+      const x = mx + mw * (0.08 + 0.84 * hash2(i, 1 + m * 7, 51)), y = my + (mh - TASKBAR) * (0.1 + 0.8 * hash2(i, 2 + m * 7, 51));
+      const room = Math.min(sampleArr(s, x, y) - 50, x - mx + 60, y - my + 60, mx + mw - x + 60, my + mh - y + 60);
+      if (!best || room > best.room) best = { x, y, room };
+    }
+    if (best && best.room > 60) geo.galaxies.push({ x: best.x, y: best.y, R: Math.min(280, best.room * 1.15), tilt: hash2(7, 7 + m, 52) * 3.14, flat: 0.42 + 0.3 * hash2(7, 8 + m, 52) });
+  });
   return geo;
 }
 function pointOn(o, d, out) {                    // point at distance d along a closed orbit
@@ -276,7 +295,8 @@ function nebula(geo) {
 const STAR_COLORS = [[255, 255, 255], [200, 220, 255], [255, 240, 205], [255, 205, 170], [180, 200, 255]];
 function buildStatic(geo, cw, ch, s) {
   const pal = PALETTES[P.palette], c = makeCanvas(cw, ch), x = c.getContext('2d');
-  x.setTransform(s, 0, 0, s, 0, 0);
+  const W = WORLD.w, H = WORLD.h;                  // in here W, H are the whole desktop: everything is drawn in desktop coordinates, the canvas keeps this screen's part
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);
   const bg = x.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, Math.max(W, H) * 0.75);
   bg.addColorStop(0, pal.bg[0]); bg.addColorStop(1, pal.bg[1]);
   x.fillStyle = bg; x.fillRect(0, 0, W, H);
@@ -400,15 +420,29 @@ const COMET = (() => {
 /* ======================================================================
    Moving things
    ====================================================================== */
-let twinkles = [], meteors = [], meteorWait = 2, comet = null, cometWait = PREVIEW ? 6 : 25 + Math.random() * 30, nova = null, novaWait = PREVIEW ? 9 : 15 + Math.random() * 20, spin = 0;
+// Twinkling stars, shooting stars and novas are small and brief: each monitor has its own. The comet, the planets and the galaxies' turn
+// follow the shared clock, so they are in the same place on every monitor
+let twinkles = [], meteors = [], meteorWait = 2, nova = null, novaWait = PREVIEW ? 9 : 15 + Math.random() * 20;
+const COMET_PERIOD = PREVIEW ? 35 : 90;          // one possible comet per period (only while shooting stars are on)
+function cometAt(T) {
+  if (P.meteors <= 0) return null;
+  const now = Math.floor(T / COMET_PERIOD);
+  for (const slot of [now, now - 1]) {
+    const r = mulberry32(seed * 41 + slot);
+    if (r() < 0.3 && !PREVIEW) continue;
+    const start = slot * COMET_PERIOD + 4 + r() * COMET_PERIOD * 0.4;
+    const fromLeft = r() < 0.5, A = [fromLeft ? -260 : WORLD.w + 260, WORLD.h * (0.05 + 0.5 * r())], B = [fromLeft ? WORLD.w + 260 : -260, WORLD.h * (0.2 + 0.7 * r())];
+    const size = 300 + 160 * r(), u = (T - start) / (Math.hypot(B[0] - A[0], B[1] - A[1]) / 110);
+    if (u < 0 || u >= 1) continue;
+    return { x: A[0] + (B[0] - A[0]) * u, y: A[1] + (B[1] - A[1]) * u, ang: Math.atan2(B[1] - A[1], B[0] - A[0]), size };
+  }
+  return null;
+}
 function initTwinkles() {
   const r = mulberry32(seed + 23);
   twinkles = Array.from({ length: Math.round(W * H / 16000) }, () => ({ x: r() * W, y: r() * H, ph: r() * 6.28, rate: 0.6 + 2.2 * r(), sz: 7 + 13 * r() * r(), k: (r() * GLOWS.length) | 0 }));
 }
 function step(dt) {
-  const sp = P.speed;
-  spin += dt * 0.035 * sp;
-  if (geoNew) for (const p of geoNew.planets) p.d += p.v * sp * dt;
   // shooting stars
   meteorWait -= dt * P.meteors;
   if (meteorWait <= 0 && P.meteors > 0) {
@@ -418,17 +452,6 @@ function step(dt) {
   }
   for (const m of meteors) { m.age += dt; m.x += m.vx * dt; m.y += m.vy * dt; }
   meteors = meteors.filter(m => m.age < m.life);
-  // comet: a slow crossing every now and then (only when shooting stars are on)
-  if (!comet && P.meteors > 0) {
-    cometWait -= dt;
-    if (cometWait <= 0) {
-      const fromLeft = Math.random() < 0.5, A = [fromLeft ? -260 : W + 260, H * (0.05 + 0.5 * Math.random())], B = [fromLeft ? W + 260 : -260, H * (0.2 + 0.7 * Math.random())];
-      comet = { A, B, t: 0, dur: Math.hypot(B[0] - A[0], B[1] - A[1]) / 110, ang: Math.atan2(B[1] - A[1], B[0] - A[0]), size: 300 + Math.random() * 160 };
-    }
-  } else if (comet) {
-    comet.t += dt / comet.dur;
-    if (comet.t >= 1 || P.meteors <= 0) { comet = null; cometWait = PREVIEW ? 16 + Math.random() * 10 : 50 + Math.random() * 70; }
-  }
   // nova: one of the twinkling stars flares up for a few seconds
   if (!nova) { novaWait -= dt; if (novaWait <= 0 && twinkles.length) nova = { s: twinkles[(Math.random() * twinkles.length) | 0], age: 0 }; }
   else { nova.age += dt; if (nova.age > 4.2) { nova = null; novaWait = PREVIEW ? 10 + Math.random() * 8 : 18 + Math.random() * 30; } }
@@ -454,9 +477,17 @@ function resize() {
   // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
-  Gw = Math.ceil((W + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((H + 2 * MARGIN) / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
   buildNoise();
   initTwinkles();
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): recompute the sky over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise();
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
 }
 
 const T0 = performance.now();
@@ -473,17 +504,19 @@ function frame(now) {
   frameN++;
 }
 const pt = [0, 0];
-function drawPlanets(geo, alpha, s, t) {
+function drawPlanets(geo, alpha, s, t) {          // t: shared clock (s)
   if (alpha <= 0) return;
-  const k = s;
+  const k = s, VX = WORLD.x, VY = WORLD.y;
   for (const p of geo.planets) {
+    p.d = p.d0 + p.v * P.speed * t;
     pointOn(p.o, p.d, pt);
-    const x = pt[0], y = pt[1];
-    if (x < -60 || y < -60 || x > W + 60 || y > H + 60) continue;
+    const wx = pt[0], wy = pt[1];                  // desktop coordinates
+    if (wx < VX - 60 || wy < VY - 60 || wx > VX + W + 60 || wy > VY + H + 60) continue;
+    const x = wx - VX, y = wy - VY;                // this screen's coordinates
     const tint = PLANET_TINT[p.type], dir = Math.sign(p.v);
-    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.setTransform(k, 0, 0, k, -VX * k, -VY * k);
     ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, p.r * 0.16);
-    let px = x, py = y;
+    let px = wx, py = wy;
     for (let i = 1; i <= 9; i++) {                 // trail along the orbit behind the planet
       pointOn(p.o, p.d - dir * i * (7 + p.r * 0.5), pt);
       ctx.strokeStyle = rgba(tint, alpha * 0.34 * (1 - i / 10));
@@ -491,7 +524,7 @@ function drawPlanets(geo, alpha, s, t) {
       px = pt[0]; py = pt[1];
     }
     // the suns are where the field falls
-    const gx = sampleArr(geo.s, x + 6, y) - sampleArr(geo.s, x - 6, y), gy = sampleArr(geo.s, x, y + 6) - sampleArr(geo.s, x, y - 6);
+    const gx = sampleArr(geo.s, wx + 6, wy) - sampleArr(geo.s, wx - 6, wy), gy = sampleArr(geo.s, wx, wy + 6) - sampleArr(geo.s, wx, wy - 6);
     const sun = Math.atan2(-gy, -gx), ct = Math.cos(p.tilt), st = Math.sin(p.tilt);
     ctx.globalAlpha = alpha;
     const ring = half => {                         // ring: the far half before the planet, the near half after it
@@ -518,7 +551,8 @@ function drawPlanets(geo, alpha, s, t) {
   ctx.globalAlpha = 1;
 }
 function draw(now) {
-  const s = cv._scale, t = (now - T0) / 1000, e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), k = e * e * (3 - 2 * e);
+  const s = cv._scale, t = (now - T0) / 1000, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), k = e * e * (3 - 2 * e);
+  const VX = WORLD.x, VY = WORLD.y, spin = T * 0.035 * P.speed, comet = cometAt(T);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (!geoNew) { ctx.fillStyle = PALETTES[P.palette].bg[1]; ctx.fillRect(0, 0, cv.width, cv.height); return; }
@@ -531,10 +565,10 @@ function draw(now) {
   ctx.drawImage(cached(geoNew.rasters, (w, h, q) => buildStatic(geoNew, w, h, q)), 0, 0);
   const aNew = e < 1 ? k : 1;
   ctx.globalCompositeOperation = 'lighter';
-  const g = geoNew.galaxy;
-  if (g && P.galaxy) {                             // galaxy: turned (spin), flattened, tilted
+  for (const g of P.galaxy ? geoNew.galaxies : []) {   // galaxies (one per monitor): turned (spin), flattened, tilted
+    if (g.x + g.R < VX || g.x - g.R > VX + W || g.y + g.R < VY || g.y - g.R > VY + H) continue;
     const ct = Math.cos(g.tilt), st = Math.sin(g.tilt), cp = Math.cos(spin), sp = Math.sin(spin), f = g.flat;
-    ctx.setTransform(s * (ct * cp - st * f * sp), s * (st * cp + ct * f * sp), s * (-ct * sp - st * f * cp), s * (-st * sp + ct * f * cp), g.x * s, g.y * s);
+    ctx.setTransform(s * (ct * cp - st * f * sp), s * (st * cp + ct * f * sp), s * (-ct * sp - st * f * cp), s * (-st * sp + ct * f * cp), (g.x - VX) * s, (g.y - VY) * s);
     ctx.globalAlpha = 0.9 * aNew;
     ctx.drawImage(galaxySprite(), -g.R, -g.R, g.R * 2, g.R * 2);
   }
@@ -551,18 +585,18 @@ function draw(now) {
     ctx.drawImage(GLOWS[0], n.x - sz * 1.5, n.y - 1.2, sz * 3, 2.4); ctx.drawImage(GLOWS[0], n.x - 1.2, n.y - sz * 1.5, 2.4, sz * 3);
   }
   for (const sun of geoNew.suns) {                 // our own suns (only without icons): a pulsing star
-    const sz = 150 + 14 * Math.sin(t * 0.8 + sun.ph);
+    const sz = 150 + 14 * Math.sin(T * 0.8 + sun.ph), cx = sun.cx - VX, cy = sun.cy - VY;
     ctx.globalAlpha = aNew;
-    ctx.drawImage(SUN, sun.cx - sz / 2, sun.cy - sz / 2, sz, sz);
-    ctx.drawImage(GLOWS[0], sun.cx - 17, sun.cy - 17, 34, 34);
+    ctx.drawImage(SUN, cx - sz / 2, cy - sz / 2, sz, sz);
+    ctx.drawImage(GLOWS[0], cx - 17, cy - 17, 34, 34);
   }
   ctx.globalCompositeOperation = 'source-over';
-  if (geoOld && e < 1) drawPlanets(geoOld, 1 - k, s, t);
-  drawPlanets(geoNew, aNew, s, t);
+  if (geoOld && e < 1) drawPlanets(geoOld, 1 - k, s, T);
+  drawPlanets(geoNew, aNew, s, T);
   ctx.setTransform(s, 0, 0, s, 0, 0);
   ctx.globalCompositeOperation = 'lighter';
   if (comet) {
-    const c = comet, x = c.A[0] + (c.B[0] - c.A[0]) * c.t, y = c.A[1] + (c.B[1] - c.A[1]) * c.t, cs = Math.cos(c.ang) * s, sn = Math.sin(c.ang) * s, q = c.size / 480;
+    const c = comet, x = c.x - VX, y = c.y - VY, cs = Math.cos(c.ang) * s, sn = Math.sin(c.ang) * s, q = c.size / 480;
     ctx.setTransform(cs, sn, -sn, cs, x * s, y * s);
     ctx.globalAlpha = 0.9;
     ctx.drawImage(COMET, -432 * q, -80 * q, 480 * q, 160 * q);
@@ -617,6 +651,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

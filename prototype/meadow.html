@@ -156,6 +156,15 @@ const MORPH_MS = 1800;
 const QS = new URLSearchParams(location.search);
 const WALL = QS.has('wallpaper');      // wallpaper mode: loaded by the desktop host; messages come from the host
 const PREVIEW = QS.has('preview');     // preview mode: the thumbnail preview (iframe) in the settings window; messages come from the parent page
+// Where this screen sits in the whole desktop (CSS px), from the host's layout message. The meadow's noise, the cloud masses' grid and the drifting
+// clouds use desktop coordinates, so they continue across monitors; the boy and the cat stay on their own monitor. Without a layout: this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: drifting clouds stay in step across monitors
 // Defaults must match the "default" values of the meadow theme in themes.json; grain and quality are not adjustable
 const P = {
   sigma: 72, warp: 40, edge: 10, cover: 0.3, flow: 1, grain: 1, quality: 2,   // quality 2: draw at the screen's actual pixels (no more blurry upscaling at 150% scaling)
@@ -237,7 +246,7 @@ function mineCells() {
 /* ======================================================================
    CPU noise + tileable noise texture
    ====================================================================== */
-let seed = (Math.random() * 1e6) | 0;
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
 function hash2(x, y, k = 0) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -288,7 +297,7 @@ function buildNoise() {
   const N = Gw * Gh;
   NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
   for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
-    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    const i = gy * Gw + gx, x = gx * STEP + WORLD.x, y = gy * STEP + WORLD.y;   // the warp noise in desktop coordinates: cloud outlines continue across monitors
     NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
     NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
   }
@@ -340,6 +349,7 @@ const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uNoise, uFA, uFB;
 uniform vec2 uRes, uGrid;
+uniform vec2 uOff;               // this screen's top-left corner in the whole desktop: noise and grass are sampled in desktop coordinates, so they continue across monitors
 uniform float uScale, uSeed, uStep, uMix, uTime, uDebug, uEdge;
 #ifdef MEADOW_ACTOR
 uniform sampler2D uActor, uActorShadow;
@@ -373,7 +383,7 @@ float hash2(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 float ss(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
-vec4 N(vec2 p, float scale) { return texture(uNoise, p / scale + uSeed * 0.013); }
+vec4 N(vec2 p, float scale) { return texture(uNoise, (p + uOff) / scale + uSeed * 0.013); }
 float fieldS(sampler2D t, vec2 p) { return texture(t, (p / uStep + 0.5) / uGrid).r; }
 float smin(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
 
@@ -400,6 +410,7 @@ float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(
 
 // Short grass strokes: at most one stroke per 12×6 cell; direction follows the large-scale region (patches of parallel hatching) and so does density (dense in places, empty in others)
 // only look at this cell and the cells above and below (a stroke never extends into the left/right cells)
+// p is in desktop coordinates; N() adds uOff itself, so the cells' centers are passed to it minus uOff
 float grassInk(vec2 p) {
   const vec2 G = vec2(12.0, 6.0);
   vec2 c0 = floor(p / G);
@@ -408,9 +419,9 @@ float grassInk(vec2 p) {
     vec2 c = c0 + vec2(0.0, float(j));
     vec2 cp = (c + 0.5) * G;
     float h = hash2(c + 3.1);
-    float dens = 0.75 * ss(0.42, 0.72, N(cp, 900.0).r) * ss(0.35, 0.6, N(cp + 50.0, 380.0).g) + 0.02;   // drawn in patches and clumps, with gaps in between
+    float dens = 0.75 * ss(0.42, 0.72, N(cp - uOff, 900.0).r) * ss(0.35, 0.6, N(cp - uOff + 50.0, 380.0).g) + 0.02;   // drawn in patches and clumps, with gaps in between
     if (h > dens) continue;
-    float ang = (N(cp, 1400.0).g - 0.5) * 0.7 + (hash2(c + 7.7) - 0.5) * 0.3;    // mostly near-horizontal; strokes within a patch are roughly parallel
+    float ang = (N(cp - uOff, 1400.0).g - 0.5) * 0.7 + (hash2(c + 7.7) - 0.5) * 0.3;    // mostly near-horizontal; strokes within a patch are roughly parallel
     float len = 2.5 + 3.0 * hash2(c + 1.9);                                      // half-length 2.5~5.5px
     vec2 ctr = cp + (vec2(hash2(c + 4.3), hash2(c + 5.9)) - 0.5) * vec2(2.0, 3.0);
     vec2 dir = vec2(cos(ang), sin(ang)) * len;
@@ -445,9 +456,9 @@ void main() {
   vec3 col = mix(G_MID, G_LIGHT, ss(0.3, 0.75, w1 * 0.7 + w2 * 0.3));
   col = mix(col, G_DEEP, ss(0.45, 0.85, N(p + 977.0, 1300.0).r) * 0.4);       // Relax the threshold: the noise is magnified many times, so too steep a cut-off gives stair-stepped blocks
   col *= 1.0 + 0.05 * (0.5 - (p.x + p.y) / (uRes.x + uRes.y));
-  col *= 1.0 + (hash2(floor(p * (0.8 * max(uScale, 1.0)))) - 0.5) * 0.035;   // grain is sampled at the screen's actual pixels
-  // the dark-green short strokes that draw the grass
-  col = mix(col, INK, grassInk(p) * 0.75);
+  col *= 1.0 + (hash2(floor((p + uOff) * (0.8 * max(uScale, 1.0)))) - 0.5) * 0.035;   // grain is sampled at the screen's actual pixels
+  // the dark-green short strokes that draw the grass, on a grid in desktop coordinates
+  col = mix(col, INK, grassInk(p + uOff) * 0.75);
 
 #ifdef MEADOW_ACTOR
   // The characters, the kite and their full cast shadows land on the grass first, then are covered by the same layer of cloud shadows and white clouds.
@@ -596,8 +607,9 @@ let circStats = null, circTex = null, circBuf = null, cgW = 0, cgH = 0;
 const rnd1 = (x, y, k) => hash2(x, y, k);                  // fixed random numbers (change together with the seed)
 const skyClouds = [];
 let flowT = 0;
-function makeSkyCloud(x) {
-  const rnd = Math.random, R = 95 * 1.2;                 // a larger outline (a thicker cloud, to fit the big circles); circle sizes are still based on 95
+// One drifting cloud's shape from a seeded random sequence (so every monitor builds the same cloud); y: its height in the whole desktop
+function makeSkyCloud(rnd) {
+  const R = 95 * 1.2;                                     // a larger outline (a thicker cloud, to fit the big circles); circle sizes are still based on 95
   // 1) Rough outline: a row of big circles at the bottom (large in the middle, small at the sides) with a few more piled on top → a blob wide at the base and narrow on top
   const n = 3 + Math.floor(rnd() * 3), w = R * (1.0 + n * 0.5);
   const body = [];
@@ -642,32 +654,27 @@ function makeSkyCloud(x) {
   for (const [cx, cy, r] of body) if (r > 0.75 * Rm) circles.push([cx, cy, r - 0.75 * Rm, rnd()]);
   layer(34 * 0.85, [0.5, 0.9], -1.0 * Rm, ci => sstep(-0.05 * Rm, -0.35 * Rm, ci) * (1 - sstep(-0.7 * Rm, -1.0 * Rm, ci)), true);
   layer(24 * 0.85, [0.45, 0.8], -0.6 * Rm, ci => sstep(0, -0.2 * Rm, ci) * (1 - sstep(-0.4 * Rm, -0.6 * Rm, ci)), true);
-  const y = 80 + rnd() * (H - TASKBAR - 120);
-  return { x, y, circles, v: 0.7 + rnd() * 0.6, grow: 0, hw: Math.max(-x0, x1) + 20 };
+  const y = 80 + rnd() * (WORLD.h - TASKBAR - 120);
+  return { y, circles, hw: Math.max(-x0, x1) + 20 };
 }
-function stepSkyClouds(dt) {
-  flowT += dt * P.flow;                                     // the cloud's own clock: the faster the flow speed, the faster the puffs breathe
-  const want = Math.round(P.cover * 10);
-  // Fewer clouds: the extra ones slowly shrink away; more: fade in right in the picture (in a spot not too crowded by other small clouds)
-  const alive = skyClouds.filter(c => !c.dying);
-  for (let i = want; i < alive.length; i++) alive[i].dying = true;
-  for (let n = alive.length; n < want; n++) {
-    let best = null, bestD = -1;
-    for (let k = 0; k < 20; k++) {
-      const c = makeSkyCloud(Math.random() * W);
-      const dmin = Math.min(1e9, ...skyClouds.map(o => Math.hypot((o.x - c.x) / 1.6, o.y - c.y)));
-      if (dmin > bestD) { bestD = dmin; best = c; }
-    }
-    skyClouds.push(best);
+// Drifting clouds: P.cover × 10 per monitor, over the whole desktop. Where a cloud is follows from the shared clock, so a cloud leaving one monitor
+// drifts into the next; each time it wraps around the desktop it gets a new shape (built once, from its index and lap number)
+const skyShapes = new Map();
+function stepSkyClouds() {
+  const T = wallClock();
+  flowT = T * P.flow;                                       // the clouds' clock: the faster the flow speed, the faster the puffs breathe
+  const n = Math.round(P.cover * 10) * WORLD.mons.length, span = WORLD.w + 700, used = new Set();
+  skyClouds.length = 0;
+  for (let i = 0; i < n; i++) {
+    const r = mulberry32(seed * 59 + i * 7919), x0 = r(), v = 0.7 + r() * 0.6;
+    const u = x0 * span + P.flow * 10 * v * T, lap = Math.floor(u / span), xw = u - lap * span - 350;   // about 10px/s at flow speed ×1
+    const key = i + ':' + lap;
+    used.add(key);
+    let c = skyShapes.get(key);
+    if (!c) { c = makeSkyCloud(mulberry32(seed * 61 + i * 131 + lap * 7)); skyShapes.set(key, c); }
+    skyClouds.push({ x: xw - WORLD.x, y: c.y - WORLD.y, circles: c.circles, grow: 1, hw: c.hw });
   }
-  for (let i = skyClouds.length - 1; i >= 0; i--) {
-    const c = skyClouds[i];
-    c.x += P.flow * 10 * c.v * dt;                          // about 10px/s at flow speed ×1
-    c.grow = c.dying ? c.grow - dt * 0.5 : Math.min(1, c.grow + dt * 0.5);
-    if (c.grow <= 0) { skyClouds.splice(i, 1); continue; }
-    // drifted out of the picture: drift back in from off-screen on the upwind side
-    if (c.x - c.hw > W + 50) { const n = makeSkyCloud(-c.hw - 50); n.grow = 1; skyClouds[i] = n; }
-  }
+  for (const k of [...skyShapes.keys()]) if (!used.has(k)) skyShapes.delete(k);
 }
 const sstep = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
 let massList = null, massT = -1e9;
@@ -679,11 +686,12 @@ function buildMassCircles() {
   const R = 95;
   // big: big circles are stored per cell (base size, without breathing) so small circles can find an adjacent big one
   const big = new Map();
+  const OX = WORLD.x, OY = WORLD.y;               // the cells are laid on the whole desktop, so a cloud on the edge between two monitors gets the same circles on both
   const layer = (G, k0, size, band, isBig) => {
     if (!FB) return;
-    for (let cy = -Math.ceil(2 * R / G); cy <= Math.ceil((H + 2 * R) / G); cy++) for (let cx = -Math.ceil(2 * R / G); cx <= Math.ceil((W + 2 * R) / G); cx++) {
+    for (let cy = Math.floor((OY - 2 * R) / G); cy <= Math.ceil((OY + H + 2 * R) / G); cy++) for (let cx = Math.floor((OX - 2 * R) / G); cx <= Math.ceil((OX + W + 2 * R) / G); cx++) {
       const ox = rnd1(cx, cy, k0), oy = rnd1(cx, cy, k0 + 1), rr = rnd1(cx, cy, k0 + 2), ph = rnd1(cx, cy, k0 + 3);
-      const x = (cx + 0.1 + ox * 0.8) * G, y = (cy + 0.1 + oy * 0.8) * G;
+      const x = (cx + 0.1 + ox * 0.8) * G - OX, y = (cy + 0.1 + oy * 0.8) * G - OY;   // this screen's coordinates
       const ci = curS(x, y) - P.edge;                        // distance from the circle center to the mass edge (<0 inside the mass)
       if (ci > 0 || ci < band[1] - 10) continue;
       let r = G * (size[0] + (size[1] - size[0]) * rr) * band[2](ci);
@@ -691,7 +699,7 @@ function buildMassCircles() {
       const gap = ci + 0.6 * R;
       let att = sstep(gap - 4, gap + 12, r);
       if (!isBig) {
-        const bx = Math.floor(x / R), by = Math.floor(y / R);
+        const bx = Math.floor((x + OX) / R), by = Math.floor((y + OY) / R);
         for (let j = by - 1; j <= by + 1; j++) for (let i = bx - 1; i <= bx + 1; i++) {
           const o = big.get(i + ',' + j);
           if (!o) continue;
@@ -737,7 +745,7 @@ function uploadCircles(t) {
   const list = massList.slice();
   for (let i = 0; i < list.length; i += 4) {
     const x = list[i], y = list[i + 1], r = list[i + 2], ph = list[i + 3];
-    list[i] = x + wobX(x, y, r, ph); list[i + 1] = y + wobY(x, y, r, ph);
+    list[i] = x + wobX(x + WORLD.x, y + WORLD.y, r, ph); list[i + 1] = y + wobY(x + WORLD.x, y + WORLD.y, r, ph);   // churn in desktop coordinates: the same on both sides of a monitor edge
   }
   // small clouds in the sky
   for (const c of skyClouds) {
@@ -890,8 +898,17 @@ function resize() {
   const box = cv.getBoundingClientRect();
   cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
   Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
   buildNoise();
   allocField();
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed)
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise(); massList = null;
+  if (FB) refresh();
 }
 
 const T0 = performance.now();
@@ -933,6 +950,7 @@ function draw(now) {
     gl.uniform2f(U.uGrid, Gw, Gh);
     gl.uniform1f(U.uScale, cv._scale);
     gl.uniform1f(U.uSeed, (seed % 997) * 0.37);
+    gl.uniform2f(U.uOff, WORLD.x, WORLD.y);
     gl.uniform1f(U.uStep, STEP);
     gl.uniform1f(U.uMix, curMix);
     gl.uniform1f(U.uTime, (now - T0) / 1000);
@@ -1115,6 +1133,7 @@ function startHostedMode() {
     if (m.t === 'pause') { paused = PREVIEW ? false : m.v; return; }
     if (m.t === 'settings') { applySettings(m.v || {}); return; }
     if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
     if (m.t !== 'icons') return;
     const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
     icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];

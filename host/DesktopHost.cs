@@ -510,6 +510,7 @@ class HostContext : ApplicationContext
             "autostartWarn", autoStartSw != null, "autostartSw", autoStartSw ?? "",
             "lang", Settings.Lang, "langEff", I18n.Code, "langSys", I18n.Sys)));
         WallpaperForm form = PrimaryForm();
+        if (form != null) settingsWin.Post(form.LayoutJson());   // the preview shows the primary monitor's part of the whole desktop
         if (form != null && form.LastIcons != "") settingsWin.Post(form.LastIcons);
     }
 
@@ -877,9 +878,11 @@ class HostContext : ApplicationContext
             form.IconsChanged += delegate(string json) { if (settingsWin != null && form == PrimaryForm()) settingsWin.Post(json); };
             form.RecordProgress += delegate(string p) { if (settingsWin != null) settingsWin.Post("{\"t\":\"recProgress\",\"p\":" + p + "}"); };
             form.HandleDestroyed += OnFormGone;
+            form.LayoutChanged += delegate(string json) { if (settingsWin != null && form == PrimaryForm()) settingsWin.Post(json); };
             forms.Add(form);
             form.Show();
         }
+        foreach (WallpaperForm f in forms) f.Relayout();   // the desktop changed shape: every page places itself again (a new window sends it when its page is ready)
     }
 
     void OnFormGone(object sender, EventArgs e)
@@ -1291,6 +1294,7 @@ class WallpaperForm : Form
                 if (msg != null && msg.StartsWith("recprogress|")) { if (RecordProgress != null) RecordProgress(msg.Substring(12)); return; }
                 if (msg != null && msg.StartsWith("record|")) { OnRecord(msg); return; }
                 if (SettingsJson != null) core.PostWebMessageAsString(SettingsJson());
+                lastLayout = ""; Relayout();                // where this monitor sits in the whole desktop: before the icons, which the page places in that space
                 lastIcons = ""; lastPause = -1; PollIcons(); PollForeground();
             };
             core.Navigate(PageUrl);
@@ -1494,19 +1498,20 @@ class WallpaperForm : Form
         if (rects != null) SetIcons(rects, visible);
     }
 
-    // Icons of the whole desktop (screen coordinates) → the ones that touch this monitor, relative to its top-left corner; sent to the page only when they change
+    // Icons of the whole desktop (screen coordinates), all of them, relative to this monitor's top-left corner (so icons on the other monitors
+    // have coordinates outside this screen); sent to the page only when they change. The page needs them all to compute one continuous scene
     public void SetIcons(List<Native.RECT> rects, bool visible)
     {
         if (web.CoreWebView2 == null || shuttingDown) return;
         var sb = new StringBuilder();
         sb.Append("{\"t\":\"icons\",\"vis\":").Append(visible ? "true" : "false").Append(",\"r\":[");
-        int n = 0;
+        int n = 0, here = 0;
         foreach (Native.RECT r in rects)
         {
-            if (r.Right <= screen.Left || r.Left >= screen.Right || r.Bottom <= screen.Top || r.Top >= screen.Bottom) continue;
             if (n++ > 0) sb.Append(',');
             sb.Append('[').Append(r.Left - screen.X).Append(',').Append(r.Top - screen.Y).Append(',')
               .Append(r.Right - screen.X).Append(',').Append(r.Bottom - screen.Y).Append(']');
+            if (r.Right > screen.Left && r.Left < screen.Right && r.Bottom > screen.Top && r.Top < screen.Bottom) here++;
         }
         sb.Append("]}");
         string json = sb.ToString();
@@ -1514,7 +1519,40 @@ class WallpaperForm : Form
         lastIcons = json;
         if (IconsChanged != null) IconsChanged(json);
         Post(json);
-        Log.Write(string.Format("图标变化（{2}）：{0} 个，可见={1}", n, visible, Device));
+        Log.Write(string.Format("图标变化（{2}）：{0} 个，可见={1}", here + "/" + n, visible, Device));
+    }
+
+    // ---------------------------------------------------------------- Where this monitor sits in the whole desktop
+    // Physical pixels, relative to the top-left corner of the virtual screen (the union of all monitors): this monitor (x, y), the whole desktop (w, h)
+    // and every monitor (mons). The theme pages compute one scene over the whole desktop and each draws its own part, so the scenery continues across monitors
+    string lastLayout = "";
+    public event Action<string> LayoutChanged;          // forwarded to the settings window preview (primary monitor)
+    public string LayoutJson()
+    {
+        Rectangle v = SystemInformation.VirtualScreen;
+        var sb = new StringBuilder();
+        sb.Append("{\"t\":\"layout\",\"x\":").Append(screen.X - v.X).Append(",\"y\":").Append(screen.Y - v.Y)
+          .Append(",\"w\":").Append(v.Width).Append(",\"h\":").Append(v.Height).Append(",\"mons\":[");
+        Screen[] all = Screen.AllScreens;
+        for (int i = 0; i < all.Length; i++)
+        {
+            Rectangle b = all[i].Bounds;
+            if (i > 0) sb.Append(',');
+            sb.Append('[').Append(b.X - v.X).Append(',').Append(b.Y - v.Y).Append(',').Append(b.Width).Append(',').Append(b.Height).Append(']');
+        }
+        return sb.Append("]}").ToString();
+    }
+    // Send the layout when it changed (a monitor added, removed, moved or resized); the icons are sent again after it
+    public void Relayout()
+    {
+        if (web.CoreWebView2 == null || shuttingDown) return;
+        string json = LayoutJson();
+        if (json == lastLayout) return;
+        lastLayout = json;
+        lastIcons = "";
+        if (LayoutChanged != null) LayoutChanged(json);
+        Post(json);
+        Log.Write("Desktop layout (" + Device + "): " + json);
     }
 
     // ---------------------------------------------------------------- Pause while a maximized / fullscreen window hides this monitor

@@ -127,9 +127,61 @@
     "errStart": "Impossibile avviare: {msg}"
   },
   "themes": {
+    "woodland": {
+      "name": "Bosco delle fiabe",
+      "desc": "Un bosco da libro di fiabe disegnato come un cartone animato classico: le icone galleggiano su stagni con ninfee, rane e famiglie di anatroccoli; intorno alberi tondi, funghi rossi e fiori, coniglietti, volpi e ricci che passeggiano, uccellini azzurri e farfalle; di giorno, al tramonto o di notte con le lucciole",
+      "groups": [
+        "Stagni",
+        "Bosco",
+        "Animali"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Dimensione degli stagni",
+          "hint": "Quanto si estende lo stagno intorno alle tue icone"
+        },
+        "warp": {
+          "label": "Rive irregolari",
+          "hint": "Quanto è irregolare il profilo degli stagni"
+        },
+        "trees": {
+          "label": "Alberi",
+          "hint": "Quanti alberi e cespugli crescono nel prato"
+        },
+        "flowers": {
+          "label": "Fiori",
+          "hint": "Quanti fiori e funghi spuntano nel prato"
+        },
+        "time": {
+          "label": "Momento del giorno",
+          "options": [
+            "Giorno",
+            "Tramonto",
+            "Notte"
+          ]
+        },
+        "animals": {
+          "label": "Animaletti",
+          "hint": "Quanti animaletti passeggiano su ogni monitor (coniglietti, volpi, ricci)",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Uccellini azzurri",
+          "hint": "Uccellini che ogni tanto attraversano il cielo",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "flow": {
+          "label": "Velocità",
+          "hint": "Quanto velocemente si muovono animali, anatroccoli e farfalle"
+        }
+      }
+    },
     "ninja": {
       "name": "Villaggio ninja",
-      "desc": "Un villaggio giapponese visto dall'alto: le icone poggiano su tetti di tegole circondati da giardini zen di sabbia rastrellata; lanterne di pietra, ciliegi in fiore o aceri rossi e un ninja che compare in uno sbuffo di fumo, salta di tetto in tetto, lancia uno shuriken e svanisce",
+      "desc": "Un villaggio giapponese disegnato come un anime degli anni Settanta: case viste dall'alto con tetti di tegole, muri bianchi e travi di legno, giardini di sabbia rastrellata, tinte piatte con contorni neri, ombre nette e grana di pellicola; lanterne di pietra, ciliegi in fiore o aceri rossi e un ninja che compare in uno sbuffo di fumo, salta di tetto in tetto, lancia uno shuriken e svanisce",
       "groups": [
         "Villaggio",
         "Atmosfera",
@@ -181,7 +233,11 @@
         },
         "flow": {
           "label": "Velocità",
-          "hint": "Quanto velocemente si muovono petali, foglie e ombre delle nuvole"
+          "hint": "Quanto velocemente cadono petali e foglie"
+        },
+        "film": {
+          "label": "Effetto pellicola",
+          "hint": "Grana, graffi e bordi scuri di una pellicola di animazione degli anni Settanta"
         },
         "ninja": {
           "label": "Mostra il ninja",

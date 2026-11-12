@@ -126,9 +126,61 @@
     "errStart": "Couldn't start: {msg}"
   },
   "themes": {
+    "woodland": {
+      "name": "Storybook Woods",
+      "desc": "A picture-book wood drawn like a classic cartoon: your icons float on ponds with water lilies, frogs and families of ducklings; around them round trees, red toadstools and flowers, bunnies, foxes and hedgehogs out for a stroll, bluebirds and butterflies; by day, at sunset or at night with fireflies",
+      "groups": [
+        "Ponds",
+        "Woods",
+        "Animals"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Pond size",
+          "hint": "How far the pond extends around your icons"
+        },
+        "warp": {
+          "label": "Ragged shores",
+          "hint": "How irregular the outline of the ponds is"
+        },
+        "trees": {
+          "label": "Trees",
+          "hint": "How many trees and bushes grow in the meadow"
+        },
+        "flowers": {
+          "label": "Flowers",
+          "hint": "How many flowers and toadstools grow in the meadow"
+        },
+        "time": {
+          "label": "Time of day",
+          "options": [
+            "Day",
+            "Sunset",
+            "Night"
+          ]
+        },
+        "animals": {
+          "label": "Animals",
+          "hint": "How many little animals wander on each monitor (bunnies, foxes, hedgehogs)",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Bluebirds",
+          "hint": "Little birds flying across the sky now and then",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        },
+        "flow": {
+          "label": "Speed",
+          "hint": "How fast the animals, ducklings and butterflies move"
+        }
+      }
+    },
     "ninja": {
       "name": "Ninja Village",
-      "desc": "A Japanese village seen from above: your icons rest on tiled roofs ringed by raked zen-garden sand; stone lanterns, cherry blossoms or red maples, and a ninja who appears in a puff of smoke, leaps from roof to roof, throws a shuriken and vanishes",
+      "desc": "A Japanese village drawn like a 1970s anime: houses seen from above with tiled roofs, white walls and timber, raked zen-garden sand, flat colours with ink outlines, hard shadows and film grain; stone lanterns, cherry blossoms or red maples, and a ninja who appears in a puff of smoke, leaps from roof to roof, throws a shuriken and vanishes",
       "groups": [
         "Village",
         "Atmosphere",
@@ -180,7 +232,11 @@
         },
         "flow": {
           "label": "Speed",
-          "hint": "How fast the petals, leaves and cloud shadows move"
+          "hint": "How fast the petals and leaves fall"
+        },
+        "film": {
+          "label": "Film look",
+          "hint": "Grain, scratches and dark edges of a 1970s animation film print"
         },
         "ninja": {
           "label": "Show the ninja",

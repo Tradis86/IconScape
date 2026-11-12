@@ -127,6 +127,63 @@
     "errStart": "Impossibile avviare: {msg}"
   },
   "themes": {
+    "manga": {
+      "name": "Manga",
+      "desc": "Una tavola di manga in bianco e nero: le icone poggiano su macchie d'inchiostro da cui esplodono linee d'impatto; intorno vignette con retini, linee cinetiche, città notturne e onomatopee, petali di ciliegio e, ogni tanto, un corvo di passaggio",
+      "groups": [
+        "Inchiostro",
+        "Tavola",
+        "Animazione"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Macchia d'inchiostro",
+          "hint": "Quanto si estende il nero intorno alle tue icone"
+        },
+        "warp": {
+          "label": "Bordi irregolari",
+          "hint": "Quanto è irregolare il contorno delle macchie"
+        },
+        "burst": {
+          "label": "Linee d'impatto",
+          "hint": "Lunghezza delle punte che si irradiano dal nero"
+        },
+        "palette": {
+          "label": "Inchiostro e carta",
+          "options": [
+            "Bianco e nero",
+            "Seppia",
+            "Inchiostro blu",
+            "Shōjo rosa"
+          ]
+        },
+        "panels": {
+          "label": "Vignette",
+          "hint": "Quante vignette dividono la tavola: più alto, vignette più piccole"
+        },
+        "sfx": {
+          "label": "Onomatopee",
+          "hint": "Quanto spesso compaiono scritte come ドン o ゴゴゴ"
+        },
+        "petals": {
+          "label": "Petali di ciliegio",
+          "hint": "Quanti petali cadono su ogni monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocità",
+          "hint": "Quanto velocemente cadono i petali"
+        },
+        "crow": {
+          "label": "Mostra il corvo",
+          "hint": "Un corvo che ogni tanto attraversa la tavola",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        }
+      }
+    },
     "cosmos": {
       "name": "Universo",
       "desc": "Spazio profondo: ogni gruppo di icone è un sistema stellare, con orbite che ne seguono la forma e pianeti che le percorrono; intorno nebulose, una galassia che ruota, stelle cadenti, comete e qualche nova",

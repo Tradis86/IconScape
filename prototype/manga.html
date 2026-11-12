@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IconScape · 漫画</title>
+<!--
+  IconScape · manga theme (black-and-white comic page; Canvas 2D)
+  Art direction: the desktop is one page of a manga. Every group of icons sits on a solid black ink splash (beta) with a sea-urchin burst
+  of impact spikes around it; the rest of the page is divided into panels with screentone, speed lines, focus lines, hatching,
+  a night city, clouds and hollow sound effects
+  - Ink: the same icon field as the other themes (a sum of Gaussians around the icons, warped by noise); outline traced with marching squares
+  - Static drawing (paper and panels; ink, halo and spikes per icon layout) is cached at the screen's actual pixels; when the icons move
+    the old and the new ink cross-fade
+  - Every frame only draws small things: sparkles on the ink, falling cherry petals, sound effects popping up and, now and then, a crow
+  - The page, the ink, the petals, the sound effects and the crow live in desktop coordinates, so they continue across monitors
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f6f2e9; }
+  #art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  /* Preview mode (?preview=1, inside the settings window) and standalone mode: translucent blocks mark where the icons are */
+  #ghosts { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.ghosts #ghosts { display: block; }
+  .ghost { position: absolute; }
+  .ghost i { position: absolute; left: 50%; top: 4px; width: 48px; height: 48px; margin-left: -24px; border-radius: 9px;
+    background: rgba(255,255,255,.88); box-shadow: 3px 6px 8px rgba(0,0,0,.35); }
+  .ghost b { position: absolute; left: 14%; right: 14%; top: 60px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.75); }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<div id="ghosts"></div>
+<script>
+'use strict';
+
+/* ======================================================================
+   Parameters
+   ====================================================================== */
+const CELL_W = 76, CELL_H = 100, GRID_X0 = 4, GRID_Y0 = 6, TASKBAR = 48;   // desktop grid (also used by share.js)
+const STEP = 6;                                  // field grid (CSS px)
+const MARGIN = 220;                              // the field reaches this far beyond the desktop, so outlines close off-screen
+const MORPH_MS = 1600;
+
+const QS = new URLSearchParams(location.search);
+const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
+const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the scene is computed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: things that cross from one monitor to another stay in step
+// Defaults must match the "default" values of the manga theme in themes.json
+const P = { sigma: 70, warp: 30, burst: 0.6, palette: 0, panels: 0.5, sfx: 0.5, petals: 20, flow: 1, crow: 1, adaptive: 1, cap30: true };
+const DEFAULTS = Object.assign({}, P);
+// Accepted parameters: [min, max, integer]
+const RANGES = { sigma: [40, 200], warp: [0, 80], burst: [0, 1], palette: [0, 3, 1], panels: [0, 1], sfx: [0, 1],
+  petals: [0, 60, 1], flow: [0, 3], crow: [0, 1, 1], adaptive: [0, 1, 1] };
+// Ink and paper: classic black and white, sepia, blue ink, shoujo pink. tone: the screentone dots; petal: fill of the cherry petals
+const PALS = [
+  { paper: '#f6f2e9', ink: '#121212', tone: '#1a1a1a', petal: '#ffffff' },
+  { paper: '#eee0c2', ink: '#36200f', tone: '#4f321b', petal: '#fbf2e0' },
+  { paper: '#edf2f8', ink: '#111f45', tone: '#1c3570', petal: '#ffffff' },
+  { paper: '#fff0f4', ink: '#2a1020', tone: '#d47496', petal: '#ffc2d6' },
+];
+const GEOMETRY_KEYS = ['sigma', 'warp', 'burst', 'adaptive'];
+// Japanese sans fonts shipped with Windows; the sound effects are katakana in every interface language, as in a real manga
+const JFONT = '"Yu Gothic UI", "Yu Gothic", "Meiryo", "MS Gothic", sans-serif';
+const WORDS = ['ドン!', 'ゴゴゴ', 'バーン', 'ザワ…', 'ドキドキ', 'シーン', 'キラッ', 'ズドーン', 'ワクワク', 'ガーン!', 'ドドド'];
+const SHAKY = new Set(['ゴゴゴ', 'ドドド', 'ザワ…', 'ドキドキ']);   // these tremble while they are shown
+const IMPACT = new Set(['ドン!', 'バーン', 'ズドーン', 'ガーン!']);   // these get a burst of short lines behind them
+
+/* ======================================================================
+   Random numbers and noise (seeded: desktop and preview show the same scene)
+   ====================================================================== */
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
+function hash2(x, y, k = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y, k = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy, k), b = hash2(ix + 1, iy, k), c = hash2(ix, iy + 1, k), d = hash2(ix + 1, iy + 1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function fbm(x, y, k = 0) {
+  let a = 0.5, s = 0;
+  for (let i = 0; i < 4; i++) { s += a * vnoise(x, y, k + i * 7); x = x * 2.03 + 17.1; y = y * 2.03 + 17.1; a *= 0.5; }
+  return s;
+}
+function mulberry32(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const ss = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+const mod = (a, n) => ((a % n) + n) % n;
+
+/* ======================================================================
+   Ink field (CPU): s = signed distance to the ink's outline (<0 is ink), as in the other themes
+   Desktop coordinates; grid point (gx, gy) is at (gx * STEP - MARGIN, gy * STEP - MARGIN)
+   ====================================================================== */
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;   // W, H: this screen (share.js uses them too)
+function buildNoise() {
+  Gw = Math.ceil((WORLD.w + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((WORLD.h + 2 * MARGIN) / STEP) + 2;
+  const N = Gw * Gh;
+  NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
+  for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
+    const i = gy * Gw + gx, x = gx * STEP - MARGIN, y = gy * STEP - MARGIN;
+    NZ.wx[i] = fbm(x * 0.0032, y * 0.0032, 1) - 0.47;
+    NZ.wy[i] = fbm(x * 0.0032, y * 0.0032, 2) - 0.47;
+  }
+}
+// rects: { cx, cy, hw, hh, w } (w: weight)
+function computeField(rects) {
+  const N = Gw * Gh, f1 = new Float32Array(N);
+  const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
+  for (const r of rects) {
+    const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
+    const gx0 = Math.max(0, Math.floor((r.cx + MARGIN - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + MARGIN + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy + MARGIN - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + MARGIN + R) / STEP));
+    const chw = r.hw * 0.5, chh = r.hh * 0.5, w = r.w || 1;
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * Gw + gx;
+      const qx = gx * STEP - MARGIN + NZ.wx[i] * wa, qy = gy * STEP - MARGIN + NZ.wy[i] * wa;
+      let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
+      if (dx < 0) dx = 0; if (dy < 0) dy = 0;
+      f1[i] += w * Math.exp(-(dx * dx + dy * dy) * is1);
+    }
+  }
+  const c0 = Math.sqrt(-Math.log(0.35)), s = new Float32Array(N), fMin = Math.exp(-30);
+  for (let i = 0; i < N; i++) {
+    const g = Math.log(Math.max(f1[i], fMin));
+    s[i] = sig * (Math.sqrt(Math.max(-g, 0)) - c0) - sig * 0.6 * Math.max(g, 0);
+  }
+  return s;
+}
+function sampleArr(a, x, y) {
+  const fx = Math.min(Math.max((x + MARGIN) / STEP, 0), Gw - 1.001), fy = Math.min(Math.max((y + MARGIN) / STEP, 0), Gh - 1.001);
+  const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, i = iy * Gw + ix;
+  return (a[i] * (1 - tx) + a[i + 1] * tx) * (1 - ty) + (a[i + Gw] * (1 - tx) + a[i + Gw + 1] * tx) * ty;
+}
+
+// Marching squares at level lv; the grid is padded with "paper" so every outline is a closed loop. Returns loops of [x0, y0, x1, y1, …] (CSS px)
+function contours(s, lv) {
+  const gw = Gw + 2, gh = Gh + 2, V = new Float32Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++)
+    V[j * gw + i] = i < 1 || j < 1 || i > Gw || j > Gh ? 1e3 : s[(j - 1) * Gw + i - 1] - lv;
+  const pos = new Map(), adj = new Map();
+  const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
+  const hk = (i, j) => {                          // point on the edge (i, j)–(i+1, j)
+    const k = (j * gw + i) * 2;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[j * gw + i + 1]; pos.set(k, [(i - 1 + a / (a - b)) * STEP - MARGIN, (j - 1) * STEP - MARGIN]); }
+    return k;
+  };
+  const vk = (i, j) => {                          // point on the edge (i, j)–(i, j+1)
+    const k = (j * gw + i) * 2 + 1;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[(j + 1) * gw + i]; pos.set(k, [(i - 1) * STEP - MARGIN, (j - 1 + a / (a - b)) * STEP - MARGIN]); }
+    return k;
+  };
+  for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) {
+    const a = V[j * gw + i], b = V[j * gw + i + 1], c = V[(j + 1) * gw + i + 1], d = V[(j + 1) * gw + i];
+    const code = (a < 0 ? 8 : 0) | (b < 0 ? 4 : 0) | (c < 0 ? 2 : 0) | (d < 0 ? 1 : 0);
+    if (code === 0 || code === 15) continue;
+    const E = [() => hk(i, j), () => vk(i + 1, j), () => hk(i, j + 1), () => vk(i, j)];   // top, right, bottom, left
+    const seg = (p, q) => link(E[p](), E[q]());
+    const mid = (a + b + c + d) / 4 < 0;
+    switch (code) {
+      case 1: case 14: seg(3, 2); break;
+      case 2: case 13: seg(2, 1); break;
+      case 3: case 12: seg(3, 1); break;
+      case 4: case 11: seg(0, 1); break;
+      case 6: case 9: seg(0, 2); break;
+      case 7: case 8: seg(3, 0); break;
+      case 5: if (mid) { seg(0, 3); seg(1, 2); } else { seg(0, 1); seg(3, 2); } break;
+      case 10: if (mid) { seg(0, 1); seg(2, 3); } else { seg(0, 3); seg(1, 2); } break;
+    }
+  }
+  const loops = [], used = new Set();
+  for (const start of adj.keys()) {
+    if (used.has(start)) continue;
+    const pts = [];
+    let prev = -1, cur = start;
+    while (cur !== undefined && !used.has(cur)) {
+      used.add(cur);
+      const p = pos.get(cur); pts.push(p[0], p[1]);
+      const nb = adj.get(cur), next = nb[0] !== prev ? nb[0] : nb[1];
+      prev = cur; cur = next;
+    }
+    let area = 0;
+    for (let k = 0, n = pts.length; k < n; k += 2) area += pts[k] * pts[(k + 3) % n] - pts[(k + 2) % n] * pts[k + 1];
+    if (pts.length >= 8 && Math.abs(area) > 80) loops.push(pts);
+  }
+  return loops;
+}
+// Smooth closed path through the loops (quadratic curves through the midpoints); filled with the even-odd rule so holes stay open
+function loopsPath(loops) {
+  const path = new Path2D();
+  for (const L of loops) {
+    const n = L.length / 2;
+    path.moveTo((L[2 * n - 2] + L[0]) / 2, (L[2 * n - 1] + L[1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      path.quadraticCurveTo(L[2 * i], L[2 * i + 1], (L[2 * i] + L[2 * j]) / 2, (L[2 * i + 1] + L[2 * j + 1]) / 2);
+    }
+    path.closePath();
+  }
+  return path;
+}
+
+/* ======================================================================
+   Ink geometry (CSS px, desktop coordinates): ink splash, white halo, impact spikes, splatter, sparkle spots
+   ====================================================================== */
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+function nearIcon(x, y, m) {
+  for (const ic of iconsW) if (x > ic.x - m && x < ic.x + ic.w + m && y > ic.y - m && y < ic.y + ic.h + m) return true;
+  return false;
+}
+// a random point inside one of the monitors (desktop coordinates), keeping `m` from its edges and the taskbar
+function pointOnMonitors(rnd, m) {
+  const mon = WORLD.mons[(rnd() * WORLD.mons.length) | 0];
+  return [mon[0] + m + (mon[2] - 2 * m) * rnd(), mon[1] + m + (mon[3] - TASKBAR - 2 * m) * rnd()];
+}
+function fieldRects() {
+  if (P.adaptive) return iconRects();
+  const rnd = mulberry32(seed * 7 + 3), out = [];   // not adapting: a few large splashes of their own (3 per monitor)
+  for (let i = 0; i < 3 * WORLD.mons.length; i++) { const [x, y] = pointOnMonitors(rnd, 140); out.push({ cx: x, cy: y, hw: 60 + 120 * rnd(), hh: 50 + 90 * rnd(), w: 1 }); }
+  return out;
+}
+const haloWidth = () => 10 + 22 * P.burst;       // white paper kept clear around the ink, so the spikes read against it
+const spikeMax = () => 14 + 84 * P.burst;
+function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
+  const s = computeField(fieldRects()), halo = haloWidth(), Lmax = spikeMax();
+  const edge = contours(s, 0);
+  const geo = { s, ink: loopsPath(edge), rim: loopsPath(contours(s, -9)), halo: loopsPath(contours(s, halo)),
+    spikes: new Path2D(), drops: new Path2D(), kira: [], rasters: [] };
+  // Impact spikes: thin black wedges along the outline, pointing away from the ink (the field's gradient), mostly short with a few long ones
+  const rnd = mulberry32(seed * 17 + 9);
+  if (P.burst > 0) for (const L of edge) {
+    const n = L.length / 2;
+    let acc = 0, next = 0;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, ax = L[2 * i], ay = L[2 * i + 1], bx = L[2 * j], by = L[2 * j + 1], seg = Math.hypot(bx - ax, by - ay);
+      while (next <= acc + seg) {
+        const t = seg > 0 ? (next - acc) / seg : 0, px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
+        let gx = sampleArr(s, px + 3, py) - sampleArr(s, px - 3, py), gy = sampleArr(s, px, py + 3) - sampleArr(s, px, py - 3);
+        const gl = Math.hypot(gx, gy) || 1; gx /= gl; gy /= gl;
+        const long = rnd() < 0.18, len = Lmax * (long ? 0.72 + 0.28 * rnd() : 0.16 + 0.5 * rnd() * rnd()), w = (long ? 3.4 : 2) + 2.4 * rnd();
+        const tx = -gy, ty = gx;
+        geo.spikes.moveTo(px - gx * 3 + tx * w / 2, py - gy * 3 + ty * w / 2);
+        geo.spikes.lineTo(px + gx * len, py + gy * len);
+        geo.spikes.lineTo(px - gx * 3 - tx * w / 2, py - gy * 3 - ty * w / 2);
+        geo.spikes.closePath();
+        next += 3.5 + 4 * rnd();
+      }
+      acc += seg;
+    }
+  }
+  // Ink splatter: drops flung beyond the spikes
+  const DW = WORLD.w, DH = WORLD.h, nMon = WORLD.mons.length;
+  for (let cy = 0; cy * 34 < DH; cy++) for (let cx = 0; cx * 34 < DW; cx++) {
+    if (hash2(cx, cy, 51) > 0.1 * (0.25 + P.burst)) continue;
+    const x = (cx + hash2(cx, cy, 52)) * 34, y = (cy + hash2(cx, cy, 53)) * 34, d = sampleArr(s, x, y);
+    if (d < halo + Lmax * 0.35 || d > halo + Lmax + 46) continue;
+    const r = 1.2 + 3.6 * hash2(cx, cy, 54) ** 2;
+    geo.drops.moveTo(x + r, y); geo.drops.arc(x, y, r, 0, 6.2832);
+    if (hash2(cx, cy, 55) < 0.5) { const a = hash2(cx, cy, 56) * 6.28, q = r * 0.45; geo.drops.moveTo(x + Math.cos(a) * r * 2.3 + q, y + Math.sin(a) * r * 2.3); geo.drops.arc(x + Math.cos(a) * r * 2.3, y + Math.sin(a) * r * 2.3, q, 0, 6.2832); }
+  }
+  // Sparkle spots: inside the ink, near its outline and away from the icons; 6 per monitor
+  const kc = [];
+  for (let cy = 0; cy * 44 < DH; cy++) for (let cx = 0; cx * 44 < DW; cx++) {
+    const x = (cx + 0.2 + 0.6 * hash2(cx, cy, 61)) * 44, y = (cy + 0.2 + 0.6 * hash2(cx, cy, 62)) * 44, d = sampleArr(s, x, y);
+    if (d > -14 || d < -42 || nearIcon(x, y, 14)) continue;
+    kc.push({ x, y, h: hash2(cx, cy, 63), ph: hash2(cx, cy, 64) * 6.28, sz: 0.7 + 0.6 * hash2(cx, cy, 65), sp: 0.7 + 0.8 * hash2(cx, cy, 66) });
+  }
+  kc.sort((a, b) => a.h - b.h);
+  for (const c of kc) {
+    if (geo.kira.length >= 6 * nMon) break;
+    if (geo.kira.some(o => Math.hypot(o.x - c.x, o.y - c.y) < 110)) continue;
+    geo.kira.push(c);
+  }
+  return geo;
+}
+
+/* ======================================================================
+   Page layout: rows of panels over the whole desktop, slanted dividers, some panels split in two
+   Each panel: q = [TL, TR, BR, BL] (x, y pairs), its content type and its own seed
+   ====================================================================== */
+let panels = [];
+function buildPanels() {
+  const rnd = mulberry32(seed * 13 + 5), DW = WORLD.w, DH = WORLD.h, k = 1.55 - 1.05 * P.panels, G = 11, B = 40;
+  const TYPES = [['tone', 22], ['speed', 14], ['focus', 14], ['sky', 12], ['hatch', 10], ['city', 12], ['bokeh', 9], ['blank', 7]];
+  const total = TYPES.reduce((a, t) => a + t[1], 0);
+  panels = [];
+  const add = q => {
+    let r = rnd() * total, type = 'blank';
+    for (const [t, w] of TYPES) { if (r < w) { type = t; break; } r -= w; }
+    const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
+    panels.push({ q, type, seed: (rnd() * 1e9) | 0, sfx: rnd() < 0.3, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) });
+  };
+  for (let y0 = -B; y0 < DH + B;) {
+    let y1 = y0 + (150 + 230 * rnd()) * k;
+    if (DH + B - y1 < 110 * k) y1 = DH + B;
+    const div = [[-B, -B]];                         // dividers: x at the top and at the bottom of the row
+    for (let x = -B; ;) {
+      x += (200 + 380 * rnd()) * k;
+      if (DW + B - x < 140 * k) { div.push([DW + B, DW + B]); break; }
+      const sl = rnd() < 0.6 ? (rnd() - 0.5) * 0.4 * (y1 - y0) : 0;
+      div.push([x + sl / 2, x - sl / 2]);
+    }
+    for (let i = 1; i < div.length; i++) {
+      const [a0, a1] = div[i - 1], [b0, b1] = div[i];
+      const L = y => a0 + (a1 - a0) * (y - y0) / (y1 - y0) + G / 2, R = y => b0 + (b1 - b0) * (y - y0) / (y1 - y0) - G / 2;
+      const ty = y0 + G / 2, by = y1 - G / 2;
+      if (y1 - y0 > 230 * k && rnd() < 0.3) {     // split in two with a slightly tilted gutter
+        const m = y0 + (y1 - y0) * (0.38 + 0.24 * rnd()), tilt = (rnd() - 0.5) * 50, ml = m - tilt / 2, mr = m + tilt / 2;
+        add([L(ty), ty, R(ty), ty, R(mr - G / 2), mr - G / 2, L(ml - G / 2), ml - G / 2]);
+        add([L(ml + G / 2), ml + G / 2, R(mr + G / 2), mr + G / 2, R(by), by, L(by), by]);
+      } else add([L(ty), ty, R(ty), ty, R(by), by, L(by), by]);
+    }
+    y0 = y1;
+  }
+}
+
+/* ======================================================================
+   Canvas and cached layers (drawn at the canvas's actual pixels; at most two sizes are kept: the screen and a share/recording size)
+   ====================================================================== */
+const cv = document.getElementById('art');
+const ctx = cv.getContext('2d', { alpha: false });
+function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; }
+function cached(list, build) {
+  const w = cv.width, h = cv.height;
+  let hit = list.find(e => e.w === w && e.h === h && e.pal === P.palette);
+  if (!hit) { hit = { w, h, pal: P.palette, c: build(w, h, cv._scale) }; list.unshift(hit); if (list.length > 2) list.pop(); }
+  return hit.c;
+}
+
+// Screentone: dots on a 45° lattice anchored to the desktop (so a panel split by two monitors matches); cover(x, y) gives 0..1
+function toneDots(x, p, cover, D, col) {
+  const path = new Path2D(), h = D * 0.7071, maxR = D * 0.52;
+  for (let j = Math.floor((p.y0 - D) / h); j * h < p.y1 + D; j++) {
+    const y = j * h;
+    for (let i = Math.floor((p.x0 - D) / (2 * h)); i * 2 * h < p.x1 + D; i++) {
+      const xx = i * 2 * h + (j & 1) * h, t = cover(xx, y);
+      if (t <= 0.03) continue;
+      const r = maxR * Math.sqrt(Math.min(1, t));
+      path.moveTo(xx + r, y); path.arc(xx, y, r, 0, 6.2832);
+    }
+  }
+  x.fillStyle = col; x.fill(path);
+}
+// A thin wedge from (ax, ay) (width w) to a point (bx, by)
+function wedge(path, ax, ay, bx, by, w) {
+  const dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy) || 1, nx = -dy / l * w / 2, ny = dx / l * w / 2;
+  path.moveTo(ax + nx, ay + ny); path.lineTo(bx, by); path.lineTo(ax - nx, ay - ny); path.closePath();
+}
+// A sound effect in hollow or solid letters; each character a little bigger and a little off the line, like hand lettering
+function lettering(x, word, size, solid, pal, ph = 0) {
+  const chars = [...word];
+  x.font = `900 ${size}px ${JFONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  const ws = chars.map((c, i) => x.measureText(c).width * (0.9 + i * 0.07));
+  let cx = -ws.reduce((a, b) => a + b, 0) / 2;
+  const place = [];
+  chars.forEach((c, i) => { place.push([c, cx + ws[i] / 2, Math.sin(i * 1.9 + ph) * size * 0.09, 0.9 + i * 0.07, Math.sin(i * 2.3 + ph) * 0.12]); cx += ws[i] * 0.94; });
+  for (const pass of solid ? [0, 1] : [0, 1, 2]) {
+    for (const [c, px, py, k, rot] of place) {
+      x.save(); x.translate(px, py); x.rotate(rot); x.scale(k, k);
+      if (solid) {
+        if (pass === 0) { x.lineWidth = size * 0.26; x.strokeStyle = pal.paper; x.strokeText(c, 0, 0); }
+        else { x.fillStyle = pal.ink; x.fillText(c, 0, 0); }
+      } else {
+        if (pass === 0) { x.lineWidth = size * 0.3; x.strokeStyle = pal.paper; x.strokeText(c, 0, 0); }
+        else if (pass === 1) { x.lineWidth = size * 0.13; x.strokeStyle = pal.ink; x.strokeText(c, 0, 0); }
+        else { x.fillStyle = pal.paper; x.fillText(c, 0, 0); }
+      }
+      x.restore();
+    }
+  }
+}
+
+function drawPanel(x, p, pal) {
+  const r = mulberry32(p.seed), w = p.x1 - p.x0, h = p.y1 - p.y0, cx = (p.x0 + p.x1) / 2, cy = (p.y0 + p.y1) / 2, E = Math.hypot(w, h) / 2 + 4;
+  const q = p.q, clip = new Path2D();
+  clip.moveTo(q[0], q[1]); clip.lineTo(q[2], q[3]); clip.lineTo(q[4], q[5]); clip.lineTo(q[6], q[7]); clip.closePath();
+  x.save(); x.clip(clip);
+  if (p.type === 'tone') {                         // screentone gradient
+    const a = r() * 6.283, ca = Math.cos(a), sa = Math.sin(a), lo = 0.05 + 0.2 * r(), hi = 0.55 + 0.4 * r();
+    toneDots(x, p, (px, py) => lo + (hi - lo) * ss(-1, 1, ((px - cx) * ca + (py - cy) * sa) / E), 5 + 2 * r(), pal.tone);
+  } else if (p.type === 'speed') {                 // parallel speed lines coming in from one side
+    const a = [0, 0, Math.PI, 0.3, -0.3, Math.PI + 0.3, Math.PI / 2][(r() * 7) | 0], ca = Math.cos(a), sa = Math.sin(a), path = new Path2D();
+    for (let o = -E; o < E; o += 2.5 + 3 * r()) {
+      if (r() < 0.22) continue;
+      const len = E * (0.45 + 1.25 * r()), ox = cx - sa * o, oy = cy + ca * o;
+      wedge(path, ox - ca * (E + 10), oy - sa * (E + 10), ox - ca * (E + 10) + ca * len, oy - sa * (E + 10) + sa * len, 0.6 + 2.6 * r() * r());
+    }
+    x.fillStyle = pal.ink; x.fill(path);
+  } else if (p.type === 'focus') {                 // focus lines converging on an empty spot
+    const fx = p.x0 + w * (0.3 + 0.4 * r()), fy = p.y0 + h * (0.3 + 0.4 * r()), r0 = Math.min(w, h) * (0.14 + 0.14 * r());
+    const n = 150 + ((100 * r()) | 0), R = Math.hypot(w, h), path = new Path2D();
+    for (let i = 0; i < n; i++) {
+      const a = (i + r() * 0.7) / n * 6.2832, inner = r0 * (1 + 0.8 * r() * r());
+      wedge(path, fx + Math.cos(a) * R, fy + Math.sin(a) * R, fx + Math.cos(a) * inner, fy + Math.sin(a) * inner, Math.PI * R / n * (0.2 + 0.6 * r()));
+    }
+    x.fillStyle = pal.ink; x.fill(path);
+  } else if (p.type === 'sky') {                   // light tone at the top, outlined cumulus clouds, a few birds
+    toneDots(x, p, (px, py) => 0.5 * (1 - ss(p.y0, p.y0 + h * 0.75, py)), 5, pal.tone);
+    for (let c = 0, nc = 1 + ((r() * 2.5) | 0); c < nc; c++) {
+      const ccx = p.x0 + w * (0.15 + 0.7 * r()), ccy = p.y0 + h * (0.35 + 0.4 * r()), cw = Math.min(w * (0.35 + 0.3 * r()), 320), blobs = [];
+      for (let i = 0, nb = 5 + ((r() * 4) | 0); i < nb; i++) {
+        const t = i / (nb - 1), br = cw * (0.12 + 0.1 * r()) * (1 - 0.5 * Math.abs(t - 0.5));
+        blobs.push([ccx - cw / 2 + cw * t, ccy - br * (0.3 + 0.6 * r()), br]);
+      }
+      x.lineWidth = 2.2; x.strokeStyle = pal.ink;
+      for (const [bx, by, br] of blobs) { x.beginPath(); x.arc(bx, by, br, 0, 6.2832); x.stroke(); }
+      x.fillStyle = pal.paper;
+      for (const [bx, by, br] of blobs) { x.beginPath(); x.arc(bx, by, br - 1, 0, 6.2832); x.fill(); }
+      x.lineWidth = 1; x.beginPath();
+      for (let i = 0; i < 4; i++) { const yy = ccy + 2 - i * 4; x.moveTo(ccx - cw * (0.3 - i * 0.05), yy); x.lineTo(ccx + cw * (0.05 - i * 0.04), yy); }
+      x.stroke();
+    }
+    x.lineWidth = 1.4; x.strokeStyle = pal.ink; x.beginPath();
+    for (let i = 0, nb = (r() * 4) | 0; i < nb; i++) {
+      const bx = p.x0 + w * (0.1 + 0.8 * r()), by = p.y0 + h * (0.1 + 0.3 * r()), bs = 4 + 4 * r();
+      x.moveTo(bx - bs, by - bs * 0.5); x.quadraticCurveTo(bx - bs * 0.4, by - bs * 0.6, bx, by); x.quadraticCurveTo(bx + bs * 0.4, by - bs * 0.6, bx + bs, by - bs * 0.5);
+    }
+    x.stroke();
+  } else if (p.type === 'hatch') {                 // gradient of strokes coming from a solid edge (a "beta flash")
+    const a = r() * 6.283, ca = Math.cos(a), sa = Math.sin(a), path = new Path2D(), reach = 0.35 + 0.35 * r();
+    for (let o = -E; o < E; o += 2.6 + 0.8 * r()) {
+      const sx = cx - ca * E - sa * o, sy = cy - sa * E + ca * o, len = E * 2 * reach * (0.55 + 0.45 * r()) + Math.sin(o * 0.07) * 14;
+      wedge(path, sx, sy, sx + ca * len, sy + sa * len, 1.6 + 1.4 * r());
+    }
+    x.fillStyle = pal.ink; x.fill(path);
+  } else if (p.type === 'city') {                  // night city: dark tone sky, a moon, black buildings with lit windows
+    const gy = p.y1 - h * (0.06 + 0.14 * r());
+    toneDots(x, p, (px, py) => 0.25 + 0.6 * (1 - ss(p.y0, gy, py)), 5, pal.tone);
+    const mx = p.x0 + w * (0.2 + 0.6 * r()), my = p.y0 + h * (0.22 + 0.12 * r()), mr = Math.min(w, h) * (0.07 + 0.04 * r());
+    x.fillStyle = pal.paper; x.beginPath(); x.arc(mx, my, mr + 5, 0, 6.2832); x.fill();
+    x.lineWidth = 1.6; x.strokeStyle = pal.ink; x.beginPath(); x.arc(mx, my, mr, 0, 6.2832); x.stroke();
+    const win = new Path2D(), body = new Path2D();
+    for (let bx = p.x0 - 10; bx < p.x1 + 10;) {
+      const bw = 16 + 40 * r(), bh = h * (0.15 + 0.5 * r());
+      body.rect(bx, gy - bh, bw - 2, bh + h);
+      if (r() < 0.3) { body.rect(bx + bw * 0.4, gy - bh - 14, 1.6, 14); }
+      for (let wy = gy - bh + 6; wy < gy - 6; wy += 8) for (let wx = bx + 4; wx < bx + bw - 7; wx += 6) if (r() < 0.32) win.rect(wx, wy, 2.6, 3.6);
+      bx += bw;
+    }
+    x.fillStyle = pal.ink; x.fill(body); x.fillStyle = pal.paper; x.fill(win);
+  } else if (p.type === 'bokeh') {                 // shoujo background: even tone with soft bubbles and sparkles
+    toneDots(x, p, () => 0.42, 5, pal.tone);
+    for (let i = 0, n = Math.max(4, Math.min(30, (w * h / 9000) | 0)); i < n; i++) {
+      const bx = p.x0 + w * r(), by = p.y0 + h * r(), br = 5 + 24 * r() * r();
+      x.globalAlpha = 0.9; x.fillStyle = pal.paper; x.beginPath(); x.arc(bx, by, br, 0, 6.2832); x.fill();
+      x.globalAlpha = 1; x.lineWidth = 0.8; x.strokeStyle = pal.ink; x.stroke();
+    }
+    for (let i = 0, n = 2 + ((r() * 4) | 0); i < n; i++) star(x, p.x0 + w * r(), p.y0 + h * r(), 6 + 8 * r(), pal.paper, pal.ink);
+  }
+  if (p.sfx && p.type !== 'city' && w > 120 && h > 90) {   // a hollow sound effect painted into the panel
+    x.save(); x.translate(p.x0 + w * (0.3 + 0.4 * r()), p.y0 + h * (0.3 + 0.4 * r())); x.rotate((r() - 0.5) * 0.6);
+    lettering(x, WORDS[(r() * WORDS.length) | 0], Math.max(26, Math.min(86, Math.min(w, h) * 0.26)), false, pal, r() * 6);
+    x.restore();
+  }
+  x.restore();
+  x.lineWidth = 2.6; x.lineJoin = 'miter'; x.strokeStyle = pal.ink; x.stroke(clip);
+}
+// Four-pointed sparkle, filled and optionally outlined
+function star(x, sx, sy, sr, fill, line) {
+  x.beginPath(); x.moveTo(sx, sy - sr);
+  x.quadraticCurveTo(sx, sy, sx + sr * 0.8, sy); x.quadraticCurveTo(sx, sy, sx, sy + sr);
+  x.quadraticCurveTo(sx, sy, sx - sr * 0.8, sy); x.quadraticCurveTo(sx, sy, sx, sy - sr);
+  x.fillStyle = fill; x.fill();
+  if (line) { x.lineWidth = 0.9; x.strokeStyle = line; x.stroke(); }
+}
+
+// Paper and panels (independent of the icons)
+const baseCache = [];
+function buildBase(cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), pal = PALS[P.palette], VX = WORLD.x, VY = WORLD.y;
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);   // desktop coordinates: panels continue across monitors
+  x.fillStyle = pal.paper; x.fillRect(VX, VY, W, H);
+  for (const p of panels) {
+    if (p.x1 < VX - 4 || p.x0 > VX + W + 4 || p.y1 < VY - 4 || p.y0 > VY + H + 4) continue;
+    drawPanel(x, p, pal);
+  }
+  // paper grain: sparse faint specks on a desktop-anchored grid
+  x.fillStyle = pal.ink; x.globalAlpha = 0.07;
+  for (let cy = Math.floor(VY / 7); cy * 7 < VY + H; cy++) for (let cx = Math.floor(VX / 7); cx * 7 < VX + W; cx++) {
+    if (hash2(cx, cy, 71) > 0.08) continue;
+    x.fillRect(cx * 7 + hash2(cx, cy, 72) * 7, cy * 7 + hash2(cx, cy, 73) * 7, 0.8, 0.8);
+  }
+  x.globalAlpha = 1;
+  return c;
+}
+// Ink of one icon layout, on a transparent layer: white halo, splatter, spikes, solid ink and a thin white rim inside it
+function buildInk(geo, cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), pal = PALS[P.palette];
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);
+  x.fillStyle = pal.paper; x.fill(geo.halo, 'evenodd');
+  x.fillStyle = pal.ink; x.fill(geo.drops); x.fill(geo.spikes); x.fill(geo.ink, 'evenodd');
+  x.lineWidth = 1.6; x.strokeStyle = pal.paper; x.globalAlpha = 0.85; x.stroke(geo.rim); x.globalAlpha = 1;
+  return c;
+}
+
+/* ======================================================================
+   Moving things: cherry petals, sound effects, crow. All of them are functions of the shared clock and the seed,
+   so on every monitor they are in the same place at the same moment
+   ====================================================================== */
+let petals = [];
+function initMovers() {
+  const r = mulberry32(seed + 77);
+  petals = [];
+  for (let i = 0, n = 60 * WORLD.mons.length; i < n; i++)
+    petals.push({ x0: r(), y0: r(), sp: r(), ph: r() * 6.28, sz: 5.5 + 4 * r(), spin: 0.6 + 1.4 * r() });
+  popCache.clear();
+}
+function petalAt(p, T, out) {                    // desktop coordinates at time T (the petals wrap around a band 100px wider than the desktop)
+  const spanX = WORLD.w + 200, spanY = WORLD.h + 200, f = P.flow;
+  const x = p.x0 * spanX + (10 + 14 * p.sp) * f * T + Math.sin(T * 0.8 * (0.6 + p.sp) + p.ph) * 28;
+  const y = p.y0 * spanY + (18 + 16 * p.sp) * f * T;
+  out[0] = mod(x, spanX) - 100; out[1] = mod(y, spanY) - 100;
+}
+const PETAL = (() => {                           // unit petal: an oval with a notch at its tip
+  const p = new Path2D();
+  p.moveTo(0, -0.62); p.lineTo(-0.3, -1); p.bezierCurveTo(-0.95, -0.6, -0.7, 0.75, 0, 1);
+  p.bezierCurveTo(0.7, 0.75, 0.95, -0.6, 0.3, -1); p.closePath();
+  return p;
+})();
+
+// Sound effects: per monitor, one chance every POP_PERIOD seconds; the word pops in, holds, trembles if it is a rumble, then fades
+const POP_PERIOD = PREVIEW ? 3.5 : 8, POP_DUR = 3;
+const popCache = new Map();
+function makePop(mi, slot) {
+  const r = mulberry32(seed * 131 + slot * 7919 + mi * 104729);
+  if (r() >= P.sfx) return null;
+  const mon = WORLD.mons[mi], word = WORDS[(r() * WORDS.length) | 0], size = 46 + 34 * r(), tw = size * [...word].length * 0.62 + 30, th = size * 0.75 + 20;
+  if (mon[2] < tw + 60 || mon[3] < th + TASKBAR + 60) return null;
+  for (let t = 0; t < 14; t++) {
+    const x = mon[0] + 30 + tw / 2 + (mon[2] - tw - 60) * r(), y = mon[1] + 30 + th / 2 + (mon[3] - TASKBAR - th - 60) * r();
+    let clear = true;
+    for (const ic of iconsW) if (ic.x < x + tw / 2 + 20 && ic.x + ic.w > x - tw / 2 - 20 && ic.y < y + th / 2 + 20 && ic.y + ic.h > y - th / 2 - 20) { clear = false; break; }
+    if (!clear) continue;
+    return { x, y, word, size, ang: (r() - 0.5) * 0.5, ph: r() * 6, start: slot * POP_PERIOD + r() * POP_PERIOD * 0.4 };
+  }
+  return null;
+}
+function popsAt(T, out) {
+  out.length = 0;
+  if (P.sfx <= 0) return out;
+  const cur = Math.floor(T / POP_PERIOD);
+  for (let mi = 0; mi < WORLD.mons.length; mi++) for (const slot of [cur, cur - 1]) {
+    const key = mi + ':' + slot;
+    let p = popCache.get(key);
+    if (p === undefined) { p = makePop(mi, slot); popCache.set(key, p); if (popCache.size > 64) popCache.delete(popCache.keys().next().value); }
+    if (!p) continue;
+    const u = T - p.start;
+    if (u >= 0 && u < POP_DUR) out.push([p, u]);
+  }
+  return out;
+}
+function drawPop(x, p, u, pal) {
+  const t = Math.min(u / 0.22, 1), back = 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;   // ease-out with a small overshoot
+  const k = u < 0.22 ? back : 1, a = u > POP_DUR - 0.5 ? (POP_DUR - u) / 0.5 : 1;
+  const shake = SHAKY.has(p.word) ? Math.sin(u * 55) * 1.8 : 0;
+  x.save(); x.translate(p.x + shake, p.y + shake * 0.4); x.rotate(p.ang); x.scale(k, k); x.globalAlpha = a;
+  if (IMPACT.has(p.word)) {                        // short burst lines behind the word
+    const path = new Path2D(), rx = p.size * [...p.word].length * 0.42 + 10, ry = p.size * 0.62 + 6;
+    for (let i = 0; i < 18; i++) {
+      const ang = i / 18 * 6.2832 + Math.sin(i * 3.1) * 0.12, l = 0.25 + 0.2 * (0.5 + 0.5 * Math.sin(i * 5.7));
+      const ox = Math.cos(ang) * rx, oy = Math.sin(ang) * ry;
+      wedge(path, ox * (1 + l), oy * (1 + l), ox, oy, 4);
+    }
+    x.fillStyle = pal.ink; x.fill(path);
+  }
+  lettering(x, p.word, p.size, true, pal, p.ph);
+  x.restore();
+}
+
+// Crow: crosses the whole desktop now and then, flapping, with a few speed lines behind and, sometimes, its call
+const CROW_PERIOD = PREVIEW ? 16 : 38;
+function crowAt(T) {
+  if (!P.crow) return null;
+  for (const slot of [Math.floor(T / CROW_PERIOD), Math.floor(T / CROW_PERIOD) - 1]) {
+    const r = mulberry32(seed * 37 + slot);
+    if (r() < 0.3 && !PREVIEW) continue;           // now and then a period without a crow
+    const start = slot * CROW_PERIOD + 1 + r() * CROW_PERIOD * 0.3;
+    const fromLeft = r() < 0.5, y0 = WORLD.h * (0.08 + 0.5 * r()), y1 = WORLD.h * (0.08 + 0.5 * r());
+    const A = [fromLeft ? -80 : WORLD.w + 80, y0], B = [fromLeft ? WORLD.w + 80 : -80, y1];
+    const dur = Math.hypot(B[0] - A[0], B[1] - A[1]) / 180, u = (T - start) / dur, bend = (r() - 0.5) * WORLD.h * 0.2, flap0 = r() * 6, aho = r() < 0.6;
+    if (u < 0 || u >= 1) continue;
+    return { x: A[0] + (B[0] - A[0]) * u, y: A[1] + (B[1] - A[1]) * u + Math.sin(Math.PI * u) * bend + Math.sin(T * 2.6) * 5,
+      dir: fromLeft ? 1 : -1, flap: T * 9 + flap0, u, aho };
+  }
+  return null;
+}
+function drawCrow(x, c, pal) {
+  const wy = Math.sin(c.flap);
+  x.save(); x.translate(c.x, c.y); x.scale(c.dir * 2.1, 2.1);
+  x.strokeStyle = pal.ink; x.lineWidth = 1; x.globalAlpha = 0.75; x.beginPath();
+  for (const [oy, l] of [[-3, 34], [2, 46], [7, 28]]) { x.moveTo(-26, oy); x.lineTo(-26 - l, oy); }
+  x.stroke(); x.globalAlpha = 1;
+  const wing = (k, off) => {                       // one wing: curved leading edge up to the tip, fingered primaries along the trailing edge
+    const p = new Path2D(), ty = -30 * wy * k + off, tx = -8 - 5 * (1 - Math.abs(wy)), rx = -9, ry = -1;
+    p.moveTo(7, -3);
+    p.quadraticCurveTo(5, ty * 0.75, tx, ty);
+    for (let i = 1; i <= 4; i++) {                 // feather tips stick out backwards between the tip and the root
+      const t = i / 5, bx = tx + (rx - tx) * t, by = ty + (ry - ty) * t;
+      p.lineTo(bx - 7 * (1 - t * 0.6), by - Math.sign(ty || 1) * 1.5); p.lineTo(bx, by);
+    }
+    p.quadraticCurveTo(rx + 2, ry, 0, 2); p.closePath();
+    return p;
+  };
+  const body = new Path2D();
+  body.ellipse(0, 0, 14, 6, -0.05, 0, 6.2832);
+  body.moveTo(17, -6); body.arc(12, -3, 5.5, 0, 6.2832);
+  body.moveTo(16, -5); body.lineTo(26, -2.5); body.lineTo(16, -0.5); body.closePath();
+  body.moveTo(-12, -3); body.lineTo(-25, -6); body.lineTo(-24, 4); body.lineTo(-12, 3); body.closePath();
+  const parts = [wing(0.8, 2), body, wing(1, 0)];
+  x.lineJoin = 'round';
+  for (const p of parts) { x.lineWidth = 3; x.strokeStyle = pal.paper; x.stroke(p); x.fillStyle = pal.ink; x.fill(p); }
+  x.fillStyle = pal.paper; x.beginPath(); x.arc(13.5, -4, 1, 0, 6.2832); x.fill();
+  x.restore();
+  if (c.aho && c.u > 0.35 && c.u < 0.7) {          // its call, trailing behind
+    const a = Math.min(1, (c.u - 0.35) / 0.05, (0.7 - c.u) / 0.05);
+    x.save(); x.globalAlpha = a; x.translate(c.x - c.dir * 70, c.y - 50); x.rotate(-0.12 * c.dir);
+    lettering(x, 'アホー', 22, true, pal, 1);
+    x.restore();
+  }
+}
+
+/* ======================================================================
+   Frame
+   ====================================================================== */
+let geoOld = null, geoNew = null, morphT0 = -1e9, morphDur = MORPH_MS;
+function commit(fromEmpty = false) {
+  const g = buildGeometry();
+  geoOld = fromEmpty ? null : geoNew; geoNew = g;
+  morphT0 = performance.now(); morphDur = fromEmpty ? 2400 : MORPH_MS;
+  popCache.clear();                              // the sound effects avoid the icons: place them again
+  if (paused) { morphT0 = -1e9; draw(performance.now()); }   // paused: show the final state right away
+}
+let rebuildT = 0, panelsT = 0;
+function rebuildSoon() { clearTimeout(rebuildT); rebuildT = setTimeout(() => commit(false), PREVIEW ? 40 : 160); }
+function panelsSoon() {
+  clearTimeout(panelsT);
+  panelsT = setTimeout(() => { buildPanels(); baseCache.length = 0; if (paused && iconsSeen) draw(performance.now()); }, PREVIEW ? 40 : 160);
+}
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  // Preview mode: the page is laid out at the full desktop size and then scaled down as a whole, so the canvas only needs a low resolution
+  const scale = PREVIEW ? 0.45 : devicePixelRatio || 1;
+  // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
+  const box = cv.getBoundingClientRect();
+  cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
+  buildNoise(); buildPanels();
+  baseCache.length = 0;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): recompute the scene over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise(); buildPanels(); baseCache.length = 0; initMovers();
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
+}
+
+let lastT = 0, frameN = 0;
+let paused = false;                              // host notification: a maximized / fullscreen window hides this monitor → pause
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (paused) { lastT = 0; return; }
+  if (P.cap30 && now - lastT < 31) return;
+  lastT = now;
+  draw(now);
+  frameN++;
+}
+const pp = [0, 0], pops = [];
+function draw(now) {
+  const s = cv._scale, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), pal = PALS[P.palette];
+  const VX = WORLD.x, VY = WORLD.y;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(cached(baseCache, buildBase), 0, 0);
+  const aOld = geoOld && e < 1 ? 1 - ss(0.35, 1, e) : 0, aNew = geoNew ? (geoOld ? ss(0, 0.65, e) : ss(0, 1, e)) : 0;
+  if (aOld > 0) { ctx.globalAlpha = aOld; ctx.drawImage(cached(geoOld.rasters, (w, h, k) => buildInk(geoOld, w, h, k)), 0, 0); }
+  if (aNew > 0) { ctx.globalAlpha = aNew; ctx.drawImage(cached(geoNew.rasters, (w, h, k) => buildInk(geoNew, w, h, k)), 0, 0); }
+  ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s); // desktop coordinates from here on
+  for (const [g, a] of [[geoOld, aOld], [geoNew, aNew]]) {   // sparkles twinkling on the ink
+    if (!g || a <= 0) continue;
+    for (const c of g.kira) {
+      if (c.x < VX - 30 || c.x > VX + W + 30 || c.y < VY - 30 || c.y > VY + H + 30) continue;
+      const tw = Math.sin(T * 1.6 * c.sp + c.ph);
+      if (tw <= 0) continue;
+      ctx.globalAlpha = a * tw;
+      star(ctx, c.x, c.y, (5 + 9 * tw) * c.sz, pal.paper, null);
+    }
+  }
+  ctx.globalAlpha = 1;
+  const n = Math.min(petals.length, P.petals * WORLD.mons.length);
+  ctx.lineWidth = 0.18; ctx.strokeStyle = pal.ink; ctx.fillStyle = pal.petal;
+  for (let i = 0; i < n; i++) {
+    const p = petals[i];
+    petalAt(p, T, pp);
+    if (pp[0] < VX - 12 || pp[0] > VX + W + 12 || pp[1] < VY - 12 || pp[1] > VY + H + 12) continue;
+    const a = T * p.spin + p.ph, ca = Math.cos(a), sa = Math.sin(a), fl = (0.35 + 0.65 * Math.abs(Math.cos(T * p.spin * 1.3 + p.ph))) * p.sz;
+    ctx.setTransform(s * ca * p.sz, s * sa * p.sz, -s * sa * fl, s * ca * fl, (pp[0] - VX) * s, (pp[1] - VY) * s);
+    ctx.fill(PETAL); ctx.stroke(PETAL);
+  }
+  ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);
+  for (const [p, u] of popsAt(T, pops)) {
+    if (p.x + p.size * 4 < VX || p.x - p.size * 4 > VX + W || p.y + p.size * 2 < VY || p.y - p.size * 2 > VY + H) continue;
+    drawPop(ctx, p, u, pal);
+  }
+  const crow = crowAt(T);
+  if (crow && crow.x > VX - 180 && crow.x < VX + W + 180) drawCrow(ctx, crow, pal);
+  ctx.globalAlpha = 1;
+}
+
+/* ======================================================================
+   Hosted mode: the scene is driven from outside
+   - Wallpaper mode (?wallpaper=1): the desktop host sends messages through WebView2
+   - Preview mode (?preview=1): the settings window sends messages through the iframe's postMessage
+   Messages: layout (where this monitor sits in the desktop) / icons (real icon rectangles, physical pixels) /
+   settings (parameters, partial update) / reset (restore defaults) / pause
+   ====================================================================== */
+let iconsSeen = false;
+function reseed(v) {
+  seed = v; buildNoise(); buildPanels(); baseCache.length = 0; initMovers();
+  if (iconsSeen) commit(true);
+}
+function applySettings(v) {
+  if (typeof v.seed === 'number' && v.seed !== seed) reseed(v.seed);   // "Refresh" in the settings window: new scene (desktop and preview use the same seed)
+  let geometry = false, redraw = false;
+  for (const k in v) {
+    const r = RANGES[k];
+    if (!r || typeof v[k] !== 'number' || !Number.isFinite(v[k])) continue;
+    const val = Math.min(r[1], Math.max(r[0], r[2] ? Math.round(v[k]) : v[k]));
+    if (P[k] === val) continue;
+    P[k] = val;
+    if (GEOMETRY_KEYS.includes(k)) geometry = true;
+    if (k === 'panels') panelsSoon();
+    if (k === 'sfx') popCache.clear();
+    if (k === 'palette') redraw = true;            // the cached layers are kept per palette: nothing to rebuild
+  }
+  if (geometry && iconsSeen) rebuildSoon();
+  else if (redraw && paused && iconsSeen) draw(performance.now());
+}
+function drawGhosts() {
+  document.getElementById('ghosts').innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');
+}
+function startHostedMode() {
+  if (PREVIEW) document.body.classList.add('ghosts');
+  let first = true;
+  const settlePaused = () => { if (paused && iconsSeen) { morphT0 = -1e9; draw(performance.now()); } };
+  const handle = m => {
+    if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
+    if (m.t === 'settings') { applySettings(m.v || {}); return; }
+    if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
+    if (m.t !== 'icons') return;
+    const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
+    icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];
+    if (PREVIEW) drawGhosts();
+    iconsSeen = true;
+    clearTimeout(rebuildT);
+    commit(first);                                // first time: the ink fades in; afterwards: old and new ink cross-fade
+    first = false;
+  };
+  if (PREVIEW) {
+    addEventListener('message', ev => { if (ev.source === parent) handle(typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data); });
+    parent.postMessage(JSON.stringify({ t: 'ready' }), '*');
+    return;
+  }
+  const host = window.chrome && window.chrome.webview;
+  if (!host) return;
+  host.addEventListener('message', ev => handle(JSON.parse(ev.data)));
+  host.postMessage('ready');
+}
+// Opened directly in a browser: a sample desktop (for work on the theme); R = new scene
+function startStandalone() {
+  document.body.classList.add('ghosts');
+  const cell = (c, r) => ({ x: GRID_X0 + c * CELL_W, y: GRID_Y0 + r * CELL_H, w: CELL_W, h: 92 });
+  icons = [];
+  for (let c = 0; c < 2; c++) for (let r = 0; r < Math.min(7, Math.floor((H - TASKBAR) / CELL_H)); r++) icons.push(cell(c, r));
+  for (const [c, r] of [[7, 1], [8, 1], [8, 2], [13, 4], [14, 4], [19, 0], [19, 1]]) if (GRID_X0 + (c + 1) * CELL_W < W) icons.push(cell(c, r));
+  drawGhosts();
+  iconsSeen = true;
+  commit(true);
+  addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') reseed((Math.random() * 1e6) | 0); });
+}
+
+let resizeT = 0;
+addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => { resize(); initMovers(); if (iconsSeen) { commit(false); morphT0 = -1e9; } }, 100);
+});
+
+resize();
+initMovers();
+if (WALL || PREVIEW) startHostedMode(); else startStandalone();
+requestAnimationFrame(frame);
+</script>
+<script src="share.js"></script>   <!-- Share image / share animation (sample icons, names as color blocks) -->
+</body>
+</html>

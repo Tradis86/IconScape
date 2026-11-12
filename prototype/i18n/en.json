@@ -126,6 +126,63 @@
     "errStart": "Couldn't start: {msg}"
   },
   "themes": {
+    "manga": {
+      "name": "Manga",
+      "desc": "A black-and-white manga page: your icons sit on ink splashes bursting with impact lines; around them panels with screentone, speed lines, night cities and sound effects, falling cherry petals and, now and then, a crow flying by",
+      "groups": [
+        "Ink",
+        "Page",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Ink splash size",
+          "hint": "How far the black ink spreads around your icons"
+        },
+        "warp": {
+          "label": "Ragged edges",
+          "hint": "How irregular the outline of the ink is"
+        },
+        "burst": {
+          "label": "Impact lines",
+          "hint": "Length of the spikes radiating from the ink"
+        },
+        "palette": {
+          "label": "Ink and paper",
+          "options": [
+            "Black and white",
+            "Sepia",
+            "Blue ink",
+            "Shōjo pink"
+          ]
+        },
+        "panels": {
+          "label": "Panels",
+          "hint": "How many panels divide the page: higher means smaller panels"
+        },
+        "sfx": {
+          "label": "Sound effects",
+          "hint": "How often words like ドン or ゴゴゴ pop up"
+        },
+        "petals": {
+          "label": "Cherry petals",
+          "hint": "How many petals fall on each monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Speed",
+          "hint": "How fast the petals fall"
+        },
+        "crow": {
+          "label": "Show the crow",
+          "hint": "A crow that crosses the page now and then",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        }
+      }
+    },
     "cosmos": {
       "name": "Cosmos",
       "desc": "Deep space: every group of icons is a star system, with orbits that follow its shape and planets travelling along them; around it nebulae, a turning galaxy, shooting stars, comets and the odd nova",

@@ -38,15 +38,15 @@ $WebView2Bootstrapper = [IO.Path]::GetFullPath($WebView2Bootstrapper)
 $sources = @('.gitattributes', '.gitignore', 'AGENTS.md', 'LICENSE', 'NOTICE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
     'host\DesktopHost.cs', 'host\Themes.cs', 'host\IconScape.ico', 'host\README.md', 'host\app.manifest', 'host\build.ps1', 'host\inspect.ps1',
     'tools\build-installer.ps1', 'tools\installer.nsi', 'tools\version.json', 'tools\make-icon.ps1', 'tools\serve.ps1')
-$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
+$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'manga.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
     'i18n\en.json', 'i18n\it.json', 'i18n\zh-CN.json', 'thumbs\beach.webp', 'thumbs\meadow.webp',
     'assets\beach-coconut-palm-v2.png', 'assets\beach-coconut-palm-curved.png', 'assets\beach-coconut-palm-airy.png', 'assets\beach-coconut-palm-windswept.png', 'assets\beach-coconut-palm-arch.png',
     'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png')
 $themes = (Get-Content -LiteralPath (Join-Path $root 'prototype\themes.json') -Raw -Encoding UTF8 | ConvertFrom-Json).themes
 $ready = @($themes | Where-Object { $_.status -eq 'ready' -and $_.locked -ne $true -and $_.page })
 # IconScape lists only the themes it includes: no locked or paid preview cards
-if ($themes.Count -ne 6 -or $ready.Count -ne 6 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,meadow,steampunk')) {
-    throw 'Expected exactly six usable themes and no locked ones'
+if ($themes.Count -ne 7 -or $ready.Count -ne 7 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,manga,meadow,steampunk')) {
+    throw 'Expected exactly seven usable themes and no locked ones'
 }
 foreach ($theme in $themes) {
     $match = [regex]::Match([string]$theme.thumb, 'url\(thumbs/([^\)?]+)')

@@ -33,12 +33,17 @@ Added in IconScape:
 | ![Steampunk theme](prototype/thumbs/steampunk.webp) | ![Cosmos theme](prototype/thumbs/cosmos.webp) |
 | Riveted metal plates, meshing gears, copper pipes with pressure gauges and steam, and a passing airship. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
 
-The theme list contains only these six themes. The locked preview cards of Deskland's paid Wallpaper edition, which Deskland Preview shows, are not part of IconScape.
+| Manga |
+| --- |
+| ![Manga theme](prototype/thumbs/manga.webp) |
+| A black-and-white manga page: icons on ink splashes bursting with impact lines, panels with screentone, speed lines, night cities and sound effects, cherry petals and a passing crow; four ink-and-paper palettes. |
+
+The theme list contains only these seven themes. The locked preview cards of Deskland's paid Wallpaper edition, which Deskland Preview shows, are not part of IconScape.
 
 ## Features
 
 - **Adaptive scenery:** uses the real positions of desktop icons and transitions smoothly when they move.
-- **Six complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk and Cosmos is included and saved between sessions.
+- **Seven complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk, Cosmos and Manga is included and saved between sessions.
 - **Every monitor, one landscape:** the scene is computed over the whole desktop as your monitors are arranged, and each monitor shows its part: islands, coasts, clouds, boards and orbits continue from one monitor to the next, and a dragon, an airship or a comet crosses from one to the other. Monitors can be added, removed or rearranged while IconScape runs.
 - **Made for the desktop:** tray controls, startup on sign-in and automatic pause of each monitor that a maximized or full-screen window covers, even when that window is not in the foreground.
 - **Private sharing:** image and animation exports use sample icons and color blocks, never a screenshot of your desktop or real file names.
@@ -111,6 +116,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 | `prototype/circuit.html` | Circuit theme |
 | `prototype/steam.html` | Steampunk theme |
 | `prototype/cosmos.html` | Cosmos theme |
+| `prototype/manga.html` | Manga theme |
 | `prototype/settings.html` | Settings interface |
 | `prototype/themes.json` | Theme definitions: pages, parameters, defaults and thumbnails |
 | `prototype/share.js` | Privacy-preserving image and animation sharing |
@@ -134,7 +140,7 @@ Version 0.1.4, on top of Deskland Preview 0.1.3:
 - **Multi-monitor:** one wallpaper window per monitor instead of the primary monitor only, showing its part of one landscape computed over the whole desktop; windows are created, moved or closed when the monitor layout changes.
 - **Pause per monitor:** a monitor pauses when any maximized or full-screen window hides it, not only the foreground window; overlays that cover the screen without hiding anything are ignored.
 - **Italian interface:** settings, tray menu, messages and theme texts; the share buttons and share error messages now follow the interface language.
-- **Four themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk and Cosmos. Their thumbnails are rendered from the themes themselves.
+- **Five themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk, Cosmos and Manga. Their thumbnails are rendered from the themes themselves.
 - **Browser preview without Node.js:** `tools/serve.ps1`.
 
 ## Credits and license
@@ -178,12 +184,17 @@ Aggiunti in IconScape:
 | ![Tema Steampunk](prototype/thumbs/steampunk.webp) | ![Tema Universo](prototype/thumbs/cosmos.webp) |
 | Piastre di metallo rivettate, ingranaggi che ingranano davvero, tubi di rame con manometri e vapore, e un dirigibile di passaggio. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
 
-L'elenco dei temi contiene solo questi sei. Le schede bloccate dell'edizione Wallpaper a pagamento di Deskland, presenti in Deskland Preview, non fanno parte di IconScape.
+| Manga |
+| --- |
+| ![Tema Manga](prototype/thumbs/manga.webp) |
+| Una tavola di manga in bianco e nero: le icone su macchie d'inchiostro da cui esplodono linee d'impatto, vignette con retini, linee cinetiche, città notturne e onomatopee, petali di ciliegio e un corvo di passaggio; quattro combinazioni di inchiostro e carta. |
+
+L'elenco dei temi contiene solo questi sette. Le schede bloccate dell'edizione Wallpaper a pagamento di Deskland, presenti in Deskland Preview, non fanno parte di IconScape.
 
 ### Funzioni
 
 - **Paesaggio adattivo:** usa le posizioni reali delle icone del desktop e passa in modo fluido da una disposizione all'altra quando si spostano.
-- **Sei temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk e Universo sono disponibili e vengono salvate.
+- **Sette temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk, Universo e Manga sono disponibili e vengono salvate.
 - **Tutti i monitor, un solo paesaggio:** la scena è calcolata sull'intero desktop, così come sono disposti i monitor, e ogni monitor ne mostra la sua parte: isole, coste, nuvole, circuiti e orbite continuano da un monitor all'altro, e un drago, un dirigibile o una cometa passano dall'uno all'altro. I monitor si possono collegare, scollegare o ridisporre mentre IconScape è in esecuzione.
 - **Pensato per il desktop:** controlli nell'area di notifica, avvio all'accesso e pausa automatica di ogni monitor coperto da una finestra massimizzata o a schermo intero, anche se quella finestra non è in primo piano.
 - **Condivisione rispettosa della privacy:** immagini e animazioni usano icone di esempio e blocchi di colore, mai una cattura del desktop o i nomi veri dei file.
@@ -256,6 +267,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 | `prototype/circuit.html` | Tema Circuito |
 | `prototype/steam.html` | Tema Steampunk |
 | `prototype/cosmos.html` | Tema Universo |
+| `prototype/manga.html` | Tema Manga |
 | `prototype/settings.html` | Interfaccia delle impostazioni |
 | `prototype/themes.json` | Definizione dei temi: pagine, parametri, valori predefiniti e miniature |
 | `prototype/share.js` | Condivisione di immagini e animazioni rispettosa della privacy |
@@ -279,7 +291,7 @@ Versione 0.1.4, basata su Deskland Preview 0.1.3:
 - **Multi monitor:** una finestra di sfondo per ogni monitor invece del solo monitor principale, che mostra la propria parte di un unico paesaggio calcolato sull'intero desktop; le finestre vengono create, spostate o chiuse quando cambia la disposizione dei monitor.
 - **Pausa per monitor:** un monitor va in pausa quando lo nasconde una qualsiasi finestra massimizzata o a schermo intero, non solo quella in primo piano; le sovrapposizioni che coprono lo schermo senza nascondere nulla vengono ignorate.
 - **Interfaccia in italiano:** impostazioni, menu dell'icona, messaggi e testi dei temi; anche i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
-- **Quattro temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk e Universo. Le loro miniature sono generate dai temi stessi.
+- **Cinque temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk, Universo e Manga. Le loro miniature sono generate dai temi stessi.
 - **Anteprima nel browser senza Node.js:** `tools/serve.ps1`.
 
 ### Crediti e licenza
@@ -323,12 +335,17 @@ IconScape 新增：
 | ![蒸汽朋克主题](prototype/thumbs/steampunk.webp) | ![宇宙主题](prototype/thumbs/cosmos.webp) |
 | 铆接的金属板、咬合转动的齿轮、带压力表和蒸汽的铜管，以及偶尔飘过的飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
 
-主题列表只包含这六个主题。Deskland Preview 中展示的 Deskland 付费壁纸版锁定主题卡片不属于 IconScape。
+| 漫画 |
+| --- |
+| ![漫画主题](prototype/thumbs/manga.webp) |
+| 黑白漫画的一页：图标落在迸出集中线的浓墨上，分镜格里有网点、速度线、夜景和拟声词，樱花飘落，偶尔有乌鸦飞过；四种墨与纸的配色。 |
+
+主题列表只包含这七个主题。Deskland Preview 中展示的 Deskland 付费壁纸版锁定主题卡片不属于 IconScape。
 
 ### 功能
 
 - **图标自适应：**读取真实桌面图标的位置，在移动、添加或删除时平滑调整场景。
-- **六个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克和宇宙的全部参数均可调整并自动保存。
+- **七个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克、宇宙和漫画的全部参数均可调整并自动保存。
 - **所有显示器，一片风景：**场景按显示器的实际排列在整个桌面上计算，每个显示器显示其中的一部分：岛屿、海岸、云、电路和轨道从一个显示器延续到另一个，龙、飞艇或彗星会从一个显示器飞到另一个。运行中增减或重新排列显示器会自动调整。
 - **适合常驻桌面：**托盘控制、开机自动启动；某个显示器被最大化或全屏窗口遮住时（即使该窗口不在前台）只暂停这个显示器。
 - **隐私分享：**图片和动画使用示例图标与名字色块，不截取桌面窗口或真实文件名。
@@ -399,6 +416,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 | `prototype/circuit.html` | 电路板主题 |
 | `prototype/steam.html` | 蒸汽朋克主题 |
 | `prototype/cosmos.html` | 宇宙主题 |
+| `prototype/manga.html` | 漫画主题 |
 | `prototype/settings.html` | 设置界面 |
 | `prototype/themes.json` | 主题定义：页面、参数、默认值和缩略图 |
 | `prototype/share.js` | 隐私保护的图片和动画分享 |
@@ -422,7 +440,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 - **多显示器：**每个显示器一个壁纸窗口，不再只覆盖主显示器，各自显示在整个桌面上计算的同一片风景的一部分；显示器布局变化时自动创建、移动或关闭窗口。
 - **按显示器暂停：**任何最大化或全屏窗口遮住某个显示器时暂停该显示器，不只看前台窗口；覆盖整个屏幕但不遮挡内容的悬浮层不会触发暂停。
 - **意大利语界面：**设置、托盘菜单、提示和主题文字；分享按钮和分享错误信息也跟随界面语言。
-- **四个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克和宇宙，缩略图由主题本身渲染生成。
+- **五个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克、宇宙和漫画，缩略图由主题本身渲染生成。
 - **无需 Node.js 的浏览器预览：**`tools/serve.ps1`。
 
 ### 许可与反馈

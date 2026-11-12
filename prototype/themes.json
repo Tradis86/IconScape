@@ -598,6 +598,124 @@
           ]
         }
       ]
+    },
+    {
+      "id": "manga",
+      "adaptive": true,
+      "name": "漫画",
+      "desc": "黑白漫画的一页：图标落在浓墨上，四周迸出集中线；分镜格里有网点、速度线、夜景和拟声词，樱花飘落，偶尔有乌鸦飞过",
+      "page": "manga.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/manga.webp?v=e3ce324b10) center / cover no-repeat, radial-gradient(ellipse 18% 30% at 22% 40%, #121212 80%, transparent 84%), radial-gradient(ellipse 14% 20% at 70% 60%, #121212 80%, transparent 84%), repeating-linear-gradient(90deg, #f6f2e9 0 31%, #121212 31% 32%), linear-gradient(160deg, #f6f2e9 0%, #d9d4c9 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "墨",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "墨块大小",
+              "hint": "图标下的浓墨从图标往外铺多远",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 70,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "边缘起伏",
+              "hint": "墨块轮廓的不规则程度",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 30
+            },
+            {
+              "key": "burst",
+              "label": "集中线",
+              "hint": "从墨块向外迸出的尖刺有多长",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "palette",
+              "label": "墨与纸",
+              "options": [
+                "黑白",
+                "棕褐",
+                "蓝墨",
+                "少女粉"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "分镜",
+          "params": [
+            {
+              "key": "panels",
+              "label": "分镜格",
+              "hint": "分镜格的多少：越高格子越小",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "sfx",
+              "label": "拟声词",
+              "hint": "「ドン」「ゴゴゴ」这样的拟声词多久蹦出一次",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            }
+          ]
+        },
+        {
+          "name": "动画",
+          "params": [
+            {
+              "key": "petals",
+              "label": "樱花瓣",
+              "hint": "每个显示器上飘落的花瓣数量",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 20,
+              "unit": "片"
+            },
+            {
+              "key": "flow",
+              "label": "速度",
+              "hint": "花瓣飘落的速度",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "crow",
+              "label": "显示乌鸦",
+              "hint": "偶尔从画面上飞过的乌鸦",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            }
+          ]
+        }
+      ]
     }
   ]
 }

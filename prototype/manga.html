@@ -296,14 +296,25 @@ function buildGeometry() {
 let panels = [];
 function buildPanels() {
   const rnd = mulberry32(seed * 13 + 5), DW = WORLD.w, DH = WORLD.h, k = 1.55 - 1.05 * P.panels, G = 11, B = 40;
-  const TYPES = [['tone', 22], ['speed', 14], ['focus', 14], ['sky', 12], ['hatch', 10], ['city', 12], ['bokeh', 9], ['blank', 7]];
+  // Most panels are inked backgrounds; a few are pure manga effects. fits: the panel shapes a scene needs (wide, tall enough, any)
+  const TYPES = [['street', 14], ['skyline', 10], ['clouds', 12], ['mountains', 12], ['sea', 10], ['bamboo', 9], ['shrine', 9], ['moon', 10],
+    ['focus', 5], ['speed', 3], ['hatch', 2], ['tone', 2]];
+  const fits = (t, pw, ph) => t === 'mountains' || t === 'sea' ? pw >= ph * 1.15 : t === 'street' || t === 'shrine' ? ph >= 150 && pw <= ph * 2.4 :
+    t === 'bamboo' ? ph >= 120 && pw <= ph * 2.6 : true;
   const total = TYPES.reduce((a, t) => a + t[1], 0);
   panels = [];
   const add = q => {
-    let r = rnd() * total, type = 'blank';
-    for (const [t, w] of TYPES) { if (r < w) { type = t; break; } r -= w; }
     const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
-    panels.push({ q, type, seed: (rnd() * 1e9) | 0, sfx: rnd() < 0.3, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) });
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    let type = 'clouds';
+    for (let tries = 0; tries < 10; tries++) {     // a scene that fits the panel and was not used in one of the last few panels
+      let r = rnd() * total;
+      for (const [t, w] of TYPES) { if (r < w) { type = t; break; } r -= w; }
+      if (!fits(type, x1 - x0, y1 - y0)) continue;
+      if (!panels.slice(-5).some(o => o.type === type)) break;
+    }
+    if (!fits(type, x1 - x0, y1 - y0)) type = 'clouds';
+    panels.push({ q, type, seed: (rnd() * 1e9) | 0, sfx: rnd() < 0.3, x0, x1, y0, y1 });
   };
   for (let y0 = -B; y0 < DH + B;) {
     let y1 = y0 + (150 + 230 * rnd()) * k;
@@ -343,7 +354,12 @@ function cached(list, build) {
 }
 
 // Screentone: dots on a 45° lattice anchored to the desktop (so a panel split by two monitors matches); cover(x, y) gives 0..1
+// The panel being drawn: tone and hatching never work outside it, however far a shape in perspective reaches
+let PANEL_BOX = null;
+const inPanel = b => PANEL_BOX ? { x0: Math.max(b.x0, PANEL_BOX.x0), y0: Math.max(b.y0, PANEL_BOX.y0), x1: Math.min(b.x1, PANEL_BOX.x1), y1: Math.min(b.y1, PANEL_BOX.y1) } : b;
 function toneDots(x, p, cover, D, col) {
+  p = inPanel(p);
+  if (p.x1 <= p.x0 || p.y1 <= p.y0) return;
   const path = new Path2D(), h = D * 0.7071, maxR = D * 0.52;
   for (let j = Math.floor((p.y0 - D) / h); j * h < p.y1 + D; j++) {
     const y = j * h;
@@ -385,11 +401,279 @@ function lettering(x, word, size, solid, pal, ph = 0) {
   }
 }
 
+/* ----------------------------------------------------------------------
+   Pen-and-ink toolkit, in the manner of hand-inked manga backgrounds: pen lines that swell and taper with pressure,
+   hatching that builds tone in crossing layers, ruled perspective
+   ---------------------------------------------------------------------- */
+// A pen line through pts, added to path as a polygon. w: width in the middle; taper 0..1: how much thinner the ends get;
+// wf(t), when given, replaces the pressure profile (t from 0 at the first point to 1 at the last). Every polygon winds the same way,
+// so overlapping strokes in one path never cancel out
+function penLine(path, pts, w, taper = 0.8, wf = null) {
+  const n = pts.length;
+  if (n < 2) return;
+  const L = [], R = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i > 0 ? i - 1 : 0], b = pts[i < n - 1 ? i + 1 : n - 1];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const t = i / (n - 1), hw = (wf ? wf(t) : w * (1 - taper + taper * Math.pow(Math.sin(Math.PI * t), 0.6))) / 2;
+    L.push(pts[i][0] - dy * hw, pts[i][1] + dx * hw); R.push(pts[i][0] + dy * hw, pts[i][1] - dx * hw);
+  }
+  path.moveTo(L[0], L[1]);
+  for (let i = 2; i < L.length; i += 2) path.lineTo(L[i], L[i + 1]);
+  for (let i = R.length - 2; i >= 0; i -= 2) path.lineTo(R[i], R[i + 1]);
+  path.closePath();
+}
+function penSeg(path, ax, ay, bx, by, w, taper = 0.8) {
+  const pts = [];
+  for (let i = 0; i <= 4; i++) pts.push([ax + (bx - ax) * i / 4, ay + (by - ay) * i / 4]);
+  penLine(path, pts, w, taper);
+}
+// Hatching inside the current clip, following shade(x, y) in 0..1 over the box b: a layer of parallel strokes where the shade passes 0.12,
+// a crossing layer past 0.45 and a third past 0.72. Strokes start and stop where the shade crosses each layer's threshold and get heavier
+// in darker parts, so tones grade smoothly and stroke ends stay ragged, as in hand hatching
+function hatch(x, b, shade, ang, col, sp = 3.4, wmul = 1, layers = 3) {
+  b = inPanel(b);
+  if (b.x1 <= b.x0 || b.y1 <= b.y0) return;
+  const path = new Path2D(), rr = mulberry32((Math.round(b.x0) * 73856093) ^ (Math.round(b.y0) * 19349663) ^ seed);
+  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, E = Math.hypot(b.x1 - b.x0, b.y1 - b.y0) / 2 + 2, st = 2.5;
+  const LAY = [[ang, 0.12, sp], [ang + 1.1, 0.45, sp * 1.1], [ang - 0.85, 0.72, sp * 1.25]];
+  for (let li = 0; li < layers; li++) {
+    const [a, th, s] = LAY[li], ca = Math.cos(a), sa = Math.sin(a);
+    for (let o = -E; o < E; o += s * (0.8 + 0.4 * rr())) {
+      const jt = th + (rr() - 0.5) * 0.1;
+      let run = [], acc = 0;
+      const flush = () => {
+        if (run.length > 1) {
+          const k = Math.ceil(run.length / 10), pts = run.filter((_, i) => i % k === 0 || i === run.length - 1);
+          penLine(path, pts, Math.min(1.7, 0.45 + 2.4 * acc / run.length) * wmul, 0.85);
+        }
+        run = []; acc = 0;
+      };
+      for (let u = -E; u <= E; u += st) {
+        const px = cx + ca * u - sa * o, py = cy + sa * u + ca * o;
+        const v = px < b.x0 - 1 || px > b.x1 + 1 || py < b.y0 - 1 || py > b.y1 + 1 ? 0 : shade(px, py);
+        if (v > jt) { run.push([px, py]); acc += v - jt; } else if (run.length) flush();
+      }
+      flush();
+    }
+  }
+  x.fillStyle = col; x.fill(path);
+}
+// Perspective camera: the horizon is at vy, the vanishing point at vx, f the focal length in px, eye the eye height (scene units: metres)
+const cam3 = (vx, vy, f, eye) => (X, Y, Z) => [vx + X * f / Z, vy + (eye - Y) * f / Z];
+function polyPath(pts, path = new Path2D()) { pts.forEach((pt, i) => i ? path.lineTo(pt[0], pt[1]) : path.moveTo(pt[0], pt[1])); path.closePath(); return path; }
+function boxOf(pts) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [a, b] of pts) { if (a < x0) x0 = a; if (a > x1) x1 = a; if (b < y0) y0 = b; if (b > y1) y1 = b; }
+  return { x0, y0, x1, y1 };
+}
+const seg = (path, a, b) => { path.moveTo(a[0], a[1]); path.lineTo(b[0], b[1]); };
+const paperA = (pal, a) => { const c = [1, 3, 5].map(i => parseInt(pal.paper.slice(i, i + 2), 16)); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+// A jagged line from (ax, ay) to (bx, by): midpoint displacement, for ridges and rocks
+function jagged(ax, ay, bx, by, rough, r, depth = 5) {
+  let pts = [[ax, ay], [bx, by]];
+  for (let d = 0, amp = rough; d < depth; d++, amp *= 0.55) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const [px, py] = pts[i - 1], [qx, qy] = pts[i], l = Math.hypot(qx - px, qy - py) || 1, m = (r() - 0.5) * 2 * amp;
+      out.push([(px + qx) / 2 - (qy - py) / l * m, (py + qy) / 2 + (qx - px) / l * m], pts[i]);
+    }
+    pts = out;
+  }
+  return pts;
+}
+function birds(x, p, r, w, h, n, pal) {
+  const path = new Path2D();
+  for (let i = 0; i < n; i++) {
+    const bx = p.x0 + w * (0.1 + 0.8 * r()), by = p.y0 + h * (0.08 + 0.25 * r()), bs = 3 + 4 * r();
+    penLine(path, [[bx - bs, by - bs * 0.45], [bx - bs * 0.45, by - bs * 0.55], [bx, by]], 1.3, 0.7);
+    penLine(path, [[bx, by], [bx + bs * 0.45, by - bs * 0.55], [bx + bs, by - bs * 0.45]], 1.3, 0.7);
+  }
+  x.fillStyle = pal.ink; x.fill(path);
+}
+// A narration box in the panel's top-left corner, as manga use to set time and place
+const CAPTIONS = ['——その夜', '夏。', '翌朝——', 'あの街で', '静かだった', '遠い日の記憶', '風が止んだ'];
+function caption(x, p, r, pal) {
+  const text = CAPTIONS[(r() * CAPTIONS.length) | 0], size = 13;
+  x.font = `600 ${size}px ${JFONT}`;
+  const bw = x.measureText(text).width + 16, bh = size + 12, bx = Math.max(p.q[0], p.q[6]) + 12, by = p.q[1] + 12;
+  x.fillStyle = pal.paper; x.fillRect(bx, by, bw, bh);
+  x.lineWidth = 1.4; x.strokeStyle = pal.ink; x.strokeRect(bx, by, bw, bh);
+  x.fillStyle = pal.ink; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(text, bx + 8, by + bh / 2 + 0.5);
+}
+
+/* ----------------------------------------------------------------------
+   Recurring elements: cumulus, the moon, a Japanese pine, utility pole and wires, roofs and a pagoda in silhouette
+   ---------------------------------------------------------------------- */
+// A cumulus modelled as a cluster of spheres that grows like a cauliflower: big ones along the flat base, smaller ones piled on top.
+// Each point of the cloud takes the sphere surface nearest the viewer; its normal, lit from the upper left, drives the hatching, so the
+// cloud gets real volume. Lines are drawn only where they belong: the outer silhouette and the edges where one bulge hides another.
+// night: the cloud is lit from behind by the moon, dark in the body with bright rims
+function cloudMass(x, cx, base, cw, ch, r, pal, night = false) {
+  const S = [], nb = 5 + ((r() * 3) | 0);
+  for (let i = 0; i < nb; i++) { const rad = cw * (0.09 + 0.06 * r()); S.push([cx - cw * 0.42 + cw * 0.84 * (i + 0.5) / nb + (r() - 0.5) * rad * 0.6, base - rad * 0.5, rad, r() * rad * 0.5]); }
+  for (let tries = 0; tries < 500 && S.length < 70; tries++) {
+    const par = S[(r() * S.length) | 0], a = -Math.PI / 2 + (r() - 0.5) * 2.4, rad = par[2] * (0.5 + 0.38 * r());
+    const nx = par[0] + Math.cos(a) * par[2] * 0.8, ny = par[1] + Math.sin(a) * par[2] * 0.8, t = (base - ny) / ch;
+    if (t > 1 || ny + rad * 0.3 > base || Math.abs(nx - cx) > cw * 0.5 * (1 - 0.5 * t * t)) continue;
+    S.push([nx, ny, rad, par[3] + (r() - 0.35) * rad * 0.6]);
+  }
+  const front = (px, py) => {                      // the sphere whose surface is nearest the viewer at (px, py), and its depth there
+    let best = -1e9, bi = -1;
+    for (let i = 0; i < S.length; i++) {
+      const s = S[i], dx = px - s[0], dy = py - s[1], q = s[2] * s[2] - dx * dx - dy * dy;
+      if (q > 0) { const z = s[3] + Math.sqrt(q); if (z > best) { best = z; bi = i; } }
+    }
+    return [bi, best];
+  };
+  const LX = -0.55, LY = -0.62, LZ = 0.56;
+  const shade = (px, py) => {
+    const [i] = front(px, py);
+    if (i < 0) return 0;
+    const s = S[i], nx = (px - s[0]) / s[2], ny = (py - s[1]) / s[2], nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+    const low = ss(base - ch * 0.22, base, py);
+    if (night) return 0.95 - 0.85 * ss(0.62, 0.95, 1 - nz) * ss(-0.2, 0.5, -(nx * 0.3 + ny * 0.95)) + 0.05 * low;
+    const lam = nx * LX + ny * LY + nz * LZ;
+    return 0.95 * (1 - ss(-0.05, 0.75, lam)) + 0.35 * low;
+  };
+  const union = new Path2D();
+  let bx0 = 1e9, bx1 = -1e9, by0 = 1e9;
+  for (const s of S) { union.moveTo(s[0] + s[2], s[1]); union.arc(s[0], s[1], s[2], 0, 6.2832); bx0 = Math.min(bx0, s[0] - s[2]); bx1 = Math.max(bx1, s[0] + s[2]); by0 = Math.min(by0, s[1] - s[2]); }
+  x.save(); x.beginPath(); x.rect(bx0 - 4, by0 - 4, bx1 - bx0 + 8, base - by0 + 4); x.clip();
+  x.fillStyle = pal.paper; x.fill(union);
+  x.save(); x.clip(union);
+  hatch(x, { x0: bx0, y0: by0, x1: bx1, y1: base }, shade, 0.5, pal.ink, 2.9, 0.85, 3);
+  x.restore();
+  const lines = new Path2D();                      // silhouette and occluding edges, traced along each sphere's rim
+  for (let i = 0; i < S.length; i++) {
+    const s = S[i], n = Math.max(24, Math.round(s[2] * 0.6));
+    let run = [];
+    const flush = () => { if (run.length > 1) penLine(lines, run, run.outer ? 1.9 : 1.2, 0.75); run = []; };
+    for (let k = 0; k <= n; k++) {
+      const a = k / n * 6.2832, px = s[0] + Math.cos(a) * s[2], py = s[1] + Math.sin(a) * s[2];
+      let hidden = false, inside = false;
+      for (let j = 0; j < S.length && !hidden; j++) {
+        if (j === i) continue;
+        const t = S[j], dx = px - t[0], dy = py - t[1], q = t[2] * t[2] - dx * dx - dy * dy;
+        if (q > 0) { inside = true; if (t[3] + Math.sqrt(q) > s[3]) hidden = true; }
+      }
+      if (hidden || py > base) flush(); else { run.push([px, py]); if (!inside) run.outer = true; }
+    }
+    flush();
+  }
+  x.fillStyle = pal.ink; x.fill(lines);
+  x.restore();
+}
+// The moon: paper disc, maria and the shaded limb in hatching
+function moonDisc(x, mx, my, mr, pal) {
+  const c = new Path2D(); c.arc(mx, my, mr, 0, 6.2832);
+  x.fillStyle = pal.paper; x.beginPath(); x.arc(mx, my, mr + 4, 0, 6.2832); x.fill();
+  x.save(); x.clip(c);
+  hatch(x, { x0: mx - mr, y0: my - mr, x1: mx + mr, y1: my + mr }, (hx, hy) => {
+    const u = (hx - mx) / mr, v = (hy - my) / mr, d = Math.hypot(u, v);
+    return 0.62 * ss(0.5, 0.64, fbm(u * 1.7 + 40, v * 1.7 + 11, 7)) + 0.55 * ss(0.62, 1, d) * ss(-0.3, 0.7, u * 0.7 + v * 0.7);
+  }, 0.6, pal.ink, 2.6, 0.75, 2);
+  x.restore();
+  x.lineWidth = 1.3; x.strokeStyle = pal.ink; x.stroke(c);
+}
+// A Japanese black pine: a leaning, tapering trunk, branches ending in flat cloud-like pads of needles
+function pine(x, bx, by, ht, dir, r, pal) {
+  const trunk = [];
+  for (let i = 0; i <= 12; i++) { const t = i / 12; trunk.push([bx + dir * (Math.sin(t * 2.6) * ht * 0.16 + t * t * ht * 0.2), by - t * ht]); }
+  const tp = new Path2D(), br = new Path2D(), pads = new Path2D(), fringe = new Path2D(), hi = new Path2D();
+  penLine(tp, trunk, 0, 0, t => ht * 0.075 * (1 - 0.72 * t) + 1);
+  const nb = 4 + ((r() * 3) | 0);
+  for (let k = 0; k < nb; k++) {
+    const t = 0.4 + 0.58 * k / nb, [ax, ay] = trunk[Math.round(t * 12)], top = k === nb - 1;
+    const sd = top ? 0 : (k % 2 ? 1 : -1) * dir, len = ht * (0.2 + 0.2 * r()) * (1 - 0.4 * t);
+    const ex = ax + sd * len + (top ? dir * ht * 0.04 : 0), ey = ay - len * 0.16 - (top ? ht * 0.04 : 0);
+    if (!top) penLine(br, [[ax, ay], [(ax + ex) / 2, ay - len * 0.14], [ex, ey]], ht * 0.028, 0.4);
+    const rx = len * 0.55 + ht * 0.06, ry = rx * 0.3;
+    pads.ellipse(ex, ey, rx, ry, 0, 0, 6.2832);
+    for (let j = 0; j < 30; j++) {                 // needles bristling from the top and the ends of the pad
+      const a = Math.PI * 0.92 + (j + r()) / 30 * Math.PI * 1.16, sx = ex + Math.cos(a) * rx * 0.93, sy = ey + Math.sin(a) * ry * 0.93, l = 3 + 5 * r();
+      penSeg(fringe, sx, sy, sx + Math.cos(a) * l * 0.7, sy + Math.sin(a) * l - 1.5, 1.3, 0.9);
+    }
+    for (let j = 0; j < 6; j++) { const hx = ex - rx * 0.65 + rx * 1.3 * r(), hy = ey - ry * (0.1 + 0.4 * r()); penSeg(hi, hx, hy, hx + rx * 0.18, hy - 0.8, 0.8, 0.9); }
+  }
+  for (let i = 2; i < 11; i++) {                   // bark: a few paper flecks along the trunk
+    const [tx, ty] = trunk[i], wdt = ht * 0.075 * (1 - 0.72 * i / 12);
+    if (r() < 0.6) penSeg(hi, tx - wdt * 0.25, ty, tx - wdt * 0.1, ty - ht * 0.03, 0.9, 0.9);
+  }
+  x.fillStyle = pal.ink; x.fill(tp); x.fill(br); x.fill(pads); x.fill(fringe);
+  x.fillStyle = pal.paper; x.fill(hi);
+}
+// A utility pole in the foreground with crossarms, insulators and wires sagging across the sky out of the panel
+function poleAndWires(x, p, r, pal, w, h) {
+  const side = r() < 0.5 ? -1 : 1, px = side < 0 ? p.x0 + w * (0.06 + 0.08 * r()) : p.x1 - w * (0.06 + 0.08 * r()), pw = Math.max(8, Math.min(16, w * 0.025)), top = p.y0 + h * (0.08 + 0.1 * r());
+  const ink = new Path2D(), hi = new Path2D(), wires = new Path2D();
+  ink.rect(px - pw / 2, top, pw, p.y1 - top + 20);
+  penSeg(hi, px - pw * 0.22, top + 8, px - pw * 0.22, p.y1 + 10, 1.2, 0.3);
+  const arms = [[top + h * 0.05, pw * 4.2], [top + h * 0.14, pw * 3.2]];
+  const ends = [];
+  for (const [ay, half] of arms) {
+    ink.rect(px - half, ay, half * 2, pw * 0.38);
+    for (const k of [-1, -0.45, 0.45, 1]) { const ix = px + k * half * 0.9; ink.rect(ix - 2, ay - 6, 4, 6); ends.push([ix, ay - 6]); }
+  }
+  for (const [ex, ey] of ends) {                   // wires: out of the panel on the far side, sagging
+    const tx = px - side * (w * (1.1 + 0.3 * r())), ty = ey + h * (0.05 + 0.2 * r()), sag = h * (0.1 + 0.08 * r());
+    const pts = [];
+    for (let i = 0; i <= 14; i++) { const t = i / 14; pts.push([ex + (tx - ex) * t, ey + (ty - ey) * t + sag * Math.sin(Math.PI * t)]); }
+    penLine(wires, pts, 1.3, 0.2);
+  }
+  x.fillStyle = pal.ink; x.fill(ink); x.fill(wires); x.fillStyle = pal.paper; x.fill(hi);
+}
+// A row of tiled roofs in silhouette along gy, rims lit from the side of lx; returns nothing
+function rooftops(x, p, r, pal, gy, lx) {
+  const ink = new Path2D(), rim = new Path2D();
+  for (let bx = p.x0 - 30; bx < p.x1 + 30;) {
+    const rw = 40 + 70 * r(), rh = rw * (0.22 + 0.1 * r()), wall = 10 + 18 * r(), ry = gy - wall;
+    // hip roof with slightly concave slopes and upturned eaves
+    ink.moveTo(bx - 4, ry + 2); ink.quadraticCurveTo(bx + rw * 0.18, ry - rh * 0.15, bx + rw * 0.28, ry - rh);
+    ink.lineTo(bx + rw * 0.72, ry - rh); ink.quadraticCurveTo(bx + rw * 0.82, ry - rh * 0.15, bx + rw + 4, ry + 2); ink.closePath();
+    ink.rect(bx + 4, ry, rw - 8, wall + 20);
+    ink.rect(bx + rw * 0.26, ry - rh - 3, rw * 0.48, 3.5);   // ridge
+    const lit = lx < bx + rw / 2;
+    penLine(rim, lit ? [[bx - 2, ry], [bx + rw * 0.18, ry - rh * 0.2], [bx + rw * 0.28, ry - rh + 1]] : [[bx + rw * 0.72, ry - rh + 1], [bx + rw * 0.82, ry - rh * 0.2], [bx + rw + 2, ry]], 1.2, 0.6);
+    bx += rw * (0.75 + 0.3 * r());
+  }
+  x.fillStyle = pal.ink; x.fill(ink); x.fillStyle = pal.paper; x.fill(rim);
+}
+// A five-storey pagoda in silhouette: tiers that narrow upward, eaves with upturned tips, a spire with rings
+function pagoda(x, px, gy, ph, pal, lx) {
+  const ink = new Path2D(), rim = new Path2D(), tiers = 5, bw0 = ph * 0.2;
+  let y = gy;
+  for (let i = 0; i < tiers; i++) {
+    const bw = bw0 * (1 - 0.1 * i), th = ph * 0.105 * (1 - 0.05 * i), ew = bw * 1.75;
+    ink.rect(px - bw / 2, y - th, bw, th + 2);
+    const ey = y - th;                              // eave: wide, thin in the middle, tips swept up
+    ink.moveTo(px - ew / 2 - ew * 0.04, ey - ew * 0.09); ink.quadraticCurveTo(px - ew * 0.3, ey + 2, px, ey + 1);
+    ink.quadraticCurveTo(px + ew * 0.3, ey + 2, px + ew / 2 + ew * 0.04, ey - ew * 0.09);
+    ink.quadraticCurveTo(px + ew * 0.25, ey - ew * 0.06, px + bw * 0.4, ey - ew * 0.13); ink.lineTo(px - bw * 0.4, ey - ew * 0.13);
+    ink.quadraticCurveTo(px - ew * 0.25, ey - ew * 0.06, px - ew / 2 - ew * 0.04, ey - ew * 0.09); ink.closePath();
+    const s = lx < px ? -1 : 1;
+    penLine(rim, [[px + s * ew * 0.52, ey - ew * 0.085], [px + s * ew * 0.28, ey - ew * 0.05], [px + s * bw * 0.4, ey - ew * 0.125]], 1.1, 0.5);
+    y = ey - ew * 0.13;
+  }
+  ink.rect(px - 1.6, y - ph * 0.2, 3.2, ph * 0.2);  // spire with nine rings
+  for (let k = 0; k < 9; k++) ink.ellipse(px, y - ph * 0.03 - k * ph * 0.016, 3.6 - k * 0.15, 1.3, 0, 0, 6.2832);
+  x.fillStyle = pal.ink; x.fill(ink); x.fillStyle = pal.paper; x.fill(rim);
+}
+
+/* ----------------------------------------------------------------------
+   Panels: the page is mostly inked backgrounds (streets, the city, skies, mountains, the sea, a bamboo grove, a shrine, a moonlit town),
+   with a few pure manga effects (focus lines around a sound effect, speed lines, a beta flash, screentone)
+   ---------------------------------------------------------------------- */
+const SFX_TYPES = new Set(['tone', 'speed', 'hatch']);
+const SIGNS = ['薬', '本', '喫茶', '酒', 'ラーメン', '理容', '湯', '写真'];
 function drawPanel(x, p, pal) {
   const r = mulberry32(p.seed), w = p.x1 - p.x0, h = p.y1 - p.y0, cx = (p.x0 + p.x1) / 2, cy = (p.y0 + p.y1) / 2, E = Math.hypot(w, h) / 2 + 4;
+  PANEL_BOX = { x0: p.x0 - 6, y0: p.y0 - 6, x1: p.x1 + 6, y1: p.y1 + 6 };
   const q = p.q, clip = new Path2D();
   clip.moveTo(q[0], q[1]); clip.lineTo(q[2], q[3]); clip.lineTo(q[4], q[5]); clip.lineTo(q[6], q[7]); clip.closePath();
   x.save(); x.clip(clip);
+  x.lineCap = 'round'; x.lineJoin = 'round';
   if (p.type === 'tone') {                         // screentone gradient
     const a = r() * 6.283, ca = Math.cos(a), sa = Math.sin(a), lo = 0.05 + 0.2 * r(), hi = 0.55 + 0.4 * r();
     toneDots(x, p, (px, py) => lo + (hi - lo) * ss(-1, 1, ((px - cx) * ca + (py - cy) * sa) / E), 5 + 2 * r(), pal.tone);
@@ -401,36 +685,17 @@ function drawPanel(x, p, pal) {
       wedge(path, ox - ca * (E + 10), oy - sa * (E + 10), ox - ca * (E + 10) + ca * len, oy - sa * (E + 10) + sa * len, 0.6 + 2.6 * r() * r());
     }
     x.fillStyle = pal.ink; x.fill(path);
-  } else if (p.type === 'focus') {                 // focus lines converging on an empty spot
-    const fx = p.x0 + w * (0.3 + 0.4 * r()), fy = p.y0 + h * (0.3 + 0.4 * r()), r0 = Math.min(w, h) * (0.14 + 0.14 * r());
-    const n = 150 + ((100 * r()) | 0), R = Math.hypot(w, h), path = new Path2D();
+  } else if (p.type === 'focus') {                 // focus lines converging on a sound effect
+    const fx = p.x0 + w * (0.35 + 0.3 * r()), fy = p.y0 + h * (0.35 + 0.3 * r()), r0 = Math.min(w, h) * (0.18 + 0.1 * r());
+    const n = 160 + ((100 * r()) | 0), R = Math.hypot(w, h), path = new Path2D();
     for (let i = 0; i < n; i++) {
       const a = (i + r() * 0.7) / n * 6.2832, inner = r0 * (1 + 0.8 * r() * r());
       wedge(path, fx + Math.cos(a) * R, fy + Math.sin(a) * R, fx + Math.cos(a) * inner, fy + Math.sin(a) * inner, Math.PI * R / n * (0.2 + 0.6 * r()));
     }
     x.fillStyle = pal.ink; x.fill(path);
-  } else if (p.type === 'sky') {                   // light tone at the top, outlined cumulus clouds, a few birds
-    toneDots(x, p, (px, py) => 0.5 * (1 - ss(p.y0, p.y0 + h * 0.75, py)), 5, pal.tone);
-    for (let c = 0, nc = 1 + ((r() * 2.5) | 0); c < nc; c++) {
-      const ccx = p.x0 + w * (0.15 + 0.7 * r()), ccy = p.y0 + h * (0.35 + 0.4 * r()), cw = Math.min(w * (0.35 + 0.3 * r()), 320), blobs = [];
-      for (let i = 0, nb = 5 + ((r() * 4) | 0); i < nb; i++) {
-        const t = i / (nb - 1), br = cw * (0.12 + 0.1 * r()) * (1 - 0.5 * Math.abs(t - 0.5));
-        blobs.push([ccx - cw / 2 + cw * t, ccy - br * (0.3 + 0.6 * r()), br]);
-      }
-      x.lineWidth = 2.2; x.strokeStyle = pal.ink;
-      for (const [bx, by, br] of blobs) { x.beginPath(); x.arc(bx, by, br, 0, 6.2832); x.stroke(); }
-      x.fillStyle = pal.paper;
-      for (const [bx, by, br] of blobs) { x.beginPath(); x.arc(bx, by, br - 1, 0, 6.2832); x.fill(); }
-      x.lineWidth = 1; x.beginPath();
-      for (let i = 0; i < 4; i++) { const yy = ccy + 2 - i * 4; x.moveTo(ccx - cw * (0.3 - i * 0.05), yy); x.lineTo(ccx + cw * (0.05 - i * 0.04), yy); }
-      x.stroke();
-    }
-    x.lineWidth = 1.4; x.strokeStyle = pal.ink; x.beginPath();
-    for (let i = 0, nb = (r() * 4) | 0; i < nb; i++) {
-      const bx = p.x0 + w * (0.1 + 0.8 * r()), by = p.y0 + h * (0.1 + 0.3 * r()), bs = 4 + 4 * r();
-      x.moveTo(bx - bs, by - bs * 0.5); x.quadraticCurveTo(bx - bs * 0.4, by - bs * 0.6, bx, by); x.quadraticCurveTo(bx + bs * 0.4, by - bs * 0.6, bx + bs, by - bs * 0.5);
-    }
-    x.stroke();
+    x.save(); x.translate(fx, fy); x.rotate((r() - 0.5) * 0.4);
+    lettering(x, WORDS[(r() * WORDS.length) | 0], Math.max(28, Math.min(110, r0 * 0.75)), false, pal, r() * 6);
+    x.restore();
   } else if (p.type === 'hatch') {                 // gradient of strokes coming from a solid edge (a "beta flash")
     const a = r() * 6.283, ca = Math.cos(a), sa = Math.sin(a), path = new Path2D(), reach = 0.35 + 0.35 * r();
     for (let o = -E; o < E; o += 2.6 + 0.8 * r()) {
@@ -438,38 +703,381 @@ function drawPanel(x, p, pal) {
       wedge(path, sx, sy, sx + ca * len, sy + sa * len, 1.6 + 1.4 * r());
     }
     x.fillStyle = pal.ink; x.fill(path);
-  } else if (p.type === 'city') {                  // night city: dark tone sky, a moon, black buildings with lit windows
-    const gy = p.y1 - h * (0.06 + 0.14 * r());
-    toneDots(x, p, (px, py) => 0.25 + 0.6 * (1 - ss(p.y0, gy, py)), 5, pal.tone);
-    const mx = p.x0 + w * (0.2 + 0.6 * r()), my = p.y0 + h * (0.22 + 0.12 * r()), mr = Math.min(w, h) * (0.07 + 0.04 * r());
-    x.fillStyle = pal.paper; x.beginPath(); x.arc(mx, my, mr + 5, 0, 6.2832); x.fill();
-    x.lineWidth = 1.6; x.strokeStyle = pal.ink; x.beginPath(); x.arc(mx, my, mr, 0, 6.2832); x.stroke();
-    const win = new Path2D(), body = new Path2D();
-    for (let bx = p.x0 - 10; bx < p.x1 + 10;) {
-      const bw = 16 + 40 * r(), bh = h * (0.15 + 0.5 * r());
-      body.rect(bx, gy - bh, bw - 2, bh + h);
-      if (r() < 0.3) { body.rect(bx + bw * 0.4, gy - bh - 14, 1.6, 14); }
-      for (let wy = gy - bh + 6; wy < gy - 6; wy += 8) for (let wx = bx + 4; wx < bx + bw - 7; wx += 6) if (r() < 0.32) win.rect(wx, wy, 2.6, 3.6);
-      bx += bw;
-    }
-    x.fillStyle = pal.ink; x.fill(body); x.fillStyle = pal.paper; x.fill(win);
-  } else if (p.type === 'bokeh') {                 // shoujo background: even tone with soft bubbles and sparkles
-    toneDots(x, p, () => 0.42, 5, pal.tone);
-    for (let i = 0, n = Math.max(4, Math.min(30, (w * h / 9000) | 0)); i < n; i++) {
-      const bx = p.x0 + w * r(), by = p.y0 + h * r(), br = 5 + 24 * r() * r();
-      x.globalAlpha = 0.9; x.fillStyle = pal.paper; x.beginPath(); x.arc(bx, by, br, 0, 6.2832); x.fill();
-      x.globalAlpha = 1; x.lineWidth = 0.8; x.strokeStyle = pal.ink; x.stroke();
-    }
-    for (let i = 0, n = 2 + ((r() * 4) | 0); i < n; i++) star(x, p.x0 + w * r(), p.y0 + h * r(), 6 + 8 * r(), pal.paper, pal.ink);
+  } else if (SCENES[p.type]) {
+    SCENES[p.type](x, p, r, pal, w, h, cx, cy);
+    if (r() < 0.3 && w > 170 && h > 110) caption(x, p, r, pal);
   }
-  if (p.sfx && p.type !== 'city' && w > 120 && h > 90) {   // a hollow sound effect painted into the panel
+  if (p.sfx && SFX_TYPES.has(p.type) && w > 120 && h > 90) {   // a hollow sound effect painted into the panel
     x.save(); x.translate(p.x0 + w * (0.3 + 0.4 * r()), p.y0 + h * (0.3 + 0.4 * r())); x.rotate((r() - 0.5) * 0.6);
     lettering(x, WORDS[(r() * WORDS.length) | 0], Math.max(26, Math.min(86, Math.min(w, h) * 0.26)), false, pal, r() * 6);
     x.restore();
   }
   x.restore();
   x.lineWidth = 2.6; x.lineJoin = 'miter'; x.strokeStyle = pal.ink; x.stroke(clip);
+  PANEL_BOX = null;
 }
+
+const SCENES = {
+  // A shopping street in one-point perspective: buildings in depth with floors, windows, awnings and hanging signs, the left side
+  // in shade casting shadows across the road, a crosswalk, utility poles and their tangle of wires against the sky
+  street(x, p, r, pal, w, h) {
+    const vx = p.x0 + w * (0.36 + 0.28 * r()), vy = p.y0 + h * (0.36 + 0.12 * r()), f = Math.max(w, h * 1.2) * 0.55, P3 = cam3(vx, vy, f, 1.6);
+    const ZN = 1.4, ZF = 170, XS = 6, ink = pal.ink;
+    toneDots(x, p, (px, py) => 0.3 * (1 - ss(p.y0, vy + 8, py)), 5, pal.tone);
+    const blocks = [];
+    for (const side of [-1, 1]) for (let z = ZN; z < ZF;) {
+      const len = 5 + 11 * r();
+      blocks.push({ side, z0: z, z1: z + len, H: 5.5 + 18 * r() * r() + (r() < 0.12 ? 14 : 0), dep: 8 + 6 * r(), shop: r() < 0.6, sign: r() < 0.45, ch: r() });
+      z += len + (r() < 0.15 ? 2 : 0);
+    }
+    // ground: road in light tone, kerbs, shadows of the left-hand buildings, dashed centre line, a crosswalk
+    const road = polyPath([P3(-4, 0, ZN), P3(4, 0, ZN), P3(4, 0, ZF), P3(-4, 0, ZF)]);
+    x.save(); x.clip(road); toneDots(x, p, () => 0.14, 4.5, pal.tone); x.restore();
+    const shade = new Path2D();
+    for (const b of blocks) if (b.side < 0) { const sw = Math.min(8, b.H * 0.4); polyPath([P3(-XS, 0, b.z0), P3(-XS + sw, 0, b.z0 + 2), P3(-XS + sw, 0, b.z1 + 2), P3(-XS, 0, b.z1)], shade); }
+    x.save(); x.clip(shade); toneDots(x, p, () => 0.7, 4.5, pal.tone); x.restore();
+    const thin = new Path2D(), bold = new Path2D(), fills = new Path2D();
+    for (const X of [-4, 4]) { seg(bold, P3(X, 0, ZN), P3(X, 0, ZF)); seg(thin, P3(X, 0.15, ZN), P3(X, 0.15, ZF)); }
+    for (let z = ZN + 1; z < 90; z += 6) polyPath([P3(-0.08, 0, z), P3(0.08, 0, z), P3(0.08, 0, z + 3), P3(-0.08, 0, z + 3)], fills);
+    const zc = 4 + 4 * r();
+    for (let X = -3.6; X < 3.5; X += 0.9) polyPath([P3(X, 0, zc), P3(X + 0.45, 0, zc), P3(X + 0.45, 0, zc + 2.6), P3(X, 0, zc + 2.6)], fills);
+    x.fillStyle = paperA(pal, 1); x.fill(fills);
+    x.lineWidth = 0.8; x.strokeStyle = ink; x.stroke(fills); x.stroke(thin); x.lineWidth = 1.6; x.stroke(bold);
+    // buildings, far to near
+    blocks.sort((a, b) => b.z0 - a.z0);
+    for (const b of blocks) {
+      const s = b.side, X = s * XS, Xb = s * (XS + b.dep), lw = Math.min(2.4, 0.5 + 14 / b.z0), far = b.z0 > 45;
+      const ef = [P3(X, 0, b.z0), P3(X, b.H, b.z0), P3(Xb, b.H, b.z0), P3(Xb, 0, b.z0)], efp = polyPath(ef);   // end wall facing us
+      x.fillStyle = pal.paper; x.fill(efp);
+      x.save(); x.clip(efp);
+      if (far) toneDots(x, boxOf(ef), () => 0.4, 4, pal.tone);
+      else hatch(x, boxOf(ef), () => 0.5, Math.PI / 2 + 0.03, ink, 3.2, 0.8, 2);
+      x.restore();
+      x.lineWidth = lw; x.strokeStyle = ink; x.stroke(efp);
+      const fc = [P3(X, 0, b.z0), P3(X, b.H, b.z0), P3(X, b.H, b.z1), P3(X, 0, b.z1)], fcp = polyPath(fc);   // facade on the street
+      x.fillStyle = pal.paper; x.fill(fcp);
+      x.save(); x.clip(fcp);
+      if (s < 0) toneDots(x, boxOf(fc), () => 0.45, 4.5, pal.tone);   // the left-hand side is in shade
+      const lines = new Path2D(), dark = new Path2D(), glint = new Path2D();
+      seg(lines, P3(X, b.H - 0.5, b.z0), P3(X, b.H - 0.5, b.z1));   // parapet
+      if (b.z0 < 80) for (let Y = 3.4; Y + 2.4 < b.H; Y += 3) {
+        seg(lines, P3(X, Y, b.z0), P3(X, Y, b.z1));
+        if (far) continue;
+        for (let z = b.z0 + 0.7; z + 1.3 < b.z1 - 0.4; z += 2.4) {
+          const wq = [P3(X, Y + 0.9, z), P3(X, Y + 2.3, z), P3(X, Y + 2.3, z + 1.3), P3(X, Y + 0.9, z + 1.3)];
+          if (r() < 0.35) { polyPath(wq, dark); seg(glint, P3(X, Y + 1.0, z + 0.3), P3(X, Y + 2.0, z + 0.8)); }
+          else { polyPath(wq, lines); seg(lines, P3(X, Y + 0.9, z + 0.65), P3(X, Y + 2.3, z + 0.65)); }
+        }
+      }
+      if (b.shop && !far) {                        // shop front: dark glass with mullions
+        polyPath([P3(X, 0.3, b.z0 + 0.5), P3(X, 2.6, b.z0 + 0.5), P3(X, 2.6, b.z1 - 0.5), P3(X, 0.3, b.z1 - 0.5)], dark);
+        for (let z = b.z0 + 2; z < b.z1 - 0.8; z += 1.6) seg(glint, P3(X, 0.3, z), P3(X, 2.6, z));
+      }
+      seg(lines, P3(X, 0, b.z1 - 0.3), P3(X, b.H, b.z1 - 0.3));   // drainpipe
+      x.fillStyle = ink; x.fill(dark);
+      x.lineWidth = Math.max(0.6, lw * 0.45); x.strokeStyle = ink; x.stroke(lines);
+      x.lineWidth = 0.9; x.strokeStyle = pal.paper; x.stroke(glint);
+      x.restore();
+      x.lineWidth = lw; x.strokeStyle = ink; x.stroke(fcp);
+      if (b.shop && !far) {                        // striped awning over the shop
+        const za = b.z0 + 0.4, zb = b.z1 - 0.4, aw = polyPath([P3(X, 3.0, za), P3(X - s * 1.3, 2.5, za), P3(X - s * 1.3, 2.5, zb), P3(X, 3.0, zb)]);
+        x.fillStyle = pal.paper; x.fill(aw);
+        const st = new Path2D();
+        for (let z = za; z < zb - 0.3; z += 0.7) polyPath([P3(X, 3.0, z), P3(X - s * 1.3, 2.5, z), P3(X - s * 1.3, 2.5, z + 0.35), P3(X, 3.0, z + 0.35)], st);
+        x.fillStyle = ink; x.fill(st); x.lineWidth = lw * 0.8; x.stroke(aw);
+      }
+      if (b.sign && b.z0 < 40) {                   // a vertical sign hanging over the street
+        const zs = b.z0 + 0.6, top = P3(X - s * 0.15, 4.2 + 4, zs), bot = P3(X - s * 1.25, 4.2, zs);
+        const sx0 = Math.min(top[0], bot[0]), sx1 = Math.max(top[0], bot[0]), sy0 = top[1], sy1 = bot[1];
+        x.fillStyle = pal.paper; x.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0); x.lineWidth = lw; x.strokeStyle = ink; x.strokeRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+        const word = SIGNS[(b.ch * SIGNS.length) | 0], chars = [...word], fs = Math.min((sx1 - sx0) * 0.72, (sy1 - sy0) / (chars.length + 0.6));
+        if (fs > 5) {
+          x.font = `700 ${fs}px ${JFONT}`; x.fillStyle = ink; x.textAlign = 'center'; x.textBaseline = 'middle';
+          chars.forEach((c, i) => x.fillText(c, (sx0 + sx1) / 2, sy0 + (sy1 - sy0) * (i + 0.5 + 0.3) / (chars.length + 0.6)));
+        }
+      }
+    }
+    // utility poles along the right kerb, wires between their tops and across the street
+    const poleX = 4.7, zs = [];
+    for (let z = 3 + 3 * r(); z < 110; z += 12) zs.push(z);
+    const poles = new Path2D(), wires = new Path2D(), hi = new Path2D();
+    for (const z of zs) {
+      const a = P3(poleX, 0, z), b = P3(poleX, 9.5, z), pw = Math.max(1.2, 0.3 * f / z);
+      poles.rect(a[0] - pw / 2, b[1], pw, a[1] - b[1]);
+      penSeg(hi, a[0] - pw * 0.2, b[1] + pw, a[0] - pw * 0.2, a[1], Math.max(0.6, pw * 0.15), 0.3);
+      const c0 = P3(poleX - 1, 8.7, z), c1 = P3(poleX + 1, 8.7, z), cw = Math.max(0.8, 0.14 * f / z);
+      poles.rect(c0[0], c0[1] - cw / 2, c1[0] - c0[0], cw);
+      if (z < 60 && Math.round(z) % 2 === 0) { const t = P3(poleX + 0.35, 7.4, z), tw = 0.55 * f / z; poles.rect(t[0] - tw / 2, t[1] - tw, tw, tw * 1.7); }
+    }
+    for (let i = 1; i < zs.length; i++) for (const ox of [-0.85, 0, 0.85]) {
+      const pts = [];
+      for (let k = 0; k <= 10; k++) { const t = k / 10, z = zs[i - 1] + (zs[i] - zs[i - 1]) * t; pts.push(P3(poleX + ox, 8.7 - 0.45 * Math.sin(Math.PI * t), z)); }
+      penLine(wires, pts, Math.max(0.6, Math.min(2, 0.05 * f / zs[i - 1])), 0.1);
+    }
+    for (const z of zs.slice(1, 4)) {              // wires across the street to the left-hand buildings
+      const pts = [];
+      for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(P3(poleX - (poleX + XS) * t, 8.6 - 1.2 * t - 0.6 * Math.sin(Math.PI * t), z + 3 * t)); }
+      penLine(wires, pts, Math.max(0.6, 0.04 * f / z), 0.1);
+    }
+    x.fillStyle = ink; x.fill(poles); x.fill(wires); x.fillStyle = pal.paper; x.fill(hi);
+    birds(x, p, r, w, h, (r() * 3) | 0, pal);
+  },
+  // The city at night: a far skyline in fine tone, near towers in oblique view with a lit front, a dark side, windows and roof gear
+  skyline(x, p, r, pal, w, h) {
+    const gy = p.y1 - h * (0.02 + 0.05 * r());
+    toneDots(x, p, (px, py) => 0.35 + 0.5 * (1 - ss(p.y0, gy, py)), 5, pal.tone);
+    if (r() < 0.7) moonDisc(x, p.x0 + w * (0.15 + 0.7 * r()), p.y0 + h * (0.16 + 0.1 * r()), Math.min(w, h) * (0.08 + 0.04 * r()), pal);
+    const far = new Path2D();
+    for (let bx = p.x0 - 10; bx < p.x1 + 10;) { const bw = 8 + 22 * r(), bh = h * (0.3 + 0.35 * r()); far.rect(bx, gy - bh, bw + 1, bh + 20); bx += bw; }
+    x.fillStyle = pal.paper; x.fill(far); x.save(); x.clip(far); toneDots(x, p, () => 0.7, 3.4, pal.tone); x.restore();
+    for (let bx = p.x0 - 30; bx < p.x1 + 10;) {
+      const bw = 26 + 52 * r(), bh = h * (0.12 + 0.42 * r()), dd = bw * (0.25 + 0.15 * r()), top = gy - bh, dy = dd * 0.42;
+      const front = polyPath([[bx, top], [bx + bw, top], [bx + bw, gy + 20], [bx, gy + 20]]);
+      const sideF = polyPath([[bx + bw, top], [bx + bw + dd, top - dy], [bx + bw + dd, gy + 20], [bx + bw, gy + 20]]);
+      const roof = polyPath([[bx, top], [bx + dd, top - dy], [bx + bw + dd, top - dy], [bx + bw, top]]);
+      x.fillStyle = pal.ink; x.fill(sideF);
+      x.fillStyle = pal.paper; x.fill(roof); x.fill(front);
+      x.save(); x.clip(front); toneDots(x, { x0: bx, y0: top, x1: bx + bw, y1: gy }, () => 0.68, 4, pal.tone); x.restore();
+      const lit = new Path2D(), lines = new Path2D();
+      for (let wy = top + 6; wy < gy - 6; wy += 8) for (let wx = bx + 4; wx < bx + bw - 6; wx += 6) if (r() < 0.3) lit.rect(wx, wy, 3, 4.4);
+      for (let wy = top + 6; wy < gy; wy += 8) for (let k = 0; k < 2; k++) if (r() < 0.12) { const sx = bx + bw + dd * (0.25 + 0.4 * k); lit.moveTo(sx, wy - dy * 0.3 * k); lit.lineTo(sx + 3, wy - dy * 0.3 * k - 1.3); lit.lineTo(sx + 3, wy + 3 - dy * 0.3 * k); lit.lineTo(sx, wy + 4.3 - dy * 0.3 * k); lit.closePath(); }
+      for (let lx = bx + bw / 4; lx < bx + bw; lx += bw / 4) seg(lines, [lx, top], [lx, gy]);
+      x.fillStyle = pal.paper; x.fill(lit);
+      x.lineWidth = 0.6; x.strokeStyle = pal.ink; x.stroke(lines);
+      x.lineWidth = 1.3; x.stroke(front); x.stroke(roof); x.stroke(sideF);
+      const gear = r(), gx = bx + bw * (0.25 + 0.4 * r()), gyy = top - dy * 0.5;   // roof gear: a water tank, an antenna mast or nothing
+      if (gear < 0.35) { x.fillStyle = pal.ink; x.fillRect(gx - 7, gyy - 16, 14, 11); x.fillRect(gx - 6, gyy - 5, 1.6, 6); x.fillRect(gx + 4.4, gyy - 5, 1.6, 6); x.beginPath(); x.ellipse(gx, gyy - 16, 7, 2.5, 0, 0, 6.2832); x.fill(); }
+      else if (gear < 0.65) { const mh = 20 + 30 * r(); x.lineWidth = 1.4; x.strokeStyle = pal.ink; x.beginPath(); x.moveTo(gx, gyy); x.lineTo(gx, gyy - mh); for (let k = 1; k < 4; k++) { x.moveTo(gx - 6 + k, gyy - mh * k / 4); x.lineTo(gx + 6 - k, gyy - mh * k / 4); } x.stroke(); }
+      bx += bw + dd * (0.4 + 0.5 * r());
+    }
+  },
+  // A towering summer cumulonimbus over a low horizon of roofs, often framed by a utility pole and its wires
+  clouds(x, p, r, pal, w, h) {
+    const hz = p.y1 - h * (0.08 + 0.1 * r());
+    toneDots(x, p, (px, py) => 0.12 + 0.52 * (1 - ss(p.y0, hz, py)), 5, pal.tone);
+    const cw = w * (0.45 + 0.3 * r()), ch = Math.min(h * (0.6 + 0.25 * r()), cw * 1.4), ccx = p.x0 + w * (0.3 + 0.4 * r());
+    if (r() < 0.6) cloudMass(x, ccx + (r() < 0.5 ? -1 : 1) * cw * 0.7, hz - 3, cw * 0.4, ch * 0.35, r, pal);
+    cloudMass(x, ccx, hz - 2, cw, ch, r, pal);
+    const town = new Path2D(); town.moveTo(p.x0 - 10, p.y1 + 10);
+    for (let tx = p.x0 - 10; tx < p.x1 + 10;) { const th = 2 + 11 * r() * r(), tw = 6 + 14 * r(); town.lineTo(tx, hz - th); town.lineTo(tx + tw, hz - th); tx += tw; }
+    town.lineTo(p.x1 + 10, p.y1 + 10); town.closePath();
+    x.fillStyle = pal.paper; x.fill(town); x.save(); x.clip(town); toneDots(x, p, () => 0.55, 3.4, pal.tone); x.restore();
+    x.lineWidth = 1; x.strokeStyle = pal.ink; x.stroke(town);
+    if (r() < 0.75) poleAndWires(x, p, r, pal, w, h);
+    birds(x, p, r, w, h, (r() * 4) | 0, pal);
+  },
+  // Mountain ranges receding in layers: far ones in light tone, near ones hatched by the slope of the terrain, mist between them,
+  // and often a black pine in the foreground
+  mountains(x, p, r, pal, w, h) {
+    toneDots(x, p, (px, py) => 0.22 * (1 - ss(p.y0, p.y0 + h * 0.5, py)), 5, pal.tone);
+    const NL = 4, ko = (r() * 1000) | 0;
+    for (let k = 0; k < NL; k++) {
+      const base = p.y0 + h * (0.34 + 0.14 * k), amp = h * (0.22 - 0.035 * k), fr = (2 + k * 1.4) / Math.max(w, 200), ridge = [];
+      for (let px = p.x0 - 12; px <= p.x1 + 15; px += 3) {
+        const n = fbm(px * fr + k * 31 + ko, k * 7.3, 20 + k), rd = 1 - Math.abs(2 * n - 1);
+        ridge.push([px, base - amp * (0.3 * n + 0.75 * rd * rd)]);
+      }
+      const rAt = px => ridge[Math.max(0, Math.min(ridge.length - 1, Math.round((px - p.x0 + 12) / 3)))][1];
+      const path = new Path2D(); ridge.forEach(([a, b], i) => i ? path.lineTo(a, b) : path.moveTo(a, b));
+      path.lineTo(p.x1 + 15, p.y1 + 12); path.lineTo(p.x0 - 12, p.y1 + 12); path.closePath();
+      x.fillStyle = pal.paper; x.fill(path);
+      x.save(); x.clip(path);
+      if (k < 2) toneDots(x, p, (px, py) => (0.2 + 0.12 * k) * (0.55 + 0.45 * ss(rAt(px), rAt(px) + h * 0.25, py)), 4.5, pal.tone);
+      else {
+        // terrain: ridged noise stretched across the range, so slopes form spurs and gullies running down from the ridge;
+        // each facet is shaded by its normal against a light from the upper left
+        const Hh = (u, v) => { let s = 0, a = 1, f = 1; for (let o = 0; o < 3; o++) { const n = vnoise(u * f + k * 13 + ko, v * f, 60 + k * 5 + o); s += a * (1 - Math.abs(2 * n - 1)); a *= 0.45; f *= 2.2; } return s; };
+        const su = 1 / (70 + 30 * (NL - 1 - k)), sv = 1 / 140;
+        hatch(x, { x0: p.x0, y0: p.y0 + h * 0.12, x1: p.x1, y1: p.y1 }, (px, py) => {
+          const ry = rAt(px);
+          if (py < ry) return 0;
+          const u = px * su, v = (py - ry) * sv, e = 0.02, d = (py - ry) / h;
+          const gx = (Hh(u + e, v) - Hh(u - e, v)) / (2 * e), gy = (Hh(u, v + e) - Hh(u, v - e)) / (2 * e);
+          const nx = -gx * 0.9, ny = -gy * 0.5 - 0.6, l = Math.hypot(nx, ny, 1), lam = (nx * -0.7 + ny * -0.35 + 0.62) / l;
+          return 0.95 * (1 - ss(0.05, 0.85, lam)) + 0.25 * ss(0.15, 0.6, d) + (k === NL - 1 ? 0.1 : 0);
+        }, 1.2, pal.ink, 3.1, 0.9, k === NL - 1 ? 3 : 2);
+      }
+      if (k < NL - 1) {                            // mist at the foot of the range
+        const g = x.createLinearGradient(0, base - amp * 0.1, 0, base + h * 0.1);
+        g.addColorStop(0, paperA(pal, 0)); g.addColorStop(1, paperA(pal, 0.95));
+        x.fillStyle = g; x.fillRect(p.x0 - 12, base - amp, w + 30, h);
+      }
+      x.restore();
+      const ol = new Path2D(), sparse = ridge.filter((_, i) => i % 2 === 0);
+      penLine(ol, sparse, k >= 2 ? 1.8 : 1.0, 0.25);
+      x.fillStyle = pal.ink; x.fill(ol);
+    }
+    if (r() < 0.75) { const left = r() < 0.5; pine(x, left ? p.x0 + w * (0.06 + 0.1 * r()) : p.x1 - w * (0.06 + 0.1 * r()), p.y1 + 8, h * (0.75 + 0.2 * r()), left ? 1 : -1, r, pal); }
+    birds(x, p, r, w, h, (r() * 3) | 0, pal);
+  },
+  // The sea: clouds over the horizon, wave strokes that thicken toward the viewer with a lane of light left open,
+  // and in front either rocks rising from the water or a breaking wave
+  sea(x, p, r, pal, w, h) {
+    const hy = p.y0 + h * (0.34 + 0.14 * r()), sx = p.x0 + w * (0.2 + 0.6 * r());
+    x.save(); x.beginPath(); x.rect(p.x0 - 10, p.y0 - 10, w + 20, hy - p.y0 + 10); x.clip();
+    toneDots(x, p, (px, py) => 0.1 + 0.42 * (1 - ss(p.y0, hy, py)), 5, pal.tone);
+    if (r() < 0.75) cloudMass(x, p.x0 + w * (0.2 + 0.6 * r()), hy - 1, w * (0.3 + 0.25 * r()), (hy - p.y0) * 0.8, r, pal);
+    x.restore();
+    const water = new Path2D();
+    penSeg(water, p.x0 - 10, hy, p.x1 + 10, hy, 1.3, 0);
+    for (let y = hy + 3; y < p.y1 + 6; y += 2.2 + (y - hy) * 0.075) {
+      const k = (y - hy) / (p.y1 - hy), A = 0.4 + k * 2.6;
+      for (let lx = p.x0 - 20; lx < p.x1 + 20;) {
+        const len = (10 + 60 * r()) * (0.6 + k * 1.6), gap = (3 + 14 * r()) * (0.6 + k);
+        if (Math.abs(lx + len / 2 - sx) > w * 0.04 * (1 + 3 * k) || r() < 0.2) {
+          const pts = [];
+          for (let i = 0; i <= 5; i++) { const xx = lx + len * i / 5; pts.push([xx, y + A * Math.sin(xx * 0.05 + y * 0.3)]); }
+          penLine(water, pts, 0.5 + 1.8 * k, 0.9);
+        }
+        lx += len + gap;
+      }
+    }
+    x.fillStyle = pal.ink; x.fill(water);
+    if (r() < 0.7) {                               // rocks rising from the water, hatched by their facets
+      const side = r() < 0.5 ? -1 : 1, rx0 = side < 0 ? p.x0 - 10 : p.x1 + 10, rw = w * (0.22 + 0.15 * r()), rtop = hy + (p.y1 - hy) * 0.1 - h * (0.05 + 0.12 * r());
+      const pk = rx0 - side * rw * (0.35 + 0.2 * r());
+      const out = jagged(rx0, p.y1 + 10, pk, rtop, rw * 0.12, r, 5).concat(jagged(pk, rtop, rx0 - side * rw, p.y1 + 10, rw * 0.12, r, 5).slice(1));
+      const rock = polyPath(out);
+      x.fillStyle = pal.paper; x.fill(rock);
+      x.save(); x.clip(rock);
+      hatch(x, boxOf(out), (px, py) => 0.3 + (fbm(px * 0.03, py * 0.03, 50) - fbm((px + 3) * 0.03, py * 0.03, 50)) * 20 + 0.35 * ss(pk - rw * 0.1, pk + rw * 0.4, px), 1.0, pal.ink, 3, 1, 3);
+      x.restore();
+      const ol = new Path2D(); penLine(ol, out.filter((_, i) => i % 2 === 0), 2, 0.3); x.fillStyle = pal.ink; x.fill(ol);
+      const foam = new Path2D();
+      for (let i = 0; i < 9; i++) { const fx = rx0 - side * rw * (0.1 + 0.9 * r()), fy = p.y1 - h * (0.02 + 0.08 * r()); penLine(foam, [[fx - 10, fy], [fx - 3, fy - 3], [fx + 6, fy - 1]], 1.4, 0.8); }
+      x.fill(foam);
+    } else {                                       // a distant island on the horizon, hatched on its shaded flank
+      const ix = p.x0 + w * (0.15 + 0.7 * r()), iw = w * (0.18 + 0.15 * r()), ih = (hy - p.y0) * (0.25 + 0.25 * r());
+      const top = jagged(ix - iw / 2, hy, ix + iw * (r() - 0.5) * 0.3, hy - ih, iw * 0.06, r, 4).concat(jagged(ix + iw * (r() - 0.5) * 0.3, hy - ih, ix + iw / 2, hy, iw * 0.06, r, 4).slice(1));
+      const isl = polyPath(top);
+      x.fillStyle = pal.paper; x.fill(isl);
+      x.save(); x.clip(isl);
+      hatch(x, boxOf(top), (px, py) => 0.35 + 0.5 * ss(ix - iw * 0.15, ix + iw * 0.3, px) + 0.15 * ss(hy - ih * 0.3, hy, py), 1.1, pal.ink, 2.6, 0.8, 3);
+      x.restore();
+      const ol = new Path2D(); penLine(ol, top.filter((_, i) => i % 2 === 0), 1.3, 0.4); x.fillStyle = pal.ink; x.fill(ol);
+    }
+    birds(x, p, r, w, h, 1 + ((r() * 3) | 0), pal);
+  },
+  // A bamboo grove: far stalks in tone, nearer ones outlined and hatched on their shaded side, nodes, slender leaves, shafts of light
+  bamboo(x, p, r, pal, w, h) {
+    toneDots(x, p, (px, py) => 0.3 + 0.18 * ss(p.y0, p.y1, py), 5, pal.tone);
+    for (let i = 0; i < 3; i++) {                  // shafts of light
+      const bx = p.x0 + w * (0.1 + 0.8 * r()), bw = w * (0.04 + 0.06 * r()), sl = h * 0.35;
+      x.fillStyle = paperA(pal, 0.45); x.fill(polyPath([[bx, p.y0 - 10], [bx + bw, p.y0 - 10], [bx + bw + sl, p.y1 + 10], [bx + sl, p.y1 + 10]]));
+    }
+    const k = Math.max(0.7, Math.min(1.6, h / 320));
+    for (const layer of [0, 1, 2]) {
+      const n = Math.max(2, Math.round([10, 6, 3][layer] * w / 400));
+      for (let i = 0; i < n; i++) {
+        const bx = p.x0 + w * r(), sw = [4, 9, 18][layer] * (0.8 + 0.5 * r()) * k, lean = (r() - 0.5) * 0.06, xa = y => bx + (p.y1 - y) * lean;
+        const stalk = polyPath([[xa(p.y0 - 10) - sw / 2, p.y0 - 10], [xa(p.y0 - 10) + sw / 2, p.y0 - 10], [xa(p.y1 + 10) + sw / 2, p.y1 + 10], [xa(p.y1 + 10) - sw / 2, p.y1 + 10]]);
+        x.fillStyle = pal.paper; x.fill(stalk);
+        x.save(); x.clip(stalk);
+        if (layer === 0) toneDots(x, p, () => 0.7, 3.4, pal.tone);
+        else hatch(x, { x0: bx - sw * 2, y0: p.y0 - 10, x1: bx + sw * 2, y1: p.y1 + 10 }, (px, py) => (layer === 2 ? 0.95 : 0.6) * ss(xa(py) - sw * 0.05, xa(py) + sw * 0.5, px), Math.PI / 2 + lean, pal.ink, 2.6, 0.8, 2);
+        x.restore();
+        const ink = new Path2D(), leaves = new Path2D(), ribs = new Path2D();
+        if (layer > 0) { penSeg(ink, xa(p.y0 - 10) - sw / 2, p.y0 - 10, xa(p.y1 + 10) - sw / 2, p.y1 + 10, layer === 2 ? 1.7 : 1, 0.2); penSeg(ink, xa(p.y0 - 10) + sw / 2, p.y0 - 10, xa(p.y1 + 10) + sw / 2, p.y1 + 10, layer === 2 ? 2 : 1.2, 0.2); }
+        for (let ny = p.y1 - (20 + 40 * r()); ny > p.y0 - 10; ny -= sw * 3 + 40 + 30 * r()) {
+          if (layer > 0) { penLine(ink, [[xa(ny) - sw / 2 - 1, ny + 1], [xa(ny), ny - 1.5], [xa(ny) + sw / 2 + 1, ny + 1]], 1.5, 0.3); penLine(ink, [[xa(ny) - sw / 2, ny + 4], [xa(ny), ny + 2.5], [xa(ny) + sw / 2, ny + 4]], 0.8, 0.5); }
+          if (layer > 0 && r() < 0.5) {            // a thin twig arching out, with lance-shaped leaves drooping along its outer half
+            const sd = r() < 0.5 ? -1 : 1, tl = (30 + 40 * r()) * k, ax = xa(ny) + sd * sw / 2, twig = [];
+            for (let t = 0; t <= 8; t++) { const u = t / 8; twig.push([ax + sd * tl * u, ny - tl * 0.35 * Math.sin(u * 2.2) + tl * 0.15 * u * u]); }
+            penLine(ink, twig, 1.0, 0.5);
+            for (let j = 0, nl = 4 + ((r() * 4) | 0); j < nl; j++) {   // fans of three or four blades at the tip and halfway along
+              const [lx, ly] = twig[j < 4 ? 8 : 5], L = (26 + 18 * r()) * k * (layer === 2 ? 1.15 : 0.85);
+              const a0 = Math.PI / 2 - sd * (0.55 + 0.32 * (j % 4) + 0.15 * r()), droop = sd * (0.1 + 0.15 * r()), pts = [];
+              for (let t = 0; t <= 8; t++) { const u = t / 8, aa = a0 + droop * u * u; pts.push([lx + Math.cos(aa) * L * u, ly + Math.sin(aa) * L * u]); }
+              penLine(leaves, pts, 0, 0, t => L * 0.11 * Math.sin(Math.PI * Math.pow(t, 0.6)) + 0.3);   // widest near the base, sharp tip
+              if (layer === 2) penLine(ribs, pts.slice(1, 7), 0.6, 0.6);
+            }
+          }
+        }
+        x.fillStyle = layer === 0 ? pal.tone : pal.ink; x.fill(ink); x.fill(leaves);
+        x.fillStyle = pal.paper; x.fill(ribs);    // the midrib of the nearest leaves
+      }
+    }
+  },
+  // Stone steps climbing to a shrine gate between tall cedars, stone lanterns at the sides, light from the sky above
+  shrine(x, p, r, pal, w, h, cx) {
+    const vx = cx + (r() - 0.5) * w * 0.12, vy = p.y0 + h * 0.62, f = h * 0.75, P3 = cam3(vx, vy, f, 1.5), K = 9 + ((r() * 4) | 0);
+    toneDots(x, p, (px, py) => 0.08 + 0.25 * ss(p.y0, p.y0 + h * 0.5, py), 5, pal.tone);
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {   // far cedars: tone spires behind the gate
+      const tx = vx + s * (w * (0.12 + 0.11 * i + 0.04 * r())), th = h * (0.55 + 0.3 * r()), tw = w * (0.05 + 0.03 * r()), base = vy + h * 0.05;
+      const pts = [[tx, base - th]];
+      for (let kk = 1; kk <= 9; kk++) pts.push([tx + tw * kk / 9 * (kk % 2 ? 1.2 : 0.85), base - th + th * kk / 9]);
+      for (let kk = 9; kk >= 1; kk--) pts.push([tx - tw * kk / 9 * (kk % 2 ? 1.2 : 0.85), base - th + th * kk / 9]);
+      pts.push([tx + tw, p.y1 + 10], [tx - tw, p.y1 + 10]);
+      const tree = polyPath(pts);
+      x.fillStyle = pal.paper; x.fill(tree); x.save(); x.clip(tree); toneDots(x, boxOf(pts), () => 0.62, 3.6, pal.tone); x.restore();
+    }
+    const stepZ = k => 4 + 0.62 * k, stepY = k => 0.36 * k, Zt = stepZ(K) + 0.9, Yb = stepY(K);
+    const gate = new Path2D(), gateHi = new Path2D();   // the gate: pillars, the tie beam and the curved top beam with upturned ends
+    for (const X of [-1.45, 1.45]) {
+      const a = P3(X - 0.17, Yb, Zt), b = P3(X + 0.17, Yb + 4.3, Zt);
+      gate.rect(a[0], b[1], b[0] - a[0], a[1] - b[1]);
+      penSeg(gateHi, a[0] + (b[0] - a[0]) * 0.25, b[1] + 4, a[0] + (b[0] - a[0]) * 0.25, a[1], 1, 0.3);
+    }
+    const nu0 = P3(-2.05, Yb + 3.35, Zt), nu1 = P3(2.05, Yb + 3.65, Zt); gate.rect(nu0[0], nu1[1], nu1[0] - nu0[0], nu0[1] - nu1[1]);
+    const sh0 = P3(-2.2, Yb + 4.05, Zt), sh1 = P3(2.2, Yb + 4.3, Zt); gate.rect(sh0[0], sh1[1], sh1[0] - sh0[0], sh0[1] - sh1[1]);
+    const gk0 = P3(-0.18, Yb + 3.6, Zt), gk1 = P3(0.18, Yb + 4.1, Zt); gate.rect(gk0[0], gk1[1], gk1[0] - gk0[0], gk0[1] - gk1[1]);
+    const top = [], bot = [];
+    for (let i = 0; i <= 16; i++) { const X = -2.6 + 5.2 * i / 16, lift = 0.32 * Math.pow(Math.abs(X) / 2.6, 3); top.push(P3(X, Yb + 4.8 + lift, Zt)); bot.push(P3(X * 0.97, Yb + 4.32 + lift * 0.7, Zt)); }
+    polyPath(top.concat(bot.reverse()), gate);
+    penLine(gateHi, top.slice(2, 15).map(([a, b]) => [a, b + 1.5]), 1, 0.6);
+    x.fillStyle = pal.ink; x.fill(gate); x.fillStyle = pal.paper; x.fill(gateHi);
+    // steps, far to near: the riser facing us in hatching, the tread in paper with its nosing line
+    for (let k = K - 1; k >= 0; k--) {
+      const z = stepZ(k), y0 = stepY(k), y1 = stepY(k + 1), hw = 1.8;
+      const riser = [P3(-hw, y0, z), P3(hw, y0, z), P3(hw, y1, z), P3(-hw, y1, z)], tread = [P3(-hw, y1, z), P3(hw, y1, z), P3(hw, y1, z + 0.62), P3(-hw, y1, z + 0.62)];
+      const rp = polyPath(riser), tp = polyPath(tread);
+      x.fillStyle = pal.paper; x.fill(tp); x.fill(rp);
+      x.save(); x.clip(rp); hatch(x, boxOf(riser), () => 0.35 + 0.25 * (k / K), 0.08, pal.ink, 2.8, 0.75, 2); x.restore();
+      x.lineWidth = Math.min(2, 0.6 + 6 / z); x.strokeStyle = pal.ink; x.stroke(tp); x.stroke(rp);
+    }
+    for (const [kk, s] of [[2, -1], [2, 1], [Math.round(K * 0.55), -1], [Math.round(K * 0.55), 1]]) {   // stone lanterns beside the steps
+      const z = stepZ(kk) + 0.3, y = stepY(kk + 1), X = s * 2.5, u = f / z, b = P3(X, y, z), ink = new Path2D(), hi = new Path2D();
+      ink.rect(b[0] - 0.32 * u, b[1] - 0.25 * u, 0.64 * u, 0.25 * u);                  // base
+      ink.rect(b[0] - 0.11 * u, b[1] - 1.3 * u, 0.22 * u, 1.05 * u);                   // post
+      ink.rect(b[0] - 0.3 * u, b[1] - 1.85 * u, 0.6 * u, 0.55 * u);                    // fire box
+      hi.rect(b[0] - 0.12 * u, b[1] - 1.75 * u, 0.24 * u, 0.32 * u);                   // its opening
+      ink.moveTo(b[0] - 0.55 * u, b[1] - 1.85 * u); ink.quadraticCurveTo(b[0], b[1] - 2.0 * u, b[0] + 0.55 * u, b[1] - 1.85 * u);
+      ink.lineTo(b[0] + 0.12 * u, b[1] - 2.2 * u); ink.lineTo(b[0] - 0.12 * u, b[1] - 2.2 * u); ink.closePath();   // roof
+      ink.arc(b[0], b[1] - 2.28 * u, 0.09 * u, 0, 6.2832);                              // finial
+      penSeg(hi, b[0] - 0.05 * u, b[1] - 1.25 * u, b[0] - 0.05 * u, b[1] - 0.3 * u, Math.max(0.6, 0.04 * u), 0.3);
+      x.fillStyle = pal.ink; x.fill(ink); x.fillStyle = pal.paper; x.fill(hi);
+    }
+    for (const s of [-1, 1]) {                     // near cedar trunks framing the panel, with furrowed bark
+      const tw = w * (0.08 + 0.05 * r()), tx = s < 0 ? p.x0 + tw * (0.2 + 0.5 * r()) : p.x1 - tw * (0.2 + 0.5 * r());
+      const trunk = polyPath([[tx - tw / 2, p.y0 - 10], [tx + tw / 2, p.y0 - 10], [tx + tw * 0.6, p.y1 + 10], [tx - tw * 0.6, p.y1 + 10]]);
+      x.fillStyle = pal.paper; x.fill(trunk);
+      x.save(); x.clip(trunk);
+      const bark = new Path2D();
+      for (let bx = tx - tw * 0.6; bx < tx + tw * 0.6; bx += 3 + 3 * r()) {
+        const pts = [];
+        for (let y = p.y0 - 10; y < p.y1 + 10; y += 12) pts.push([bx + Math.sin(y * 0.05 + bx) * 1.5, y]);
+        const d = (bx - tx) / (tw * 0.6) * -s;      // the side away from the light is darker
+        penLine(bark, pts, 0.6 + 1.6 * ss(-0.6, 0.9, d), 0.2);
+      }
+      x.fillStyle = pal.ink; x.fill(bark);
+      x.restore();
+      x.lineWidth = 2.2; x.strokeStyle = pal.ink; x.stroke(trunk);
+    }
+  },
+  // A moonlit town: a big moon behind dark clouds with bright rims, tiled roofs and a pagoda in silhouette, rims lit by the moon
+  moon(x, p, r, pal, w, h) {
+    const gy = p.y1 - h * (0.06 + 0.1 * r());
+    toneDots(x, p, (px, py) => 0.6 + 0.3 * (1 - ss(p.y0, gy, py)), 4.5, pal.tone);
+    const mr = Math.min(w, h) * (0.2 + 0.08 * r()), mx = p.x0 + w * (0.25 + 0.5 * r()), my = p.y0 + h * (0.28 + 0.1 * r());
+    moonDisc(x, mx, my, mr, pal);
+    cloudMass(x, mx + (r() - 0.5) * mr * 1.4, my + mr * (0.55 + 0.4 * r()), mr * (2.2 + 0.8 * r()), mr * 0.45, r, pal, true);
+    if (r() < 0.5) cloudMass(x, p.x0 + w * r(), p.y0 + h * (0.15 + 0.2 * r()), mr * 1.6, mr * 0.3, r, pal, true);
+    const px = mx + (r() < 0.5 ? -1 : 1) * w * (0.15 + 0.15 * r());
+    if (r() < 0.85) pagoda(x, Math.max(p.x0 + w * 0.12, Math.min(p.x1 - w * 0.12, px)), gy + 2, Math.min(h * 0.62, w * 0.9), pal, mx);
+    rooftops(x, p, r, pal, gy + 8, mx);
+    x.fillStyle = pal.ink; x.fillRect(p.x0 - 10, gy + 6, w + 20, h);
+  },
+};
 // Four-pointed sparkle, filled and optionally outlined
 function star(x, sx, sy, sr, fill, line) {
   x.beginPath(); x.moveTo(sx, sy - sr);

@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IconScape · 忍者之村</title>
+<!--
+  IconScape · ninja village theme (original; top view; Canvas 2D)
+  Art direction: a Japanese village seen from above, at night, at sunset or by day. Every group of icons rests on a tiled roof;
+  around the roofs raked sand follows their shape like a zen garden, with rocks in their own raked rings; on the moss there are trees
+  (cherry blossom in spring, maples in autumn), bamboo and stone lanterns. A ninja appears in a puff of smoke, leaps from roof to roof,
+  throws a shuriken and vanishes
+  - Roofs and sand: the same icon field as the other themes (a sum of Gaussians around the icons, warped by noise); outlines traced
+    with marching squares. Tile courses are inner contours of the roof field, sand grooves outer contours of the sand field
+  - Static drawing is cached at the screen's actual pixels; when the icons move the old and new village cross-fade
+  - Every frame only draws small things: cloud shadows, lantern glows, falling petals or leaves, the ninja, the smoke and the shuriken
+  - Everything lives in desktop coordinates and moving things follow the shared clock, so the village continues across monitors
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1f3127; }
+  #art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  /* Preview mode (?preview=1, inside the settings window) and standalone mode: translucent blocks mark where the icons are */
+  #ghosts { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.ghosts #ghosts { display: block; }
+  .ghost { position: absolute; }
+  .ghost i { position: absolute; left: 50%; top: 4px; width: 48px; height: 48px; margin-left: -24px; border-radius: 9px;
+    background: rgba(255,255,255,.88); box-shadow: 3px 6px 8px rgba(0,0,0,.35); }
+  .ghost b { position: absolute; left: 14%; right: 14%; top: 60px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.75); }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<div id="ghosts"></div>
+<script>
+'use strict';
+
+/* ======================================================================
+   Parameters
+   ====================================================================== */
+const CELL_W = 76, CELL_H = 100, GRID_X0 = 4, GRID_Y0 = 6, TASKBAR = 48;   // desktop grid (also used by share.js)
+const STEP = 6;                                  // field grid (CSS px)
+const MARGIN = 220;                              // the field reaches this far beyond the desktop, so outlines close off-screen
+const MORPH_MS = 1600;
+
+const QS = new URLSearchParams(location.search);
+const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
+const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the scene is computed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: things that cross from one monitor to another stay in step
+// Defaults must match the "default" values of the ninja theme in themes.json
+const P = { sigma: 70, warp: 30, rake: 4, trees: 0.5, lanterns: 3, time: 0, season: 0, leaves: 16, flow: 1, ninja: 1, adaptive: 1, cap30: true };
+const DEFAULTS = Object.assign({}, P);
+// Accepted parameters: [min, max, integer]
+const RANGES = { sigma: [40, 200], warp: [0, 80], rake: [0, 12, 1], trees: [0, 1], lanterns: [0, 10, 1], time: [0, 2, 1], season: [0, 1, 1],
+  leaves: [0, 60, 1], flow: [0, 3], ninja: [0, 1, 1], adaptive: [0, 1, 1] };
+// Time of day: night, sunset, day. moss: ground (base, light, dark); sand and its grooves; roof tiles; tint laid over the static drawing;
+// glow: how bright the lanterns are; cloud: how dark the drifting cloud shadows are
+const TIMES = [
+  { moss: ['#1f3127', '#2f4a35', '#152219'], sand: '#7f8899', groove: 'rgba(28,34,52,0.55)', grooveHi: 'rgba(205,215,240,0.22)',
+    roof: '#262b38', roofHi: 'rgba(150,165,205,0.24)', eave: 'rgba(175,190,230,0.55)', rock: ['#7d8292', '#444857'],
+    tint: 'rgba(25,40,115,0.30)', glow: 1, shadow: 'rgba(4,8,20,0.55)', cloud: 0.26 },
+  { moss: ['#47472a', '#6b6834', '#30301d'], sand: '#d8b38a', groove: 'rgba(112,70,40,0.45)', grooveHi: 'rgba(255,232,195,0.35)',
+    roof: '#3a2e38', roofHi: 'rgba(255,190,140,0.2)', eave: 'rgba(255,192,145,0.58)', rock: ['#a28b78', '#5c4a45'],
+    tint: 'rgba(255,110,40,0.16)', glow: 0.6, shadow: 'rgba(40,14,20,0.5)', cloud: 0.17 },
+  { moss: ['#4b7a3d', '#6e9a48', '#35583a'], sand: '#e4dccb', groove: 'rgba(120,104,78,0.4)', grooveHi: 'rgba(255,255,250,0.5)',
+    roof: '#394356', roofHi: 'rgba(200,215,238,0.24)', eave: 'rgba(222,232,248,0.6)', rock: ['#a8a49c', '#67655f'],
+    tint: null, glow: 0.2, shadow: 'rgba(18,30,20,0.38)', cloud: 0.12 },
+];
+// Season: blossoms and falling petals (spring) or maples and falling leaves (autumn)
+const SEASONS = [
+  { tree: ['#ffe4ef', '#f2a6c3', '#a8577e'], leaf: ['#ffd6e4', '#ffc4d8', '#fbe0ea'], line: 'rgba(170,80,115,0.6)' },
+  { tree: ['#ffc78a', '#e0592f', '#7a1f1c'], leaf: ['#e2552b', '#f08a2e', '#c43a22'], line: 'rgba(90,20,10,0.5)' },
+];
+const GEOMETRY_KEYS = ['sigma', 'warp', 'rake', 'trees', 'lanterns', 'adaptive'];
+
+/* ======================================================================
+   Random numbers and noise (seeded: desktop and preview show the same scene)
+   ====================================================================== */
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
+function hash2(x, y, k = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y, k = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy, k), b = hash2(ix + 1, iy, k), c = hash2(ix, iy + 1, k), d = hash2(ix + 1, iy + 1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function fbm(x, y, k = 0) {
+  let a = 0.5, s = 0;
+  for (let i = 0; i < 4; i++) { s += a * vnoise(x, y, k + i * 7); x = x * 2.03 + 17.1; y = y * 2.03 + 17.1; a *= 0.5; }
+  return s;
+}
+function mulberry32(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const ss = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+const mod = (a, n) => ((a % n) + n) % n;
+const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+/* ======================================================================
+   Fields (CPU): s = signed distance to an outline (<0 is inside), as in the other themes
+   Desktop coordinates; grid point (gx, gy) is at (gx * STEP - MARGIN, gy * STEP - MARGIN)
+   ====================================================================== */
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;   // W, H: this screen (share.js uses them too)
+function buildNoise() {
+  Gw = Math.ceil((WORLD.w + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((WORLD.h + 2 * MARGIN) / STEP) + 2;
+  const N = Gw * Gh;
+  NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
+  for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
+    const i = gy * Gw + gx, x = gx * STEP - MARGIN, y = gy * STEP - MARGIN;
+    NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
+    NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
+  }
+  toneCanvas.length = 0;
+}
+// rects: { cx, cy, hw, hh, w } (w: weight; below 1 → a smaller shape)
+function computeField(rects) {
+  const N = Gw * Gh, f1 = new Float32Array(N);
+  const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
+  for (const r of rects) {
+    const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
+    const gx0 = Math.max(0, Math.floor((r.cx + MARGIN - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + MARGIN + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy + MARGIN - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + MARGIN + R) / STEP));
+    const chw = r.hw * 0.5, chh = r.hh * 0.5, w = r.w || 1;
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * Gw + gx;
+      const qx = gx * STEP - MARGIN + NZ.wx[i] * wa, qy = gy * STEP - MARGIN + NZ.wy[i] * wa;
+      let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
+      if (dx < 0) dx = 0; if (dy < 0) dy = 0;
+      f1[i] += w * Math.exp(-(dx * dx + dy * dy) * is1);
+    }
+  }
+  const c0 = Math.sqrt(-Math.log(0.35)), s = new Float32Array(N), fMin = Math.exp(-30);
+  for (let i = 0; i < N; i++) {
+    const g = Math.log(Math.max(f1[i], fMin));
+    s[i] = sig * (Math.sqrt(Math.max(-g, 0)) - c0) - sig * 0.6 * Math.max(g, 0);
+  }
+  return s;
+}
+function sampleArr(a, x, y) {
+  const fx = Math.min(Math.max((x + MARGIN) / STEP, 0), Gw - 1.001), fy = Math.min(Math.max((y + MARGIN) / STEP, 0), Gh - 1.001);
+  const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, i = iy * Gw + ix;
+  return (a[i] * (1 - tx) + a[i + 1] * tx) * (1 - ty) + (a[i + Gw] * (1 - tx) + a[i + Gw + 1] * tx) * ty;
+}
+
+// Marching squares at level lv; the grid is padded with "outside" so every outline is a closed loop. Returns loops of [x0, y0, x1, y1, …] (CSS px)
+function contours(s, lv) {
+  const gw = Gw + 2, gh = Gh + 2, V = new Float32Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++)
+    V[j * gw + i] = i < 1 || j < 1 || i > Gw || j > Gh ? 1e3 : s[(j - 1) * Gw + i - 1] - lv;
+  const pos = new Map(), adj = new Map();
+  const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
+  const hk = (i, j) => {                          // point on the edge (i, j)–(i+1, j)
+    const k = (j * gw + i) * 2;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[j * gw + i + 1]; pos.set(k, [(i - 1 + a / (a - b)) * STEP - MARGIN, (j - 1) * STEP - MARGIN]); }
+    return k;
+  };
+  const vk = (i, j) => {                          // point on the edge (i, j)–(i, j+1)
+    const k = (j * gw + i) * 2 + 1;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[(j + 1) * gw + i]; pos.set(k, [(i - 1) * STEP - MARGIN, (j - 1 + a / (a - b)) * STEP - MARGIN]); }
+    return k;
+  };
+  for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) {
+    const a = V[j * gw + i], b = V[j * gw + i + 1], c = V[(j + 1) * gw + i + 1], d = V[(j + 1) * gw + i];
+    const code = (a < 0 ? 8 : 0) | (b < 0 ? 4 : 0) | (c < 0 ? 2 : 0) | (d < 0 ? 1 : 0);
+    if (code === 0 || code === 15) continue;
+    const E = [() => hk(i, j), () => vk(i + 1, j), () => hk(i, j + 1), () => vk(i, j)];   // top, right, bottom, left
+    const seg = (p, q) => link(E[p](), E[q]());
+    const mid = (a + b + c + d) / 4 < 0;
+    switch (code) {
+      case 1: case 14: seg(3, 2); break;
+      case 2: case 13: seg(2, 1); break;
+      case 3: case 12: seg(3, 1); break;
+      case 4: case 11: seg(0, 1); break;
+      case 6: case 9: seg(0, 2); break;
+      case 7: case 8: seg(3, 0); break;
+      case 5: if (mid) { seg(0, 3); seg(1, 2); } else { seg(0, 1); seg(3, 2); } break;
+      case 10: if (mid) { seg(0, 1); seg(2, 3); } else { seg(0, 3); seg(1, 2); } break;
+    }
+  }
+  const loops = [], used = new Set();
+  for (const start of adj.keys()) {
+    if (used.has(start)) continue;
+    const pts = [];
+    let prev = -1, cur = start;
+    while (cur !== undefined && !used.has(cur)) {
+      used.add(cur);
+      const p = pos.get(cur); pts.push(p[0], p[1]);
+      const nb = adj.get(cur), next = nb[0] !== prev ? nb[0] : nb[1];
+      prev = cur; cur = next;
+    }
+    let area = 0;
+    for (let k = 0, n = pts.length; k < n; k += 2) area += pts[k] * pts[(k + 3) % n] - pts[(k + 2) % n] * pts[k + 1];
+    if (pts.length >= 8 && Math.abs(area) > 80) loops.push(pts);
+  }
+  return loops;
+}
+// Smooth closed path through the loops (quadratic curves through the midpoints); filled with the even-odd rule so holes stay open
+function loopsPath(loops) {
+  const path = new Path2D();
+  for (const L of loops) {
+    const n = L.length / 2;
+    path.moveTo((L[2 * n - 2] + L[0]) / 2, (L[2 * n - 1] + L[1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      path.quadraticCurveTo(L[2 * i], L[2 * i + 1], (L[2 * i] + L[2 * j]) / 2, (L[2 * i + 1] + L[2 * j + 1]) / 2);
+    }
+    path.closePath();
+  }
+  return path;
+}
+// Walks the loops and calls fn(x, y) every `gap()` px of outline
+function alongLoops(loops, gap, fn) {
+  for (const L of loops) {
+    const n = L.length / 2;
+    let acc = 0, next = gap() * 0.5;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, ax = L[2 * i], ay = L[2 * i + 1], bx = L[2 * j], by = L[2 * j + 1], seg = Math.hypot(bx - ax, by - ay);
+      while (next <= acc + seg) { const t = seg > 0 ? (next - acc) / seg : 0; fn(ax + (bx - ax) * t, ay + (by - ay) * t); next += gap(); }
+      acc += seg;
+    }
+  }
+}
+function gradAt(s, x, y) {                       // unit gradient of a field (points away from the inside)
+  const gx = sampleArr(s, x + 3, y) - sampleArr(s, x - 3, y), gy = sampleArr(s, x, y + 3) - sampleArr(s, x, y - 3), l = Math.hypot(gx, gy) || 1;
+  return [gx / l, gy / l];
+}
+
+/* ======================================================================
+   Village geometry (CSS px, desktop coordinates): roofs, sand and grooves, rocks, trees, lanterns, the ninja's perches
+   Positions come from fixed per-cell random numbers, so things stay put when only some icons move
+   ====================================================================== */
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+function nearIcon(x, y, m) {
+  for (const ic of iconsW) if (x > ic.x - m && x < ic.x + ic.w + m && y > ic.y - m && y < ic.y + ic.h + m) return true;
+  return false;
+}
+// a random point inside one of the monitors (desktop coordinates), keeping `m` from its edges and the taskbar
+function pointOnMonitors(rnd, m) {
+  const mon = WORLD.mons[(rnd() * WORLD.mons.length) | 0];
+  return [mon[0] + m + (mon[2] - 2 * m) * rnd(), mon[1] + m + (mon[3] - TASKBAR - 2 * m) * rnd()];
+}
+function inMonitor(x, y, m) {
+  return WORLD.mons.some(r => x > r[0] + m && x < r[0] + r[2] - m && y > r[1] + m && y < r[1] + r[3] - TASKBAR - m);
+}
+function roofRects() {
+  if (P.adaptive) return iconRects();
+  const rnd = mulberry32(seed * 7 + 3), out = [];   // not adapting: a few houses of their own (3 per monitor)
+  for (let i = 0; i < 3 * WORLD.mons.length; i++) { const [x, y] = pointOnMonitors(rnd, 140); out.push({ cx: x, cy: y, hw: 50 + 100 * rnd(), hh: 40 + 80 * rnd(), w: 1 }); }
+  return out;
+}
+const rakeWidth = () => P.rake > 0 ? 14 + 9 * P.rake : 0;
+function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
+  const roofs = roofRects(), sR = computeField(roofs), rk = rakeWidth(), nMon = WORLD.mons.length, DW = WORLD.w, DH = WORLD.h;
+  // Rocks: 3 per monitor on the moss, each in a raked circle of its own
+  const rocks = [], rnd = mulberry32(seed * 7 + 11);
+  if (rk > 0) for (let t = 0; t < 80 * nMon && rocks.length < 3 * nMon; t++) {
+    const [x, y] = pointOnMonitors(rnd, 70), sz = 9 + 11 * rnd(), ph = rnd() * 6.28;
+    if (sampleArr(sR, x, y) < rk + 90 || nearIcon(x, y, 90) || rocks.some(o => Math.hypot(o.x - x, o.y - y) < 280)) continue;
+    rocks.push({ x, y, sz, ph });
+  }
+  const sS = rocks.length ? computeField(roofs.concat(rocks.map(r => ({ cx: r.x, cy: r.y, hw: r.sz, hh: r.sz * 0.8, w: 0.42 })))) : sR;
+  const roofEdge = contours(sR, 0);
+  const geo = { sR, sS, rocks, roof: loopsPath(roofEdge), sand: rk > 0 ? loopsPath(contours(sS, rk)) : null, grooves: new Path2D(),
+    courses: new Path2D(), joints: new Path2D(), ends: new Path2D(), trees: [], lanterns: [], perches: [], rasters: [] };
+  for (let lv = 8; lv < rk - 4; lv += 8) geo.grooves.addPath(loopsPath(contours(sS, lv)));
+  // Tile courses: inner contours of the roof every 7px; tile joints: short strokes between one course and the next, staggered
+  const jr = mulberry32(seed * 19 + 1);
+  for (let lv = -7, row = 0; lv >= -126; lv -= 7, row++) {
+    const loops = contours(sR, lv);
+    if (!loops.length) break;
+    geo.courses.addPath(loopsPath(loops));
+    let flip = row & 1;
+    alongLoops(loops, () => 8 + (flip ^= 0) * 0 + jr() * 0.8, (x, y) => {
+      const [gx, gy] = gradAt(sR, x, y);
+      geo.joints.moveTo(x, y); geo.joints.lineTo(x + gx * 6.5, y + gy * 6.5);
+    });
+  }
+  // Round tile ends along the eaves
+  alongLoops(roofEdge, () => 6.5, (x, y) => {
+    const [gx, gy] = gradAt(sR, x, y), cx = x - gx * 2.6, cy = y - gy * 2.6;
+    geo.ends.moveTo(cx + 2.5, cy); geo.ends.arc(cx, cy, 2.5, 0, 6.2832);
+  });
+  // Moss test: far enough from the sand (or from the roofs when there is no sand)
+  const onMoss = (x, y, m) => sampleArr(sS, x, y) > (rk || 8) + m;
+  // Trees: one candidate per 30px cell; density from the parameter and from large patches (groves and clearings)
+  const G = 30;
+  for (let cy = 0; cy * G < DH; cy++) for (let cx = 0; cx * G < DW; cx++) {
+    const h = hash2(cx, cy, 11), grove = ss(0.3, 0.62, vnoise(cx * 0.14, cy * 0.14, 5));
+    if (h > P.trees * (0.15 + 0.85 * grove)) continue;
+    const x = (cx + 0.15 + 0.7 * hash2(cx, cy, 12)) * G, y = (cy + 0.15 + 0.7 * hash2(cx, cy, 13)) * G;
+    const k = hash2(cx, cy, 15), kind = k < 0.3 ? 2 : k < 0.55 ? 0 : k < 0.8 ? 1 : 3;   // 0 evergreen, 1 pine, 2 blossom / maple, 3 bamboo
+    const r = (kind === 3 ? 8 : 9) + 9 * hash2(cx, cy, 14);
+    if (!onMoss(x, y, r + 4) || nearIcon(x, y, r + 8)) continue;
+    geo.trees.push({ x, y, r, kind });
+  }
+  // Stone lanterns: just outside the sand, P.lanterns per monitor
+  const lc = [];
+  for (let cy = 0; cy * 34 < DH; cy++) for (let cx = 0; cx * 34 < DW; cx++) {
+    const x = (cx + 0.2 + 0.6 * hash2(cx, cy, 31)) * 34, y = (cy + 0.2 + 0.6 * hash2(cx, cy, 32)) * 34, d = sampleArr(sS, x, y), b = rk || 8;
+    if (d < b + 9 || d > b + 24 || nearIcon(x, y, 30)) continue;
+    lc.push({ x, y, h: hash2(cx, cy, 33), ph: hash2(cx, cy, 34) * 6.28 });
+  }
+  lc.sort((a, b) => a.h - b.h);
+  for (const c of lc) {
+    if (geo.lanterns.length >= P.lanterns * nMon) break;
+    if (geo.lanterns.some(o => Math.hypot(o.x - c.x, o.y - c.y) < 170)) continue;
+    geo.lanterns.push(c);
+  }
+  geo.trees = geo.trees.filter(t => !geo.lanterns.some(c => Math.hypot(t.x - c.x, t.y - c.y) < t.r + 16));
+  geo.trees.sort((a, b) => a.y - b.y);
+  // Perches for the ninja: spots on the roofs away from the icons (an icon would hide the ninja)
+  for (let cy = 0; cy * 28 < DH; cy++) for (let cx = 0; cx * 28 < DW; cx++) {
+    const x = (cx + 0.5) * 28, y = (cy + 0.5) * 28;
+    if (sampleArr(sR, x, y) < -10 && !nearIcon(x, y, 20) && inMonitor(x, y, 30)) geo.perches.push({ x, y });
+  }
+  return geo;
+}
+
+/* ======================================================================
+   Canvas and cached layers (drawn at the canvas's actual pixels; at most two sizes are kept: the screen and a share/recording size)
+   ====================================================================== */
+const cv = document.getElementById('art');
+const ctx = cv.getContext('2d', { alpha: false });
+function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; }
+function cached(list, build) {
+  const w = cv.width, h = cv.height, key = P.time * 2 + P.season;
+  let hit = list.find(e => e.w === w && e.h === h && e.key === key);
+  if (!hit) { hit = { w, h, key, c: build(w, h, cv._scale) }; list.unshift(hit); if (list.length > 2) list.pop(); }
+  return hit.c;
+}
+
+// Moss: large color washes from the field noise (low resolution, enlarged smoothly), one per time of day
+const toneCanvas = [];
+function tone() {
+  if (toneCanvas[P.time]) return toneCanvas[P.time];
+  const c = makeCanvas(Gw, Gh), x = c.getContext('2d'), img = x.createImageData(Gw, Gh), [b, l, d] = TIMES[P.time].moss.map(rgb);
+  for (let i = 0; i < Gw * Gh; i++) {
+    const a = NZ.wx[i] + 0.47, q = NZ.wy[i] + 0.47;
+    let col = b.map((v, k) => v + (l[k] - v) * ss(0.4, 0.8, a));
+    col = col.map((v, k) => v + (d[k] - v) * ss(0.45, 0.8, q) * 0.8);
+    img.data.set([col[0], col[1], col[2], 255], i * 4);
+  }
+  x.putImageData(img, 0, 0);
+  return (toneCanvas[P.time] = c);
+}
+// Moss texture as a pattern drawn at the actual pixels (the pattern matrix undoes the canvas scale so it stays sharp)
+function mossPattern(x, s) {
+  const S = Math.round(128 * s), c = makeCanvas(S, S), g = c.getContext('2d'), r = mulberry32(seed + 99);
+  for (let i = 0; i < 520; i++) {
+    g.fillStyle = r() < 0.55 ? 'rgba(0,0,0,0.16)' : 'rgba(210,255,170,0.10)';
+    g.beginPath(); g.arc(r() * S, r() * S, (0.5 + r() * 1.3) * s, 0, 6.2832); g.fill();
+  }
+  const pat = x.createPattern(c, 'repeat');
+  pat.setTransform(new DOMMatrix([1 / s, 0, 0, 1 / s, 0, 0]));
+  return pat;
+}
+const baseCache = [];
+function buildBase(cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), tm = TIMES[P.time];
+  x.setTransform(s, 0, 0, s, -WORLD.x * s, -WORLD.y * s);   // desktop coordinates: the moss continues across monitors
+  x.imageSmoothingQuality = 'high'; x.drawImage(tone(), -MARGIN, -MARGIN, Gw * STEP, Gh * STEP);
+  x.fillStyle = mossPattern(x, s); x.fillRect(WORLD.x, WORLD.y, W, H);
+  if (tm.tint) { x.fillStyle = tm.tint; x.fillRect(WORLD.x, WORLD.y, W, H); }
+  return c;
+}
+
+function drawTree(x, t, sea, sh) {
+  const r = t.r;
+  x.fillStyle = sh;
+  x.beginPath(); x.ellipse(t.x + r * 0.5, t.y + r * 0.62, r * 1.05, r * 0.92, 0.3, 0, 6.2832); x.fill();
+  if (t.kind === 1) {                              // pine: dark stars, one inside the other
+    for (const [rr, col] of [[r * 1.05, '#16423b'], [r * 0.7, '#28705a'], [r * 0.35, '#4f9e7a']]) {
+      x.fillStyle = col; x.beginPath();
+      for (let k = 0; k < 18; k++) {
+        const a = k / 18 * 6.283 + t.x, q = k % 2 ? rr * 0.58 : rr;
+        x.lineTo(t.x - r * 0.08 * (rr / r) + Math.cos(a) * q, t.y - r * 0.1 * (rr / r) + Math.sin(a) * q);
+      }
+      x.fill();
+    }
+    return;
+  }
+  if (t.kind === 3) {                              // bamboo clump: small stems seen from above with leaf strokes
+    const rr = mulberry32((t.x * 31 + t.y) | 0);
+    for (let k = 0; k < 7; k++) {
+      const a = rr() * 6.283, d = rr() * r * 0.6, sx = t.x + Math.cos(a) * d, sy = t.y + Math.sin(a) * d;
+      x.strokeStyle = '#8fc76c'; x.lineWidth = 1.3; x.lineCap = 'round'; x.beginPath();
+      for (let l = 0; l < 6; l++) { const b = rr() * 6.283, ll = r * (0.35 + 0.35 * rr()); x.moveTo(sx, sy); x.lineTo(sx + Math.cos(b) * ll, sy + Math.sin(b) * ll); }
+      x.stroke();
+      x.fillStyle = '#4f8a3a'; x.beginPath(); x.arc(sx, sy, 2.2, 0, 6.2832); x.fill();
+      x.fillStyle = '#b7dc8f'; x.beginPath(); x.arc(sx - 0.6, sy - 0.6, 0.9, 0, 6.2832); x.fill();
+    }
+    return;
+  }
+  const cols = t.kind === 2 ? sea.tree : ['#9fd486', '#4d9160', '#1d5243'];
+  const blob = (cx, cy, rr) => {
+    const g = x.createRadialGradient(cx - rr * 0.38, cy - rr * 0.45, rr * 0.1, cx, cy, rr);
+    g.addColorStop(0, cols[0]); g.addColorStop(0.55, cols[1]); g.addColorStop(1, cols[2]);
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, rr, 0, 6.2832); x.fill();
+  };
+  const a = t.x * 0.37;
+  blob(t.x + Math.cos(a) * r * 0.35, t.y + Math.sin(a) * r * 0.3, r * 0.72);
+  blob(t.x + Math.cos(a + 2.2) * r * 0.32, t.y + Math.sin(a + 2.2) * r * 0.3, r * 0.68);
+  blob(t.x, t.y, r * 0.8);
+}
+function drawLantern(x, l, sh) {                 // stone lantern from above: a hexagonal cap with a finial
+  x.fillStyle = sh; x.beginPath(); x.ellipse(l.x + 8, l.y + 10, 11, 9, 0.5, 0, 6.2832); x.fill();
+  const hex = (r, col) => { x.fillStyle = col; x.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + l.ph; x.lineTo(l.x + Math.cos(a) * r, l.y + Math.sin(a) * r); } x.fill(); };
+  const g = x.createRadialGradient(l.x - 4, l.y - 5, 1, l.x, l.y, 11);
+  g.addColorStop(0, '#c9c6bd'); g.addColorStop(1, '#6d6b66');
+  hex(10.5, g); hex(6.5, '#8f8c84'); hex(3.6, '#a8a59c');
+  x.fillStyle = '#5d5b56'; x.beginPath(); x.arc(l.x, l.y, 1.8, 0, 6.2832); x.fill();
+}
+function drawRock(x, r, tm) {
+  const pts = [];
+  for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + r.ph, q = r.sz * (0.75 + 0.35 * Math.abs(Math.sin(r.ph * 3 + k * 1.7))); pts.push([r.x + Math.cos(a) * q, r.y + Math.sin(a) * q * 0.85]); }
+  const path = new Path2D(); pts.forEach(([px, py]) => path.lineTo(px, py)); path.closePath();
+  x.save(); x.translate(7, 9); x.fillStyle = tm.shadow; x.fill(path); x.restore();
+  const g = x.createLinearGradient(r.x - r.sz, r.y - r.sz, r.x + r.sz, r.y + r.sz);
+  g.addColorStop(0, tm.rock[0]); g.addColorStop(1, tm.rock[1]);
+  x.fillStyle = g; x.fill(path);
+  x.save(); x.clip(path); x.fillStyle = 'rgba(80,130,60,0.55)'; x.beginPath(); x.ellipse(r.x - r.sz * 0.3, r.y - r.sz * 0.35, r.sz * 0.55, r.sz * 0.35, -0.4, 0, 6.2832); x.fill(); x.restore();
+  x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,0.35)'; x.stroke(path);
+}
+
+// Roof slopes: every slope runs down toward the eaves (the roof field's gradient); slopes that face the light (upper left) are lit,
+// the others are in shade, so hips and ridges appear where the slope direction turns. A low-resolution image, enlarged smoothly
+function roofShade(geo) {
+  if (geo.shade) return geo.shade;
+  const c = makeCanvas(Gw, Gh), x = c.getContext('2d'), img = x.createImageData(Gw, Gh), s = geo.sR, LX = -0.6, LY = -0.8;
+  for (let gy = 1; gy < Gh - 1; gy++) for (let gx = 1; gx < Gw - 1; gx++) {
+    const i = gy * Gw + gx;
+    if (s[i] > 6) continue;
+    const dx = s[i + 1] - s[i - 1], dy = s[i + Gw] - s[i - Gw], l = Math.hypot(dx, dy);
+    if (l < 1e-3) continue;
+    const b = (dx * LX + dy * LY) / l * Math.min(1, l / (STEP * 1.2));   // flat tops (weak gradient) stay neutral
+    img.data.set(b > 0 ? [255, 250, 235, Math.round(b * 70)] : [0, 0, 10, Math.round(-b * 120)], i * 4);
+  }
+  x.putImageData(img, 0, 0);
+  return (geo.shade = c);
+}
+// The village of one icon layout, on a transparent layer: sand and grooves, rocks, trees, lanterns, roofs; then the time-of-day tint
+function buildVillage(geo, cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), tm = TIMES[P.time], sea = SEASONS[P.season], VX = WORLD.x, VY = WORLD.y;
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);
+  if (geo.sand) {
+    x.fillStyle = tm.sand; x.fill(geo.sand, 'evenodd');
+    x.save(); x.clip(geo.sand, 'evenodd');
+    x.lineWidth = 1.5; x.strokeStyle = tm.grooveHi; x.save(); x.translate(-0.9, -0.9); x.stroke(geo.grooves); x.restore();
+    x.lineWidth = 1.4; x.strokeStyle = tm.groove; x.stroke(geo.grooves);
+    x.restore();
+    x.lineWidth = 3; x.strokeStyle = 'rgba(40,40,30,0.35)'; x.stroke(geo.sand);
+  }
+  for (const r of geo.rocks) drawRock(x, r, tm);
+  for (const l of geo.lanterns) drawLantern(x, l, tm.shadow);
+  for (const t of geo.trees) drawTree(x, t, sea, tm.shadow);
+  // Roofs: soft shadow on the ground, tiles, round tile ends along the eaves, moonlit and shaded rims
+  x.save(); x.filter = `blur(${Math.max(1, Math.round(7 * s))}px)`; x.translate(12, 16); x.fillStyle = tm.shadow; x.fill(geo.roof, 'evenodd'); x.restore();
+  x.fillStyle = tm.roof; x.fill(geo.roof, 'evenodd');
+  x.save(); x.clip(geo.roof, 'evenodd'); x.imageSmoothingQuality = 'high'; x.drawImage(roofShade(geo), -MARGIN, -MARGIN, Gw * STEP, Gh * STEP); x.restore();
+  x.save(); x.clip(geo.roof, 'evenodd');
+  x.lineWidth = 2; x.strokeStyle = 'rgba(0,0,0,0.38)'; x.save(); x.translate(0.9, 1.3); x.stroke(geo.courses); x.restore();
+  x.lineWidth = 1.1; x.strokeStyle = tm.roofHi; x.stroke(geo.courses);
+  x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,0.3)'; x.stroke(geo.joints);
+  const band = (dx, dy, color) => {                // the part of the roof not covered by itself shifted by (dx, dy): a rim on the opposite side
+    const p = new Path2D(); p.rect(VX - 60, VY - 60, W + 120, H + 120);
+    p.addPath(geo.roof, new DOMMatrix([1, 0, 0, 1, dx, dy]));
+    x.fillStyle = color; x.fill(p, 'evenodd');
+  };
+  band(5, 6, 'rgba(0,0,0,0)');
+  x.fillStyle = tm.eave; x.fill(geo.ends);
+  x.fillStyle = 'rgba(0,0,0,0.28)'; x.save(); x.translate(0.8, 1); x.fill(geo.ends); x.restore();
+  band(2, 2.5, tm.eave); band(-2.5, -3, 'rgba(0,0,0,0.4)'); band(-12, -14, 'rgba(0,0,0,0.12)');
+  x.restore();
+  x.lineWidth = 1.2; x.strokeStyle = 'rgba(0,0,0,0.6)'; x.stroke(geo.roof);
+  if (tm.tint) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = tm.tint; x.fillRect(0, 0, cw, ch); }
+  return c;
+}
+
+/* ======================================================================
+   Sprites (drawn once) and moving things: cloud shadows, petals or leaves, the ninja.
+   All of them are functions of the shared clock and the seed, so on every monitor they are in the same place at the same moment
+   ====================================================================== */
+function softSprite(stops) {
+  const S = 128, c = makeCanvas(S, S), x = c.getContext('2d'), g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  for (const [o, col] of stops) g.addColorStop(o, col);
+  x.fillStyle = g; x.fillRect(0, 0, S, S);
+  return c;
+}
+const GLOW = softSprite([[0, 'rgba(255,240,200,1)'], [0.15, 'rgba(255,190,90,0.6)'], [1, 'rgba(255,140,40,0)']]);
+const CLOUD = softSprite([[0, 'rgba(0,0,10,1)'], [0.5, 'rgba(0,0,10,0.7)'], [1, 'rgba(0,0,10,0)']]);
+const SMOKE = softSprite([[0, 'rgba(250,250,252,0.95)'], [0.55, 'rgba(210,214,222,0.8)'], [1, 'rgba(180,186,198,0)']]);
+
+let clouds = [], leaves = [];
+function initMovers() {
+  const r = mulberry32(seed + 77);
+  clouds = [];
+  for (let i = 0, n = Math.round(WORLD.w * WORLD.h / 260000) + 2 * WORLD.mons.length; i < n; i++) clouds.push({ x0: r(), y0: r(), w: 320 + 360 * r(), d: r(), k: r() * 6.28 });
+  leaves = [];
+  for (let i = 0, n = 60 * WORLD.mons.length; i < n; i++) leaves.push({ x0: r(), y0: r(), sp: r(), ph: r() * 6.28, sz: 4.5 + 3.5 * r(), spin: 0.6 + 1.4 * r(), c: (r() * 3) | 0 });
+  routeCache.clear();
+}
+function cloudAt(c, T, out) {                    // cloud shadows drift slowly over the whole desktop and wrap around
+  const spanX = WORLD.w + 900, spanY = WORLD.h + 600, f = P.flow;
+  out[0] = mod(c.x0 * spanX + (7 + 6 * c.d) * f * T, spanX) - 450; out[1] = mod(c.y0 * spanY + (2 + 2 * c.d) * f * T, spanY) - 300;
+}
+function leafAt(p, T, out) {
+  const spanX = WORLD.w + 200, spanY = WORLD.h + 200, f = P.flow;
+  const x = p.x0 * spanX + (10 + 14 * p.sp) * f * T + Math.sin(T * 0.8 * (0.6 + p.sp) + p.ph) * 26;
+  const y = p.y0 * spanY + (16 + 14 * p.sp) * f * T;
+  out[0] = mod(x, spanX) - 100; out[1] = mod(y, spanY) - 100;
+}
+const PETAL = (() => {                           // unit cherry petal: an oval with a notch at its tip
+  const p = new Path2D();
+  p.moveTo(0, -0.62); p.lineTo(-0.3, -1); p.bezierCurveTo(-0.95, -0.6, -0.7, 0.75, 0, 1);
+  p.bezierCurveTo(0.7, 0.75, 0.95, -0.6, 0.3, -1); p.closePath();
+  return p;
+})();
+const MAPLE = (() => {                           // unit maple leaf: five pointed lobes and a stem
+  const p = new Path2D();
+  for (let k = 0; k <= 10; k++) {
+    const a = -Math.PI / 2 + (k / 10) * 2 * Math.PI * 0.86 - 0.86 * Math.PI + Math.PI, q = k % 2 ? 0.42 : 1;
+    const ang = -Math.PI / 2 + (k - 5) * 0.55;
+    p.lineTo(Math.cos(ang) * q, Math.sin(ang) * q * 0.95 + 0.15);
+  }
+  p.closePath();
+  p.moveTo(0, 0.2); p.lineTo(0.05, 0.75); p.lineTo(-0.05, 0.75); p.closePath();
+  return p;
+})();
+
+// Ninja: now and then appears in a puff of smoke on a roof, leaps from roof to roof (or over the moss) across the desktop,
+// throws a shuriken that sticks in the ground and vanishes in smoke. The route follows from the shared clock, the seed and the village
+const NINJA_PERIOD = PREVIEW ? 12 : 28, HOP_AIR = 0.7, HOP_REST = 0.38, HOP = HOP_AIR + HOP_REST;
+const routeCache = new Map();
+function makeRoute(slot) {
+  const g = geoNew;
+  if (!g || !P.ninja) return null;
+  const r = mulberry32(seed * 41 + slot * 977);
+  if (!PREVIEW && r() < 0.25) return null;         // now and then a period without the ninja
+  const start = slot * NINJA_PERIOD + 1 + r() * NINJA_PERIOD * 0.25;
+  const ground = (near, dir) => {
+    for (let k = 0; k < 10; k++) {
+      let x, y;
+      if (near) { x = near.x + dir * (150 + 150 * r()); y = near.y + (r() - 0.5) * 220; } else [x, y] = pointOnMonitors(r, 60);
+      if (inMonitor(x, y, 30) && !nearIcon(x, y, 34)) return { x, y };
+    }
+    return null;
+  };
+  const p0 = g.perches.length && r() < 0.8 ? g.perches[(r() * g.perches.length) | 0] : ground(null, 1);
+  if (!p0) return null;
+  const dir = p0.x < WORLD.w / 2 ? 1 : -1, pts = [p0];
+  for (let i = 0, n = 3 + ((r() * 5) | 0); i < n; i++) {
+    const p = pts[pts.length - 1];
+    const cand = g.perches.filter(q => { const dx = (q.x - p.x) * dir; return dx > 110 && dx < 320 && Math.abs(q.y - p.y) < 170; });
+    const next = cand.length && r() < 0.75 ? cand[(r() * cand.length) | 0] : ground(p, dir);
+    if (!next) break;
+    pts.push(next);
+  }
+  const L = pts[pts.length - 1], tl = 0.35 + (pts.length - 1) * HOP, throwT = tl + 0.25;
+  let target = { x: L.x + dir * (150 + 110 * r()), y: L.y + (r() - 0.5) * 160 };
+  if (!inMonitor(target.x, target.y, 20)) target = null;
+  return { start, pts, dir, tl, throwT, vanishT: throwT + 0.55, target, spin: r() * 6.28, end: throwT + 0.55 + (target ? 3.5 : 0.8) };
+}
+function routeAt(T) {
+  const cur = Math.floor(T / NINJA_PERIOD), out = [];
+  for (const slot of [cur, cur - 1]) {
+    let rt = routeCache.get(slot);
+    if (rt === undefined) { rt = makeRoute(slot); routeCache.set(slot, rt); if (routeCache.size > 16) routeCache.delete(routeCache.keys().next().value); }
+    if (rt && T >= rt.start && T < rt.start + rt.end) out.push(rt);
+  }
+  return out;
+}
+// Where the ninja is t seconds into a route: position, height above the ground (0..1), facing, pose
+function ninjaPose(rt, t) {
+  const pts = rt.pts, n = pts.length - 1;
+  if (t < 0.35 || n === 0) { const q = pts[n === 0 || t < 0.35 ? 0 : n]; return { x: q.x, y: q.y, h: 0, ang: rt.dir > 0 ? 0 : Math.PI, air: false }; }
+  const k = Math.floor((t - 0.35) / HOP), w = t - 0.35 - k * HOP;
+  if (k >= n) { const a = pts[n - 1], b = pts[n]; return { x: b.x, y: b.y, h: 0, ang: Math.atan2(b.y - a.y, b.x - a.x), air: false }; }
+  const a = pts[k], b = pts[k + 1], ang = Math.atan2(b.y - a.y, b.x - a.x);
+  if (w >= HOP_AIR) return { x: b.x, y: b.y, h: 0, ang, air: false };
+  const u = w / HOP_AIR, e = u * u * (3 - 2 * u) * 0.35 + u * 0.65;
+  return { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e, h: Math.sin(Math.PI * u) * Math.min(1, Math.hypot(b.x - a.x, b.y - a.y) / 220), ang, air: true };
+}
+function drawNinja(x, q, T, throwing, sh, alpha) {
+  const h = q.h, k = 1.35 * (1 + 0.45 * h);
+  x.globalAlpha = alpha * (0.85 - 0.4 * h);
+  x.fillStyle = sh; x.beginPath(); x.ellipse(q.x + 5 + 26 * h, q.y + 7 + 34 * h, 10 * (1 - 0.3 * h), 7.5 * (1 - 0.3 * h), 0.5, 0, 6.2832); x.fill();
+  x.globalAlpha = alpha;
+  x.save(); x.translate(q.x, q.y); x.rotate(q.ang); x.scale(k, k);
+  // scarf: a red ribbon trailing from the neck, waving
+  const sc = [];
+  for (let i = 0; i <= 10; i++) { const u = i / 10; sc.push([-2 - u * (q.air ? 26 : 15), Math.sin(T * 15 - u * 5) * 3.2 * u + u * 3, 1.8 * (1 - u * 0.45)]); }
+  x.fillStyle = '#c8262c'; x.beginPath();
+  sc.forEach(([sx, sy, w]) => x.lineTo(sx, sy - w)); for (let i = sc.length - 1; i >= 0; i--) x.lineTo(sc[i][0], sc[i][1] + sc[i][2]);
+  x.fill();
+  x.lineCap = 'round'; x.strokeStyle = '#1b2030'; x.lineWidth = 4.2; x.beginPath();
+  if (q.air) { x.moveTo(-3, 3.5); x.lineTo(-14, 7); x.moveTo(-3, -3.5); x.lineTo(-11, -9); }
+  else { x.moveTo(-1, 4); x.lineTo(-6, 8.5); x.moveTo(-1, -4); x.lineTo(3, -8.5); }
+  x.stroke();
+  x.lineWidth = 3.2; x.beginPath();
+  if (throwing) { x.moveTo(2, -5.5); x.lineTo(15, -8); x.moveTo(2, 5.5); x.lineTo(-6, 10); }
+  else if (q.air) { x.moveTo(2, 6); x.lineTo(-8, 11); x.moveTo(2, -6); x.lineTo(-8, -11); }
+  else { x.moveTo(2, 6); x.lineTo(7, 9); x.moveTo(2, -6); x.lineTo(7, -9); }
+  x.stroke();
+  x.strokeStyle = '#6b5636'; x.lineWidth = 2; x.beginPath(); x.moveTo(-8, 5); x.lineTo(5, -5); x.stroke();   // sword on the back
+  const g = x.createRadialGradient(-2, -3, 1, 0, 0, 9);
+  g.addColorStop(0, '#3a4258'); g.addColorStop(1, '#161a26');
+  x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, 7, 8.5, 0, 0, 6.2832); x.fill();
+  x.fillStyle = '#10131c'; x.beginPath(); x.arc(3, 0, 5.4, 0, 6.2832); x.fill();
+  x.fillStyle = 'rgba(160,175,215,0.35)'; x.beginPath(); x.arc(2, -1.8, 2.2, 0, 6.2832); x.fill();
+  x.restore();
+  x.globalAlpha = 1;
+}
+function drawShuriken(x, sx, sy, a, sh, alpha, high) {
+  x.globalAlpha = alpha;
+  x.fillStyle = sh; x.beginPath(); x.ellipse(sx + 3 + high * 10, sy + 4 + high * 13, 6, 5, 0, 0, 6.2832); x.fill();
+  x.save(); x.translate(sx, sy); x.rotate(a);
+  x.beginPath();
+  for (let k = 0; k < 4; k++) {
+    const b = k * Math.PI / 2;
+    x.lineTo(Math.cos(b - 0.5) * 2.4, Math.sin(b - 0.5) * 2.4); x.lineTo(Math.cos(b) * 7.5, Math.sin(b) * 7.5); x.lineTo(Math.cos(b + 0.5) * 2.4, Math.sin(b + 0.5) * 2.4);
+  }
+  x.closePath(); x.fillStyle = '#c9cfd8'; x.fill(); x.lineWidth = 0.8; x.strokeStyle = '#3b4150'; x.stroke();
+  x.fillStyle = '#2a2e38'; x.beginPath(); x.arc(0, 0, 1.2, 0, 6.2832); x.fill();
+  x.restore(); x.globalAlpha = 1;
+}
+function drawSmoke(x, sx, sy, age) {             // a puff of smoke: a ring of soft balls that swell and fade
+  if (age < 0 || age > 0.75) return;
+  const a = 1 - age / 0.75;
+  for (let i = 0; i < 9; i++) {
+    const ang = i / 9 * 6.283 + i * 0.37, d = 3 + 22 * Math.pow(age / 0.75, 0.6) * (0.7 + 0.3 * Math.sin(i * 2.1)), r = 9 + 16 * age;
+    x.globalAlpha = 0.9 * a; x.drawImage(SMOKE, sx + Math.cos(ang) * d - r, sy + Math.sin(ang) * d - r * 0.9, r * 2, r * 2);
+  }
+  x.globalAlpha = 1;
+}
+function drawRoute(x, rt, T, sh) {
+  const t = T - rt.start, L = rt.pts[rt.pts.length - 1];
+  drawSmoke(x, rt.pts[0].x, rt.pts[0].y, t);
+  if (rt.target && t > rt.throwT) {              // the shuriken: flies, sticks in the ground, fades
+    const u = (t - rt.throwT) / 0.45;
+    if (u < 1) drawShuriken(x, L.x + (rt.target.x - L.x) * u, L.y + (rt.target.y - L.y) * u, T * 26, sh, 1, Math.sin(Math.PI * u) * 0.5);
+    else if (t < rt.throwT + 3.45) drawShuriken(x, rt.target.x, rt.target.y, rt.spin, sh, Math.min(1, (rt.throwT + 3.45 - t) / 0.5), 0);
+  }
+  if (t >= 0.15 && t < rt.vanishT + 0.08) {
+    const q = ninjaPose(rt, t);
+    if (q.air && q.h > 0.25) for (const [dt, al] of [[0.1, 0.12], [0.05, 0.22]]) drawNinja(x, ninjaPose(rt, t - dt), T, false, 'rgba(0,0,0,0)', al);
+    drawNinja(x, q, T, t > rt.throwT - 0.1 && t < rt.throwT + 0.2, sh, 1);
+  }
+  drawSmoke(x, L.x, L.y, t - rt.vanishT);
+}
+
+/* ======================================================================
+   Frame
+   ====================================================================== */
+let geoOld = null, geoNew = null, morphT0 = -1e9, morphDur = MORPH_MS;
+function commit(fromEmpty = false) {
+  const g = buildGeometry();
+  geoOld = fromEmpty ? null : geoNew; geoNew = g;
+  morphT0 = performance.now(); morphDur = fromEmpty ? 2400 : MORPH_MS;
+  routeCache.clear();                            // the ninja's perches depend on the roofs: plan the routes again
+  if (paused) { morphT0 = -1e9; draw(performance.now()); }   // paused: show the final state right away
+}
+let rebuildT = 0;
+function rebuildSoon() { clearTimeout(rebuildT); rebuildT = setTimeout(() => commit(false), PREVIEW ? 40 : 160); }
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  // Preview mode: the page is laid out at the full desktop size and then scaled down as a whole, so the canvas only needs a low resolution
+  const scale = PREVIEW ? 0.45 : devicePixelRatio || 1;
+  // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
+  const box = cv.getBoundingClientRect();
+  cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
+  buildNoise();
+  baseCache.length = 0;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): recompute the scene over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise(); baseCache.length = 0; initMovers();
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
+}
+
+let lastT = 0, frameN = 0;
+let paused = false;                              // host notification: a maximized / fullscreen window hides this monitor → pause
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (paused) { lastT = 0; return; }
+  if (P.cap30 && now - lastT < 31) return;
+  lastT = now;
+  draw(now);
+  frameN++;
+}
+const pp = [0, 0];
+function draw(now) {
+  const s = cv._scale, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1), tm = TIMES[P.time], sea = SEASONS[P.season];
+  const VX = WORLD.x, VY = WORLD.y, world = () => ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);   // desktop coordinates
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(cached(baseCache, buildBase), 0, 0);
+  const aOld = geoOld && e < 1 ? 1 - ss(0.35, 1, e) : 0, aNew = geoNew ? (geoOld ? ss(0, 0.65, e) : ss(0, 1, e)) : 0;
+  if (aOld > 0) { ctx.globalAlpha = aOld; ctx.drawImage(cached(geoOld.rasters, (w, h, k) => buildVillage(geoOld, w, h, k)), 0, 0); }
+  if (aNew > 0) { ctx.globalAlpha = aNew; ctx.drawImage(cached(geoNew.rasters, (w, h, k) => buildVillage(geoNew, w, h, k)), 0, 0); }
+  world();
+  for (const c of clouds) {                        // cloud shadows
+    cloudAt(c, T, pp);
+    if (pp[0] + c.w < VX || pp[0] - c.w > VX + W || pp[1] + c.w < VY || pp[1] - c.w > VY + H) continue;
+    ctx.globalAlpha = tm.cloud; ctx.drawImage(CLOUD, pp[0] - c.w / 2, pp[1] - c.w * 0.32, c.w, c.w * 0.64);
+  }
+  if (tm.glow > 0) {                               // lantern glows, flickering
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [g, a] of [[geoOld, aOld], [geoNew, aNew]]) {
+      if (!g || a <= 0) continue;
+      for (const l of g.lanterns) {
+        if (l.x < VX - 90 || l.x > VX + W + 90 || l.y < VY - 90 || l.y > VY + H + 90) continue;
+        const fl = 0.8 + 0.12 * Math.sin(T * 7.3 + l.ph) + 0.08 * Math.sin(T * 13.1 + l.ph * 2), sz = 120 * fl * (0.6 + 0.4 * tm.glow);
+        ctx.globalAlpha = a * tm.glow * 0.75 * fl;
+        ctx.drawImage(GLOW, l.x - sz / 2, l.y - sz / 2, sz, sz);
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.globalAlpha = 1;
+  const n = Math.min(leaves.length, P.leaves * WORLD.mons.length), shape = P.season ? MAPLE : PETAL;
+  ctx.lineWidth = 0.15; ctx.strokeStyle = sea.line;
+  for (let i = 0; i < n; i++) {                    // falling petals or leaves
+    const p = leaves[i];
+    leafAt(p, T, pp);
+    if (pp[0] < VX - 12 || pp[0] > VX + W + 12 || pp[1] < VY - 12 || pp[1] > VY + H + 12) continue;
+    const a = T * p.spin + p.ph, ca = Math.cos(a), sa = Math.sin(a), fl = (0.35 + 0.65 * Math.abs(Math.cos(T * p.spin * 1.3 + p.ph))) * p.sz;
+    ctx.setTransform(s * ca * p.sz, s * sa * p.sz, -s * sa * fl, s * ca * fl, (pp[0] - VX) * s, (pp[1] - VY) * s);
+    ctx.fillStyle = sea.leaf[p.c]; ctx.fill(shape); ctx.stroke(shape);
+  }
+  world();
+  for (const rt of routeAt(T)) drawRoute(ctx, rt, T, tm.shadow);
+  ctx.globalAlpha = 1;
+}
+
+/* ======================================================================
+   Hosted mode: the scene is driven from outside
+   - Wallpaper mode (?wallpaper=1): the desktop host sends messages through WebView2
+   - Preview mode (?preview=1): the settings window sends messages through the iframe's postMessage
+   Messages: layout (where this monitor sits in the desktop) / icons (real icon rectangles, physical pixels) /
+   settings (parameters, partial update) / reset (restore defaults) / pause
+   ====================================================================== */
+let iconsSeen = false;
+function reseed(v) {
+  seed = v; buildNoise(); baseCache.length = 0; initMovers();
+  if (iconsSeen) commit(true);
+}
+function applySettings(v) {
+  if (typeof v.seed === 'number' && v.seed !== seed) reseed(v.seed);   // "Refresh" in the settings window: new scene (desktop and preview use the same seed)
+  let geometry = false, redraw = false;
+  for (const k in v) {
+    const r = RANGES[k];
+    if (!r || typeof v[k] !== 'number' || !Number.isFinite(v[k])) continue;
+    const val = Math.min(r[1], Math.max(r[0], r[2] ? Math.round(v[k]) : v[k]));
+    if (P[k] === val) continue;
+    P[k] = val;
+    if (GEOMETRY_KEYS.includes(k)) geometry = true;
+    if (k === 'ninja') routeCache.clear();
+    if (k === 'time' || k === 'season') redraw = true;   // the cached layers are kept per time and season: nothing to rebuild
+  }
+  if (geometry && iconsSeen) rebuildSoon();
+  else if (redraw && paused && iconsSeen) draw(performance.now());
+}
+function drawGhosts() {
+  document.getElementById('ghosts').innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');
+}
+function startHostedMode() {
+  if (PREVIEW) document.body.classList.add('ghosts');
+  let first = true;
+  const settlePaused = () => { if (paused && iconsSeen) { morphT0 = -1e9; draw(performance.now()); } };
+  const handle = m => {
+    if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
+    if (m.t === 'settings') { applySettings(m.v || {}); return; }
+    if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
+    if (m.t !== 'icons') return;
+    const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
+    icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];
+    if (PREVIEW) drawGhosts();
+    iconsSeen = true;
+    clearTimeout(rebuildT);
+    commit(first);                                // first time: the village fades in; afterwards: old and new village cross-fade
+    first = false;
+  };
+  if (PREVIEW) {
+    addEventListener('message', ev => { if (ev.source === parent) handle(typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data); });
+    parent.postMessage(JSON.stringify({ t: 'ready' }), '*');
+    return;
+  }
+  const host = window.chrome && window.chrome.webview;
+  if (!host) return;
+  host.addEventListener('message', ev => handle(JSON.parse(ev.data)));
+  host.postMessage('ready');
+}
+// Opened directly in a browser: a sample desktop (for work on the theme); R = new scene
+function startStandalone() {
+  document.body.classList.add('ghosts');
+  const cell = (c, r) => ({ x: GRID_X0 + c * CELL_W, y: GRID_Y0 + r * CELL_H, w: CELL_W, h: 92 });
+  icons = [];
+  for (let c = 0; c < 2; c++) for (let r = 0; r < Math.min(7, Math.floor((H - TASKBAR) / CELL_H)); r++) icons.push(cell(c, r));
+  for (const [c, r] of [[7, 1], [8, 1], [8, 2], [13, 4], [14, 4], [19, 0], [19, 1]]) if (GRID_X0 + (c + 1) * CELL_W < W) icons.push(cell(c, r));
+  drawGhosts();
+  iconsSeen = true;
+  commit(true);
+  addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') reseed((Math.random() * 1e6) | 0); });
+}
+
+let resizeT = 0;
+addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => { resize(); initMovers(); if (iconsSeen) { commit(false); morphT0 = -1e9; } }, 100);
+});
+
+resize();
+initMovers();
+if (WALL || PREVIEW) startHostedMode(); else startStandalone();
+requestAnimationFrame(frame);
+</script>
+<script src="share.js"></script>   <!-- Share image / share animation (sample icons, names as color blocks) -->
+</body>
+</html>

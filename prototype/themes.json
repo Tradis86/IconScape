@@ -396,11 +396,11 @@
       "id": "steampunk",
       "adaptive": true,
       "name": "蒸汽朋克",
-      "desc": "深色木台上的机器：图标落在铆接的金属板上，齿轮组咬合转动，铜管连着压力表并喷出蒸汽，偶尔有飞艇飘过",
+      "desc": "手绘风格的旧机器，铅笔线条加水彩：图标落在生锈打补丁的铁皮上，齿轮组咬合转动，管道连着压力表并喷出蒸汽，墙上垂着挂灯泡的电线，偶尔有打着补丁的飞艇飘过",
       "page": "steam.html",
       "status": "ready",
       "product": "free",
-      "thumb": "url(thumbs/steampunk.webp?v=92f6348889) center / cover no-repeat, radial-gradient(circle at 70% 60%, #1d1712 0 4%, #bd963c 4.5% 13%, transparent 13.5%), radial-gradient(circle at 84% 38%, #1d1712 0 3%, #b8673b 3.5% 9%, transparent 9.5%), linear-gradient(90deg, #8d7130 0 34%, transparent 34%), repeating-linear-gradient(0deg, #2e1c13 0 20px, #120a06 20px 21px)",
+      "thumb": "url(thumbs/steampunk.webp?v=d70476178e) center / cover no-repeat, radial-gradient(circle at 70% 60%, #1d1712 0 4%, #bd963c 4.5% 13%, transparent 13.5%), radial-gradient(circle at 84% 38%, #1d1712 0 3%, #b8673b 3.5% 9%, transparent 9.5%), linear-gradient(90deg, #8d7130 0 34%, transparent 34%), repeating-linear-gradient(0deg, #2e1c13 0 20px, #120a06 20px 21px)",
       "thumbSource": "custom",
       "groups": [
         {
@@ -418,10 +418,10 @@
             },
             {
               "key": "metal",
-              "label": "金属",
+              "label": "金属锈色",
               "options": [
-                "黄铜",
-                "紫铜",
+                "铁锈",
+                "铜绿",
                 "铁"
               ],
               "default": 0

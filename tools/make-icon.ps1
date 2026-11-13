@@ -1,7 +1,7 @@
 # Draws the IconScape application icon and writes host/IconScape.ico (PNG frames: 16, 20, 24, 32, 40, 48, 64, 128 and 256 px).
 # The picture: a tile with a dusk-to-teal sky, a sun, four white desktop icons and two rolling hills: the icons become part of the scenery.
 # Small sizes are drawn separately (fewer details, pixel-aligned tiles) instead of being scaled down from the big one.
-param([string]$Out = (Join-Path $PSScriptRoot '..\host\IconScape.ico'), [string]$PreviewPng = '')
+param([string]$Out = (Join-Path $PSScriptRoot '..\host\IconScape.ico'), [string]$PreviewPng = '', [string]$MacPng = '')
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 Add-Type -ReferencedAssemblies System.Drawing @"
@@ -93,3 +93,15 @@ foreach ($f in $frames) { $w.Write($f) }
 $w.Flush()
 [IO.File]::WriteAllBytes([IO.Path]::GetFullPath($Out), $ico.ToArray())
 Write-Host "Icon written: $([IO.Path]::GetFullPath($Out)) ($($ico.Length) bytes, $($sizes -join '/') px)"
+# macOS (mac/build.sh turns it into AppIcon.icns): a 1024 px canvas with the tile at the size of the macOS icon grid (about 824 px) in the middle
+if ($MacPng) {
+    $tile = [IconArt]::Draw(876)
+    $mac = New-Object Drawing.Bitmap -ArgumentList 1024, 1024, ([Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g = [Drawing.Graphics]::FromImage($mac)
+    $g.Clear([Drawing.Color]::Transparent)
+    $g.DrawImage($tile, 74, 74, 876, 876)
+    $g.Dispose()
+    $mac.Save([IO.Path]::GetFullPath($MacPng), [Drawing.Imaging.ImageFormat]::Png)
+    $mac.Dispose(); $tile.Dispose()
+    Write-Host "macOS icon written: $([IO.Path]::GetFullPath($MacPng))"
+}

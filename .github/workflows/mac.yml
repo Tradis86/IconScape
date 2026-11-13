@@ -1,0 +1,26 @@
+# Builds the macOS app on a GitHub-hosted Mac (no Mac needed locally): Actions → "macOS build" → Run workflow,
+# then download the IconScape-mac artifact (disk image + SHA256). Also runs when the Mac host or the pages change.
+name: macOS build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mac/**'
+      - 'prototype/**'
+      - 'tools/version.json'
+      - '.github/workflows/mac.yml'
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build IconScape.app and the disk image
+        run: bash mac/build.sh --dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IconScape-mac
+          path: |
+            dist/IconScape-*-mac.dmg
+            dist/IconScape-*-mac.dmg.sha256

@@ -2,6 +2,7 @@
 /host/lib/
 /node_modules/
 /dist/
+/mac/build/
 /.vs/
 /.vscode/
 /.idea/
@@ -10,3 +11,5 @@
 Thumbs.db
 desktop.ini
 /.claude
+AGENTS.md
+AGENTS.md

@@ -750,8 +750,17 @@ $('shareOpen').addEventListener('click', () => send({ t: 'openShare' }));
 $('shareReveal').addEventListener('click', () => send({ t: 'revealShare' }));
 
 /* ---------- Communication with the host ---------- */
+// The macOS host says platform: 'mac': the login item has the macOS wording, and the help (Windows wallpaper slideshow) does not apply there
+function applyPlatform(p) {
+  document.documentElement.dataset.platform = p === 'mac' ? 'mac' : 'windows';
+  if (p !== 'mac') return;
+  const label = document.querySelector('[data-i18n="autostart"]');
+  if (label) label.dataset.i18n = 'autostartMac';
+  $('helpOpen').style.display = 'none';
+}
 function onHost(m) {
   if (m.t === 'init') {
+    applyPlatform(m.platform);
     state.langSetting = m.lang || 'auto';
     state.langSys = m.langSys || 'en';
     setLang(m.langEff || state.langSys).then(() => {        // Load the string tables for the UI language first, then draw the UI

@@ -1,0 +1,607 @@
+{
+  "name": "Français",
+  "ui": {
+    "adaptive": "Adaptatif",
+    "themes": "Thèmes",
+    "collectionTitle": "Trouvez votre paysage.",
+    "collectionSubtitle": "Faites de vos icônes une partie du paysage.",
+    "language": "Langue",
+    "langAuto": "Langue du système",
+    "langAutoWith": "Langue du système ({name})",
+    "autostart": "Lancer avec Windows",
+    "autostartTitle": "Lancer IconScape automatiquement à l'ouverture de session",
+    "animate": "Animations",
+    "animateTitle": "Désactivez-les pour garder une image fixe sur le bureau : plus rien ne bouge et le processeur comme la batterie sont presque épargnés",
+    "autostartBlocked": "Le lancement avec Windows a peut-être été bloqué",
+    "autostartWarnSw": "IconScape ne s'est pas lancé automatiquement cette fois : {sw} l'a peut-être bloqué. Ouvrez {sw}, trouvez IconScape dans son gestionnaire de démarrage et autorisez-le.",
+    "autostartWarnGeneric": "IconScape ne s'est pas lancé automatiquement cette fois : votre logiciel de sécurité ou les applications de démarrage de Windows l'ont peut-être bloqué. Activez IconScape dans le gestionnaire de démarrage de votre logiciel de sécurité ou dans Paramètres Windows → Applications → Démarrage.",
+    "gotIt": "Compris",
+    "updateAvailable": "Mise à jour disponible",
+    "updateVersion": "IconScape {version} est prête. Votre thème et vos réglages seront conservés.",
+    "updateProgram": "Mettre à jour",
+    "updateRetry": "Réessayer la mise à jour",
+    "updateWorking": "Mise à jour…",
+    "updateDownloading": "Téléchargement et installation… {progress}",
+    "updateInstalling": "Installation de la mise à jour… {progress}",
+    "updateCompletedTitle": "Mise à jour terminée",
+    "updateCompleted": "La mise à jour a été téléchargée et installée. Si IconScape ne redémarre pas tout seul, rouvrez-le.",
+    "updateDone": "Terminé",
+    "updateCanceled": "La mise à jour a été annulée. Vous pourrez réessayer plus tard.",
+    "updateLowBattery": "La mise à jour n'a pas pu se terminer sur batterie. Branchez l'ordinateur et réessayez.",
+    "updateWifiRecommended": "Ce réseau peut être facturé. Changez de réseau ou réessayez plus tard.",
+    "updateWifiRequired": "Connectez-vous à un réseau Wi-Fi pour télécharger cette mise à jour.",
+    "updateStoreRequired": "Ce mode de mise à jour n'est disponible que dans l'édition Microsoft Store.",
+    "updateFailed": "La mise à jour a échoué. Vérifiez la connexion ou le Microsoft Store et réessayez.",
+    "updateCheckingTitle": "Recherche de mises à jour",
+    "updateChecking": "Connexion au serveur de mises à jour et recherche d'une nouvelle version…",
+    "updateFailedTitle": "Mise à jour inachevée",
+    "updateCheckFailedTitle": "Impossible de rechercher des mises à jour",
+    "networkTimeout": "La connexion ou le téléchargement a pris trop de temps. Vérifiez le réseau, le proxy ou le pare-feu et réessayez. Si d'autres sites fonctionnent, le serveur répond peut-être lentement.",
+    "networkDns": "Impossible de résoudre l'adresse du serveur. Vérifiez le réseau, le DNS ou le proxy et réessayez.",
+    "networkTls": "Impossible d'établir une connexion sécurisée. Vérifiez l'heure du système et toute inspection de sécurité du réseau ou du proxy, puis réessayez.",
+    "networkLocal": "La connexion réseau a échoué ou a été interrompue. Vérifiez le réseau, le proxy ou le pare-feu et réessayez.",
+    "serverUnavailable": "Le serveur a été joint, mais le service est temporairement indisponible (HTTP 5xx). Réessayez plus tard.",
+    "serverRejected": "Le serveur a refusé la requête (HTTP 4xx). Réessayez plus tard ou contactez l'assistance si cela persiste.",
+    "serverInvalid": "Le serveur a renvoyé une réponse non reconnue. Réessayez plus tard ou contactez l'assistance si cela persiste.",
+    "downloadInvalid": "Le téléchargement était incomplet ou n'a pas passé la vérification de sécurité, l'installation a donc été arrêtée. Réessayez ou contactez l'assistance si cela persiste.",
+    "livePreview": "Aperçu en direct",
+    "previewIcons": "Aperçu en direct · avec les {n} icônes de votre bureau",
+    "previewNoIcons": "Aperçu en direct · les icônes du bureau sont masquées",
+    "refresh": "Régénérer",
+    "refreshTitle": "Générer une nouvelle scène pour ce thème",
+    "shareImage": "Partager une image",
+    "shareImageTitle": "Partagez une image de votre bureau en protégeant votre vie privée",
+    "shareVideo": "Partager une vidéo",
+    "shareVideoTitle": "Partagez l'animation de votre bureau en protégeant votre vie privée",
+    "generating": "Génération…",
+    "preparingRec": "Préparation…",
+    "recording": "Enregistrement {p} %",
+    "savingVideo": "Enregistrement du fichier…",
+    "shareErrNoRecorder": "cet ordinateur ne peut pas enregistrer de vidéo",
+    "shareErrBusy": "l'enregistrement précédent est toujours en cours",
+    "shareErrNoFrames": "l'image n'a pas bougé (le fond d'écran est peut-être entièrement masqué)",
+    "shareErrReadVideo": "impossible de lire la vidéo enregistrée",
+    "shareErrRecordingNow": "une vidéo est en cours d'enregistrement ; réessayez quand elle sera terminée",
+    "shareFailImage": "Impossible de créer l'image : {msg}",
+    "shareFailVideo": "Impossible d'enregistrer la vidéo : {msg}",
+    "unknownReason": "erreur inconnue",
+    "shareReadyImage": "L'image de votre bureau est prête",
+    "shareReadyVideo": "Le clip de votre bureau est prêt",
+    "sharePrivacy": "Les icônes sont remplacées par des icônes d'exemple et les noms de fichiers par des blocs de couleur : aucun de vos fichiers n'est visible.",
+    "shareCopiedImage": "L'image est dans le presse-papiers : collez-la directement dans une discussion ou une publication.",
+    "shareCopiedVideo": "Le fichier vidéo est dans le presse-papiers : collez-le dans une fenêtre de discussion pour l'envoyer.",
+    "shareBrowserHint": " (Aperçu dans le navigateur : cliquez sur « {btn} » pour télécharger.)",
+    "savedTo": "Enregistré dans {path}",
+    "openFolder": "Afficher dans le dossier",
+    "openImage": "Ouvrir l'image",
+    "openVideo": "Ouvrir la vidéo",
+    "saveImage": "Enregistrer l'image",
+    "saveVideo": "Enregistrer la vidéo",
+    "ok": "OK",
+    "close": "Fermer",
+    "sharePreviewAlt": "Aperçu de l'image partagée",
+    "autosave": "Les modifications sont enregistrées automatiquement et appliquées aussitôt au bureau",
+    "basedOn": "Basé sur Deskland Preview · GPL-3.0 · version non officielle",
+    "saved": "Enregistré ✓",
+    "resetAll": "Tout réinitialiser",
+    "resetAllTitle": "Remettre tous les réglages de ce thème à leurs valeurs par défaut",
+    "helpButtonTitle": "Questions fréquentes et dépannage",
+    "helpTitle": "Aide",
+    "helpSubtitle": "Questions fréquentes et dépannage",
+    "helpWallpaperQ": "IconScape clignote ou redémarre sans cesse. Comment corriger cela ?",
+    "helpWallpaperA": "Si le fond d'écran Windows habituel change automatiquement, chaque changement peut faire clignoter ou redémarrer IconScape. Utilisez un fond d'écran fixe qui ne tourne pas.",
+    "helpWallpaperStep1": "Ouvrez Paramètres Windows → Personnalisation → Arrière-plan.",
+    "helpWallpaperStep2": "Réglez « Personnaliser l'arrière-plan » sur « Image » ou « Couleur unie ». N'utilisez ni « Diaporama » ni « Windows à la une ».",
+    "helpWallpaperStep3": "Redémarrez IconScape après avoir modifié ce réglage.",
+    "badgeOn": "Actif",
+    "badgeReady": "Disponible",
+    "badgeSoon": "Bientôt",
+    "ongoingTitle": "D'autres arrivent",
+    "ongoingDesc": "De nouvelles scènes et de nouveaux éléments seront ajoutés au fil du temps.",
+    "noParams": "Ce thème n'a pas encore de réglages",
+    "resetOne": "Revenir à la valeur par défaut : {v}",
+    "resetOneAria": "Remettre {label} à sa valeur par défaut",
+    "dblclickReset": "Double-cliquez pour réinitialiser ({v})",
+    "comingSoon": "Bientôt :"
+  },
+  "host": {
+    "traySettings": "Réglages…",
+    "trayPause": "Arrêter les animations",
+    "trayReload": "Recharger",
+    "trayAutostart": "Lancer avec Windows",
+    "trayExit": "Quitter (restaurer le fond d'écran)",
+    "welcomeTitle": "IconScape est lancé",
+    "welcomeBody": "Cliquez sur l'icône IconScape dans la zone de notification{hotkey} pour ouvrir le menu.\nVous ne la voyez pas ? Cliquez sur ^ à droite de la barre des tâches.",
+    "welcomeHotkey": " ou appuyez sur Ctrl+Alt+H",
+    "errNotReady": "Le fond d'écran n'est pas encore prêt",
+    "errNoImage": "Aucune image reçue",
+    "errNoVideo": "Aucune vidéo reçue",
+    "errBusyImage": "L'image précédente est encore en cours de génération",
+    "errBusyVideo": "Le clip précédent est encore en cours d'enregistrement",
+    "errImageTimeout": "La génération a pris trop de temps",
+    "errVideoTimeout": "L'enregistrement a pris trop de temps",
+    "errBadData": "La page a renvoyé des données incomplètes",
+    "errRebuilt": "Windows reconstruisait sans cesse la couche du fond d'écran, IconScape s'est donc arrêté.",
+    "errSeeLog": "Consultez le journal pour les détails : {path}",
+    "errSettings": "Impossible d'ouvrir la fenêtre des réglages : {msg}",
+    "errNoPage": "Page introuvable : {path}",
+    "errNoDesktop": "La fenêtre du bureau est introuvable, le fond d'écran ne peut donc pas être placé.",
+    "errStart": "Échec du lancement : {msg}"
+  },
+  "themes": {
+    "woodland": {
+      "name": "Bois des contes",
+      "desc": "Une forêt de livre d'images dessinée comme un dessin animé classique : vos icônes flottent sur des étangs avec nénuphars, grenouilles et familles de canetons ; tout autour, arbres ronds, champignons rouges et fleurs, lapereaux, renards et hérissons en promenade, oiseaux bleus et papillons ; de jour, au coucher du soleil ou la nuit avec des lucioles",
+      "groups": [
+        "Étangs",
+        "Forêt",
+        "Animaux"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Taille des étangs",
+          "hint": "Jusqu'où l'étang s'étend autour de vos icônes"
+        },
+        "warp": {
+          "label": "Rives irrégulières",
+          "hint": "À quel point le contour des étangs est irrégulier"
+        },
+        "trees": {
+          "label": "Arbres",
+          "hint": "Combien d'arbres et de buissons poussent dans le pré"
+        },
+        "flowers": {
+          "label": "Fleurs",
+          "hint": "Combien de fleurs et de champignons poussent dans le pré"
+        },
+        "time": {
+          "label": "Moment de la journée",
+          "options": [
+            "Jour",
+            "Coucher du soleil",
+            "Nuit"
+          ]
+        },
+        "animals": {
+          "label": "Petits animaux",
+          "hint": "Combien de petits animaux se promènent sur chaque écran (lapereaux, renards, hérissons)",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Oiseaux bleus",
+          "hint": "Des oiseaux qui traversent parfois le ciel",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse des animaux, des canetons et des papillons"
+        }
+      }
+    },
+    "ninja": {
+      "name": "Village ninja",
+      "desc": "Un village japonais dessiné comme un anime des années soixante-dix : maisons vues d'en haut avec toits de tuiles, murs blancs et poutres de bois, sable ratissé de jardin zen, aplats de couleur cernés d'encre, ombres franches et grain de pellicule ; lanternes de pierre, cerisiers en fleurs ou érables rouges, et un ninja qui surgit dans un nuage de fumée, saute de toit en toit, lance un shuriken et disparaît",
+      "groups": [
+        "Village",
+        "Ambiance",
+        "Ninja"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Taille des toits",
+          "hint": "Jusqu'où les toits s'étendent autour de vos icônes"
+        },
+        "warp": {
+          "label": "Contour des toits",
+          "hint": "À quel point le contour des toits est irrégulier"
+        },
+        "rake": {
+          "label": "Sable ratissé",
+          "hint": "Combien de sillons de sable entourent les toits et les rochers ; à 0 le sable disparaît",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Arbres",
+          "hint": "Combien d'arbres et de touffes de bambou poussent sur la mousse"
+        },
+        "lanterns": {
+          "label": "Lanternes de pierre",
+          "hint": "Lanternes allumées au bord du sable, par écran",
+          "unit": ""
+        },
+        "time": {
+          "label": "Moment de la journée",
+          "options": [
+            "Nuit",
+            "Coucher du soleil",
+            "Jour"
+          ]
+        },
+        "season": {
+          "label": "Saison",
+          "hint": "Au printemps, cerisiers et pétales ; en automne, érables rouges et feuilles",
+          "options": [
+            "Printemps",
+            "Automne"
+          ]
+        },
+        "leaves": {
+          "label": "Pétales et feuilles",
+          "hint": "Combien de pétales ou de feuilles tombent sur chaque écran",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse de chute des pétales et des feuilles"
+        },
+        "film": {
+          "label": "Effet pellicule",
+          "hint": "Grain, rayures et bords sombres d'une copie d'animation des années soixante-dix"
+        },
+        "ninja": {
+          "label": "Afficher le ninja",
+          "hint": "Un ninja qui apparaît de temps en temps et saute de toit en toit",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        }
+      }
+    },
+    "manga": {
+      "name": "Manga",
+      "desc": "Une planche de manga en noir et blanc : vos icônes reposent sur des taches d'encre d'où jaillissent des traits d'impact ; les cases sont des décors à la plume et à la trame : rues en perspective, la ville la nuit, cumulonimbus et poteaux électriques, montagnes et pins, mer et rochers, bambous, escaliers de sanctuaire, toits et une pagode sous la lune, avec des onomatopées, des pétales de cerisier et, de temps en temps, un corbeau qui passe",
+      "groups": [
+        "Encre",
+        "Planche",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Taille de la tache",
+          "hint": "Jusqu'où l'encre noire s'étend autour de vos icônes"
+        },
+        "warp": {
+          "label": "Bords irréguliers",
+          "hint": "À quel point le contour de l'encre est irrégulier"
+        },
+        "burst": {
+          "label": "Traits d'impact",
+          "hint": "Longueur des pointes qui jaillissent de l'encre"
+        },
+        "palette": {
+          "label": "Encre et papier",
+          "options": [
+            "Noir et blanc",
+            "Sépia",
+            "Encre bleue",
+            "Rose shōjo"
+          ]
+        },
+        "panels": {
+          "label": "Cases",
+          "hint": "Combien de cases divisent la planche : plus la valeur est haute, plus elles sont petites"
+        },
+        "sfx": {
+          "label": "Onomatopées",
+          "hint": "À quelle fréquence apparaissent des mots comme ドン ou ゴゴゴ"
+        },
+        "petals": {
+          "label": "Pétales de cerisier",
+          "hint": "Combien de pétales tombent sur chaque écran",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse de chute des pétales"
+        },
+        "crow": {
+          "label": "Afficher le corbeau",
+          "hint": "Un corbeau qui traverse parfois la planche",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        }
+      }
+    },
+    "cosmos": {
+      "name": "Cosmos",
+      "desc": "L'espace profond : chaque groupe d'icônes est un système stellaire, avec des orbites qui suivent sa forme et des planètes qui les parcourent ; tout autour, des nébuleuses, une galaxie qui tourne, des étoiles filantes, des comètes et parfois une nova",
+      "groups": [
+        "Espace",
+        "Systèmes stellaires",
+        "Ciel profond"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Étendue de la nébuleuse",
+          "hint": "Jusqu'où la nébuleuse et le vide sombre s'étendent autour de vos icônes"
+        },
+        "palette": {
+          "label": "Couleur de la nébuleuse",
+          "options": [
+            "Violet",
+            "Émeraude",
+            "Feu",
+            "Glace"
+          ]
+        },
+        "stars": {
+          "label": "Étoiles",
+          "hint": "Combien d'étoiles remplissent le fond"
+        },
+        "orbits": {
+          "label": "Orbites",
+          "hint": "Nombre d'orbites autour de chaque groupe d'icônes",
+          "unit": ""
+        },
+        "planets": {
+          "label": "Planètes",
+          "hint": "Nombre de planètes qui parcourent les orbites",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Vitesse",
+          "hint": "Vitesse des planètes et de la rotation de la galaxie"
+        },
+        "galaxy": {
+          "label": "Afficher la galaxie",
+          "hint": "Une galaxie spirale qui tourne lentement dans l'espace libre",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "meteors": {
+          "label": "Étoiles filantes",
+          "hint": "Combien d'étoiles filantes traversent le ciel ; de temps en temps passe aussi une comète"
+        }
+      }
+    },
+    "steampunk": {
+      "name": "Steampunk",
+      "desc": "Une vieille salle des machines dessinée à la main au crayon et à l'aquarelle : vos icônes reposent sur des tôles rouillées et rapiécées ; entre une poutre de fer et un plancher se trouvent une chaudière avec son conduit et le charbon, des réservoirs dont les tuyaux entrent dans le mur, des caisses et des tonneaux sous une étagère, des portes avec une plaque et une lampe, des échelles et des passerelles, un établi sous le tableau électrique ; et des engrenages qui s'engrènent, des tuyaux avec manomètres et vapeur, des fenêtres éclairées, des lampes suspendues, des moineaux et, de temps en temps, un dirigeable rapiécé",
+      "groups": [
+        "Tôles",
+        "Mécanisme",
+        "Vapeur"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Taille des tôles",
+          "hint": "Jusqu'où les tôles s'étendent autour de vos icônes"
+        },
+        "metal": {
+          "label": "Finition du métal",
+          "options": [
+            "Rouille",
+            "Vert-de-gris",
+            "Fer"
+          ]
+        },
+        "gears": {
+          "label": "Engrenages",
+          "hint": "Combien de groupes d'engrenages remplissent l'espace libre"
+        },
+        "details": {
+          "label": "Détails",
+          "hint": "À quel point la salle est encombrée : coins de travail au sol (chaudière, réservoir, réserve, porte avec échelle et passerelle, établi avec tableau électrique), fenêtres, lampes et chaînes pendues à la poutre, hublots et plaques sur les tôles"
+        },
+        "speed": {
+          "label": "Vitesse",
+          "hint": "Vitesse des engrenages et des aiguilles des manomètres"
+        },
+        "pipes": {
+          "label": "Tuyaux",
+          "hint": "Nombre de tuyaux qui partent des tôles",
+          "unit": ""
+        },
+        "steam": {
+          "label": "Vapeur",
+          "hint": "Combien de vapeur s'échappe des joints des tuyaux"
+        },
+        "airship": {
+          "label": "Afficher le dirigeable",
+          "hint": "Un dirigeable qui passe parfois au-dessus de la machine",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        }
+      }
+    },
+    "isles": {
+      "name": "Îles flottantes",
+      "desc": "Des îles herbeuses flottent sur une mer de nuages au crépuscule : vos icônes reposent sur les îles parmi des cristaux lumineux, des étincelles magiques et, de temps en temps, un dragon qui passe",
+      "groups": [
+        "Îles",
+        "Ciel",
+        "Magie",
+        "Créatures"
+      ],
+      "params": {
+        "sky": {
+          "label": "Couleur du ciel",
+          "hint": "La teinte du ciel et de la mer de nuages sous les îles",
+          "options": [
+            "Crépuscule",
+            "Aube",
+            "Jour",
+            "Nuit"
+          ]
+        },
+        "sigma": {
+          "label": "Taille des îles",
+          "hint": "Jusqu'où les îles s'étendent autour de vos icônes"
+        },
+        "warp": {
+          "label": "Bords irréguliers",
+          "hint": "À quel point le contour des îles est irrégulier"
+        },
+        "islets": {
+          "label": "Îlots",
+          "hint": "Petites îles supplémentaires qui flottent loin des icônes",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Arbres",
+          "hint": "Combien d'arbres poussent sur les îles"
+        },
+        "crystals": {
+          "label": "Cristaux",
+          "hint": "Nombre de cristaux lumineux près du bord des îles",
+          "unit": ""
+        },
+        "motes": {
+          "label": "Étincelles magiques",
+          "hint": "Petits points de lumière qui montent lentement",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Vitesse de mouvement",
+          "hint": "La vitesse des nuages et des étincelles"
+        },
+        "dragon": {
+          "label": "Afficher le dragon",
+          "hint": "Un dragon qui traverse parfois le ciel",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        }
+      }
+    },
+    "circuit": {
+      "name": "Circuit",
+      "desc": "Un circuit imprimé sombre : vos icônes reposent sur des zones de cuivre, les pistes se déploient à 45° et des impulsions de données les parcourent",
+      "groups": [
+        "Carte",
+        "Signaux"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zone de cuivre",
+          "hint": "Jusqu'où la zone de cuivre s'étend autour de vos icônes"
+        },
+        "density": {
+          "label": "Densité des pistes",
+          "hint": "Combien de pistes, de puces et de composants remplissent la carte"
+        },
+        "color": {
+          "label": "Couleur",
+          "options": [
+            "Vert",
+            "Cyan",
+            "Ambre",
+            "Magenta"
+          ]
+        },
+        "pulses": {
+          "label": "Impulsions de données",
+          "hint": "Nombre de points lumineux qui parcourent les pistes",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Vitesse",
+          "hint": "Vitesse des impulsions, du balayage et des chiffres qui tombent"
+        },
+        "rain": {
+          "label": "Pluie de chiffres",
+          "hint": "Combien de colonnes de chiffres hexadécimaux tombent sur la carte"
+        },
+        "scan": {
+          "label": "Balayage",
+          "hint": "Une bande de lumière qui parcourt les pistes de haut en bas",
+          "options": [
+            "Désactivé",
+            "Activé"
+          ]
+        }
+      }
+    },
+    "beach": {
+      "name": "Plage",
+      "desc": "Le rivage s'enroule autour de vos fichiers tandis que les vagues montent sur le sable",
+      "groups": [
+        "Rivage",
+        "Eau",
+        "Détails"
+      ],
+      "params": {
+        "palms": {
+          "label": "Cocotiers",
+          "hint": "Nombre de palmiers sur la côte ; 0 pour les masquer. Il en apparaît moins s'il n'y a pas assez de sable.",
+          "unit": ""
+        },
+        "sigma": {
+          "label": "Distance aux icônes",
+          "hint": "À quelle distance de vos icônes se trouve le rivage"
+        },
+        "warp": {
+          "label": "Côte sinueuse",
+          "hint": "À quel point le trait de côte serpente"
+        },
+        "shoal": {
+          "label": "Eau transparente",
+          "hint": "La largeur de la bande d'eau transparente au-dessus du sable"
+        },
+        "shallow": {
+          "label": "Hauts-fonds",
+          "hint": "Sur quelle distance l'eau passe du turquoise au bleu profond"
+        },
+        "kayaks": {
+          "label": "Kayaks",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Oiseaux marins",
+          "hint": "Des mouettes qui planent et tournent dans le ciel",
+          "unit": ""
+        }
+      }
+    },
+    "meadow": {
+      "name": "Prairie",
+      "desc": "Une prairie à la plume et au lavis où vos icônes se cachent dans des nuages blancs qui projettent des ombres vert foncé",
+      "groups": [
+        "Autour des icônes",
+        "Nuages",
+        "Personnages"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Taille des nuages",
+          "hint": "Jusqu'où les nuages s'étendent autour de vos icônes"
+        },
+        "cover": {
+          "label": "Nuages sur la prairie",
+          "hint": "Combien de nuages flottent au-dessus de la prairie dégagée"
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse à laquelle les nuages bougent et changent de forme"
+        },
+        "showBoy": {
+          "label": "Afficher le garçon",
+          "hint": "Affiche ou masque le garçon et son cerf-volant",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "showCat": {
+          "label": "Afficher le chaton",
+          "hint": "Le chaton noir qui se repose dans l'herbe",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@
     "langAutoWith": "Predefinita di sistema ({name})",
     "autostart": "Avvia con Windows",
     "autostartTitle": "Esegui IconScape automaticamente all'accesso",
+    "animate": "Animazioni",
+    "animateTitle": "Spegnile per avere un'immagine ferma sul desktop: niente si muove e quasi non si usano processore e batteria",
     "autostartBlocked": "L'avvio con Windows potrebbe essere stato bloccato",
     "autostartWarnSw": "Questa volta IconScape non si è avviato automaticamente: {sw} potrebbe averlo bloccato. Apri {sw}, cerca IconScape nella gestione dell'avvio e impostalo su Consenti.",
     "autostartWarnGeneric": "Questa volta IconScape non si è avviato automaticamente: il software di sicurezza o l'impostazione App di avvio di Windows potrebbero averlo bloccato. Attiva IconScape nella gestione dell'avvio del software di sicurezza oppure in Impostazioni di Windows → App → Avvio.",
@@ -104,7 +106,7 @@
   },
   "host": {
     "traySettings": "Impostazioni…",
-    "trayPause": "Metti in pausa l'animazione",
+    "trayPause": "Ferma le animazioni",
     "trayReload": "Ricarica",
     "trayAutostart": "Avvia con Windows",
     "trayExit": "Esci (ripristina lo sfondo)",
@@ -362,7 +364,7 @@
     },
     "steampunk": {
       "name": "Steampunk",
-      "desc": "Una vecchia macchina disegnata a mano, a matita e acquerello: le icone poggiano su lamiere arrugginite e rattoppate, gli ingranaggi girano ingranando tra loro, i tubi portano ai manometri e sbuffano vapore, cavi con lampadine pendono sul muro e ogni tanto passa un dirigibile rattoppato",
+      "desc": "Una vecchia stanza delle macchine disegnata a mano, a matita e acquerello: le icone poggiano su lamiere arrugginite e rattoppate; sotto una trave di ferro e sopra un pavimento di assi ci sono una caldaia con la canna fumaria e il carbone, serbatoi con i tubi che entrano nel muro, casse e barili sotto una mensola, porte con targa e lampada, scale e passerelle, un banco di lavoro sotto il quadro elettrico; e poi ingranaggi che ingranano, tubi con manometri e vapore, finestre accese, lampade appese, passerotti, e ogni tanto un dirigibile rattoppato",
       "groups": [
         "Piastre",
         "Meccanismo",
@@ -384,6 +386,10 @@
         "gears": {
           "label": "Ingranaggi",
           "hint": "Quanti gruppi di ingranaggi riempiono lo spazio libero"
+        },
+        "details": {
+          "label": "Dettagli",
+          "hint": "Quanto è affollata la stanza: postazioni sul pavimento (caldaia, serbatoio, magazzino, porta con scala e passerella, banco con quadro elettrico), finestre, lampade e catene appese alla trave, oblò e targhe sulle lamiere"
         },
         "speed": {
           "label": "Velocità",

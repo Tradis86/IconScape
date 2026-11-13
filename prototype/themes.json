@@ -396,11 +396,11 @@
       "id": "steampunk",
       "adaptive": true,
       "name": "蒸汽朋克",
-      "desc": "手绘风格的旧机器，铅笔线条加水彩：图标落在生锈打补丁的铁皮上，齿轮组咬合转动，管道连着压力表并喷出蒸汽，墙上垂着挂灯泡的电线，偶尔有打着补丁的飞艇飘过",
+      "desc": "铅笔加水彩手绘的旧机房：图标落在生锈打补丁的铁皮上；铁梁和木地板之间有带烟道和煤堆的锅炉、管道通进墙里的水箱、架子下的木箱和木桶、挂着标牌和灯的门、梯子和走道、配电板下的工作台；还有咬合的齿轮、带压力表和蒸汽的管道、亮灯的窗户、垂下的灯、麻雀，偶尔有打补丁的飞艇飘过",
       "page": "steam.html",
       "status": "ready",
       "product": "free",
-      "thumb": "url(thumbs/steampunk.webp?v=d70476178e) center / cover no-repeat, radial-gradient(circle at 70% 60%, #1d1712 0 4%, #bd963c 4.5% 13%, transparent 13.5%), radial-gradient(circle at 84% 38%, #1d1712 0 3%, #b8673b 3.5% 9%, transparent 9.5%), linear-gradient(90deg, #8d7130 0 34%, transparent 34%), repeating-linear-gradient(0deg, #2e1c13 0 20px, #120a06 20px 21px)",
+      "thumb": "url(thumbs/steampunk.webp?v=52c24c63d9) center / cover no-repeat, radial-gradient(circle at 70% 60%, #1d1712 0 4%, #bd963c 4.5% 13%, transparent 13.5%), radial-gradient(circle at 84% 38%, #1d1712 0 3%, #b8673b 3.5% 9%, transparent 9.5%), linear-gradient(90deg, #8d7130 0 34%, transparent 34%), repeating-linear-gradient(0deg, #2e1c13 0 20px, #120a06 20px 21px)",
       "thumbSource": "custom",
       "groups": [
         {
@@ -439,6 +439,16 @@
               "max": 1,
               "step": 0.01,
               "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "details",
+              "label": "细节",
+              "hint": "机房的热闹程度：地板上的工作角（锅炉、水箱、货堆、带梯子和走道的门、配电板下的工作台）、窗户、横梁上垂下的灯和链条、铁皮上的舷窗和标牌",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.8,
               "format": "percent"
             },
             {

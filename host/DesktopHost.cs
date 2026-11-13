@@ -246,6 +246,7 @@ static class Settings
     static readonly string FilePath = Path.Combine(Log.DataDir, "settings.json");
     public static string Theme = "beach";
     public static string Lang = "auto";                // UI language: "auto" (follow the system) or one of I18n.Supported
+    public static bool Still;                          // animations stopped: every theme shows a still picture (tray menu and settings page)
     public static Dictionary<string, Dictionary<string, object>> Params = new Dictionary<string, Dictionary<string, object>>();
 
     public static void Load()
@@ -258,6 +259,7 @@ static class Settings
             object v;
             if (root.TryGetValue("theme", out v) && v is string) Theme = (string)v;
             if (root.TryGetValue("lang", out v) && v is string) Lang = (string)v;
+            if (root.TryGetValue("still", out v) && v is bool) Still = (bool)v;
             if (root.TryGetValue("params", out v) && v is Dictionary<string, object>)
                 foreach (var kv in (Dictionary<string, object>)v)
                 {
@@ -274,7 +276,7 @@ static class Settings
         try
         {
             Directory.CreateDirectory(Log.DataDir);
-            File.WriteAllText(FilePath, Json.Stringify(Json.Obj("version", 1, "theme", Theme, "lang", Lang, "params", Params)), new UTF8Encoding(false));
+            File.WriteAllText(FilePath, Json.Stringify(Json.Obj("version", 1, "theme", Theme, "lang", Lang, "still", Still, "params", Params)), new UTF8Encoding(false));
         }
         catch (Exception ex) { Log.Write("保存设置失败：" + ex.Message); }
     }
@@ -292,8 +294,8 @@ static class Settings
 static class I18n
 {
     // When adding a language, also update LANGS in the settings page and the language list exported with the Preview edition.
-    public static readonly string[] Supported = { "zh-CN", "en", "it" };
-    public static string Code = "zh-CN", Sys = "en";     // language in use; language that "System default" would use
+    public static readonly string[] Supported = { "en", "it", "es", "fr", "de", "zh-CN" };
+    public static string Code = "en", Sys = "en";        // language in use; language that "System default" would use (English when Windows uses a language not listed)
     static Dictionary<string, object> cur, en, zh;
 
     public static string FromCulture(System.Globalization.CultureInfo c)
@@ -381,12 +383,9 @@ class HostContext : ApplicationContext
         hotkey.Pressed += delegate { ShowMenu(); };
         Log.Write(hotkeyOk ? "快捷键 Ctrl+Alt+H 已注册" : "快捷键 Ctrl+Alt+H 注册失败（可能被其他程序占用）");
 
-        pauseItem = new MenuItem(I18n.T("trayPause"), delegate
-        {
-            manualPause = !manualPause;
-            pauseItem.Checked = manualPause;
-            foreach (WallpaperForm f in forms.ToArray()) f.SetManualPause(manualPause);
-        });
+        manualPause = Settings.Still;                   // animations stopped last time: they stay stopped
+        pauseItem = new MenuItem(I18n.T("trayPause"), delegate { SetStill(!manualPause); });
+        pauseItem.Checked = manualPause;
         autoStartItem = new MenuItem(I18n.T("trayAutostart"), delegate { SetAutoStart(!autoStartItem.Checked); });
         autoStartItem.Checked = IsAutoStart();
         if (Migration.MovedAutoStart && !autoStartItem.Checked)
@@ -438,6 +437,18 @@ class HostContext : ApplicationContext
         iconTimer.Start();
         SyncForms();
         if (showSettings) OpenSettings();                // the user started the program by double-clicking: open settings directly
+    }
+
+    // Stop or restart the animations of every theme (tray menu or settings page): saved, so it holds after a restart
+    void SetStill(bool still)
+    {
+        manualPause = still;
+        pauseItem.Checked = still;
+        Settings.Still = still;
+        SaveSoon();
+        foreach (WallpaperForm f in forms.ToArray()) f.SetManualPause(still);
+        if (settingsWin != null) settingsWin.Post(Json.Stringify(Json.Obj("t", "animate", "v", !still)));
+        Log.Write(still ? "Animations stopped" : "Animations running");
     }
 
     // UI language changed: update the tray menu texts
@@ -506,7 +517,7 @@ class HostContext : ApplicationContext
         Rectangle scr = Screen.PrimaryScreen.Bounds;
         previewScreen = scr.Size;
         settingsWin.Post(Json.Stringify(Json.Obj("t", "init", "theme", Settings.Theme, "params", Settings.Params,
-            "screen", Json.Obj("w", scr.Width, "h", scr.Height), "autostart", IsAutoStart(),
+            "screen", Json.Obj("w", scr.Width, "h", scr.Height), "autostart", IsAutoStart(), "animate", !manualPause,
             "autostartWarn", autoStartSw != null, "autostartSw", autoStartSw ?? "",
             "lang", Settings.Lang, "langEff", I18n.Code, "langSys", I18n.Sys)));
         WallpaperForm form = PrimaryForm();
@@ -621,6 +632,9 @@ class HostContext : ApplicationContext
                 break;
             case "updateProgram":
                 if (updateUrl != null) Process.Start(updateUrl);
+                break;
+            case "animate":                                 // the "Animations" switch of the settings page
+                SetStill(!(m["v"] is bool && (bool)m["v"]));
                 break;
             case "autostart":
                 SetAutoStart(m["v"] is bool && (bool)m["v"]);

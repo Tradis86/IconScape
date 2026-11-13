@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,9 +10,9 @@
   - Themes and parameters come from themes.json; the controls are generated from the manifest
   - Live preview: an iframe loads the theme page in ?preview=1 mode, using the real icon positions on your desktop
   - Messages exchanged with the host (JSON strings):
-      sent: hello / set {theme,key,value} / reset {theme} / theme {id} / autostart {v} / share / shareVideo / openShare / revealShare / updateProgram
-      received: init {theme,params,screen,autostart,autostartWarn} / layout {x,y,w,h,mons} (primary monitor in the whole desktop, forwarded to the preview)
-            / icons {vis,r} / autostart {v} / recProgress {p}
+      sent: hello / set {theme,key,value} / reset {theme} / theme {id} / autostart {v} / animate {v} / share / shareVideo / openShare / revealShare / updateProgram
+      received: init {theme,params,screen,autostart,animate,autostartWarn} / layout {x,y,w,h,mons} (primary monitor in the whole desktop, forwarded to the preview)
+            / icons {vis,r} / autostart {v} / animate {v} / recProgress {p}
             / shareResult {ok,kind?,thumb,path,url?,msg} (when kind = 'video', url is a directly playable video address)
             / updateState {version,status,progress,error} (in the Store edition the host provides download and install progress)
       autostartWarn: the reminder shown when the autostart launch did not happen this time (blocked by security software); empty string = all good; clicking "Got it" sends autostartWarnSeen
@@ -269,15 +269,18 @@
 <header class="top">
   <div class="top-left">
     <div class="brand">IconScape</div>
-    <div class="section-title" data-i18n="themes">主题</div>
+    <div class="section-title" data-i18n="themes">Themes</div>
   </div>
   <div class="top-right">
     <label class="lang-row">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c1.8 1.7 2.7 3.8 2.7 6.2S9.8 12.5 8 14.2C6.2 12.5 5.3 10.4 5.3 8S6.2 3.5 8 1.8z"/></svg>
       <select id="lang" data-i18n-title="language" aria-label="Language"></select>
     </label>
-    <label class="switch-row" data-i18n-title="autostartTitle" title="开机后自动运行 IconScape">
-      <span data-i18n="autostart">开机自动启动</span><input type="checkbox" id="autostart"><i class="switch"></i>
+    <label class="switch-row" data-i18n-title="animateTitle" title="Turn off to keep a still picture on the desktop: nothing moves and almost no processor or battery is used">
+      <span data-i18n="animate">Animations</span><input type="checkbox" id="animate" checked><i class="switch"></i>
+    </label>
+    <label class="switch-row" data-i18n-title="autostartTitle" title="Run IconScape automatically when you sign in">
+      <span data-i18n="autostart">Start with Windows</span><input type="checkbox" id="autostart"><i class="switch"></i>
     </label>
   </div>
 </header>
@@ -285,33 +288,33 @@
 <main class="layout">
   <section class="themes">
     <div class="collection-head">
-      <h1 data-i18n="collectionTitle">选一片风景。</h1>
-      <p data-i18n="collectionSubtitle">让图标成为风景的一部分。</p>
+      <h1 data-i18n="collectionTitle">Find your scenery.</h1>
+      <p data-i18n="collectionSubtitle">Make your icons part of the landscape.</p>
     </div>
     <div class="update-notice" id="updateNotice" hidden role="status" aria-live="polite">
       <span class="update-symbol" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5"/><path d="M4 12v3.5A1.5 1.5 0 0 0 5.5 17h9a1.5 1.5 0 0 0 1.5-1.5V12"/></svg></span>
-      <div class="update-copy"><b data-i18n="updateAvailable">有更新可用</b><p id="updateVersion"></p></div>
-      <button class="ghost-btn update-action" id="updateProgram" data-i18n="updateProgram">立即更新</button>
+      <div class="update-copy"><b data-i18n="updateAvailable">Update available</b><p id="updateVersion"></p></div>
+      <button class="ghost-btn update-action" id="updateProgram" data-i18n="updateProgram">Update now</button>
     </div>
-    <div class="warn" id="autostartWarn" hidden role="alert"><p><b data-i18n="autostartBlocked">开机自动启动可能被拦截了</b><br><span id="autostartWarnText"></span></p><button id="autostartWarnOk" data-i18n="gotIt">知道了</button></div>
+    <div class="warn" id="autostartWarn" hidden role="alert"><p><b data-i18n="autostartBlocked">Start with Windows may have been blocked</b><br><span id="autostartWarnText"></span></p><button id="autostartWarnOk" data-i18n="gotIt">Got it</button></div>
     <div class="theme-list" id="themes"></div>
   </section>
 
   <div class="side">
     <section class="card preview-card">
-      <div class="preview-head"><h2 id="themeName">　</h2><label class="switch-row adaptive-switch" id="adaptiveRow" hidden><span data-i18n="adaptive">自适应</span><input type="checkbox" id="adaptive" role="switch" checked><i class="switch" aria-hidden="true"></i></label></div>
-      <div class="stage" id="stage"><div class="preview" id="previewBox"><iframe id="preview" data-i18n-title="livePreview" title="实时预览" tabindex="-1"></iframe></div></div>
-      <p class="preview-foot"><span class="live-dot"></span><span id="previewFoot">实时预览</span></p>
+      <div class="preview-head"><h2 id="themeName">　</h2><label class="switch-row adaptive-switch" id="adaptiveRow" hidden><span data-i18n="adaptive">Adaptive</span><input type="checkbox" id="adaptive" role="switch" checked><i class="switch" aria-hidden="true"></i></label></div>
+      <div class="stage" id="stage"><div class="preview" id="previewBox"><iframe id="preview" data-i18n-title="livePreview" title="Live preview" tabindex="-1"></iframe></div></div>
+      <p class="preview-foot"><span class="live-dot"></span><span id="previewFoot">Live preview</span></p>
       <div class="preview-actions">
-        <button class="ghost-btn share" id="reseed" data-i18n-title="refreshTitle" title="重新生成这个主题的画面">
+        <button class="ghost-btn share" id="reseed" data-i18n-title="refreshTitle" title="Generate a new scene for this theme">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 8a5.2 5.2 0 1 1-1.6-3.75"/><path d="M13.4 2.6v3.2h-3.2"/></svg>
-          <span data-i18n="refresh">刷新</span></button>
-        <button class="ghost-btn share" id="share" data-i18n-title="shareImageTitle" title="用保护隐私的方式分享你的桌面图片">
+          <span data-i18n="refresh">Refresh</span></button>
+        <button class="ghost-btn share" id="share" data-i18n-title="shareImageTitle" title="Share your desktop image while protecting your privacy">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 11.5 3.5-3 2.5 2 2-1.5 3 2.5"/></svg>
-          <span id="shareText">分享图片</span></button>
-        <button class="ghost-btn share" id="shareVideo" data-i18n-title="shareVideoTitle" title="用保护隐私的方式分享你的桌面动画">
+          <span id="shareText">Share image</span></button>
+        <button class="ghost-btn share" id="shareVideo" data-i18n-title="shareVideoTitle" title="Share your desktop animation while protecting your privacy">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="3.5" width="9" height="9" rx="1.5"/><path d="m10.8 6.6 3.4-2v6.8l-3.4-2"/></svg>
-          <span id="shareVideoText">分享动画</span></button>
+          <span id="shareVideoText">Share video</span></button>
       </div>
     </section>
     <section class="card controls" id="controls"></section>
@@ -321,43 +324,43 @@
 
 <div class="modal" id="shareModal" hidden role="dialog" aria-modal="true" aria-labelledby="shareTitle">
   <div class="box">
-    <h3 id="shareTitle">桌面图已经准备好了</h3>
-    <p class="sub" id="shareSub">图标换成了示例图标，文件名换成了色块，不会露出你的文件。图片已复制到剪贴板，可以直接粘贴到聊天、微博、小红书……</p>
-    <img id="shareImg" data-i18n-alt="sharePreviewAlt" alt="分享图预览">
+    <h3 id="shareTitle">Your desktop picture is ready</h3>
+    <p class="sub" id="shareSub">Icons are replaced with sample icons and file names with color blocks, so none of your files are shown.</p>
+    <img id="shareImg" data-i18n-alt="sharePreviewAlt" alt="Preview of the shared image">
     <video id="shareVid" hidden autoplay loop muted playsinline controls></video>
     <p class="path" id="sharePath"></p>
     <div class="actions">
-      <button class="ghost-btn" id="shareReveal" data-i18n="openFolder">打开所在文件夹</button>
-      <button class="ghost-btn" id="shareOpen">打开图片</button>
-      <a class="ghost-btn" id="shareDownload" hidden download="IconScape.png">保存图片</a>
-      <button class="ghost-btn primary" id="shareClose" data-i18n="ok">好的</button>
+      <button class="ghost-btn" id="shareReveal" data-i18n="openFolder">Show in folder</button>
+      <button class="ghost-btn" id="shareOpen">Open image</button>
+      <a class="ghost-btn" id="shareDownload" hidden download="IconScape.png">Save image</a>
+      <button class="ghost-btn primary" id="shareClose" data-i18n="ok">OK</button>
     </div>
   </div>
 </div>
 
 <div class="modal" id="helpModal" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="box help-box">
-    <button class="auth-close" id="helpCloseX" data-i18n-title="close" title="关闭" aria-label="Close">×</button>
-    <h3 id="helpTitle" data-i18n="helpTitle">使用帮助</h3>
-    <p class="sub" data-i18n="helpSubtitle">常见使用问题和解决方法</p>
+    <button class="auth-close" id="helpCloseX" data-i18n-title="close" title="Close" aria-label="Close">×</button>
+    <h3 id="helpTitle" data-i18n="helpTitle">Help</h3>
+    <p class="sub" data-i18n="helpSubtitle">Common questions and troubleshooting</p>
     <section class="help-article">
-      <h4 data-i18n="helpWallpaperQ">IconScape 频繁闪烁或重启，怎么办？</h4>
-      <p data-i18n="helpWallpaperA">如果系统壁纸会定时自动切换，切换时可能让 IconScape 闪烁或反复重启。请把常规壁纸改成不会自动切换的固定背景。</p>
+      <h4 data-i18n="helpWallpaperQ">IconScape keeps flickering or restarting. How do I fix it?</h4>
+      <p data-i18n="helpWallpaperA">If your regular Windows wallpaper changes automatically, each change can make IconScape flicker or restart. Use a fixed background that does not rotate.</p>
       <ol>
-        <li data-i18n="helpWallpaperStep1">打开 Windows 设置 → 个性化 → 背景。</li>
-        <li data-i18n="helpWallpaperStep2">将“个性化设置背景”设为“图片”或“纯色”，不要选择“幻灯片放映”或“Windows 聚焦”。</li>
-        <li data-i18n="helpWallpaperStep3">改完后重新打开 IconScape。</li>
+        <li data-i18n="helpWallpaperStep1">Open Windows Settings → Personalization → Background.</li>
+        <li data-i18n="helpWallpaperStep2">Set ‘Personalize your background’ to ‘Picture’ or ‘Solid color’. Do not use ‘Slideshow’ or ‘Windows spotlight’.</li>
+        <li data-i18n="helpWallpaperStep3">Restart IconScape after changing this setting.</li>
       </ol>
     </section>
-    <div class="actions"><button class="ghost-btn primary" id="helpDone" data-i18n="gotIt">知道了</button></div>
+    <div class="actions"><button class="ghost-btn primary" id="helpDone" data-i18n="gotIt">Got it</button></div>
   </div>
 </div>
 
 <footer class="bottom">
-  <span class="saved" id="saved" data-i18n="autosave">设置会自动保存，并立即应用到桌面</span>
+  <span class="saved" id="saved" data-i18n="autosave">Changes are saved automatically and applied to your desktop right away</span>
   <div class="bottom-actions">
-    <span class="based-on" data-i18n="basedOn">基于 Deskland Preview 修改 · GPL-3.0 · 非官方版本</span>
-    <button class="ghost-btn help-button" id="helpOpen" data-i18n-title="helpButtonTitle" title="常见问题" aria-label="Help">?</button>
+    <span class="based-on" data-i18n="basedOn">Based on Deskland Preview &#183; GPL-3.0 &#183; not an official release</span>
+    <button class="ghost-btn help-button" id="helpOpen" data-i18n-title="helpButtonTitle" title="Common questions and troubleshooting" aria-label="Help">?</button>
   </div>
 </footer>
 
@@ -368,16 +371,16 @@ const host = window.chrome && window.chrome.webview;
 const send = m => { if (host) host.postMessage(JSON.stringify(m)); };
 
 const state = { registry0: null, registry: null, theme: 'beach', params: {}, screen: null, icons: null,
-  langSetting: 'auto', langSys: 'zh-CN', autostartWarn: false, autostartSw: '',
+  langSetting: 'auto', langSys: 'en', autostartWarn: false, autostartSw: '',
   updateVersion: '', updateStatus: '', updateProgress: -1, updateError: '' };
 const $ = id => document.getElementById(id);
 const frame = $('preview');
 
 /* ---------- UI language: the string tables live in i18n/<language>.json (ui: interface texts; themes: theme names and parameters; for Simplified Chinese these are themes.json itself) ---------- */
 // When adding a language, also update the host's I18n.Supported and the language list exported with the Preview edition.
-const LANGS = { 'en': 'English', 'it': 'Italiano', 'zh-CN': '简体中文' };
+const LANGS = { 'en': 'English', 'it': 'Italiano', 'es': 'Español', 'fr': 'Français', 'de': 'Deutsch', 'zh-CN': '简体中文' };
 const I18N = {};
-let lang = 'zh-CN';
+let lang = 'en';                                   // English until the host or the browser says otherwise
 const loadLang = code => I18N[code] ? Promise.resolve() :
   fetch('i18n/' + code + '.json').then(r => r.json()).then(j => { I18N[code] = j; }).catch(() => { I18N[code] = {}; });
 // One UI string: current language → English → Simplified Chinese; {name} is replaced by the value in vars
@@ -580,6 +583,7 @@ function flashSaved() {
 }
 
 $('autostart').addEventListener('change', e => send({ t: 'autostart', v: e.target.checked }));
+$('animate').addEventListener('change', e => send({ t: 'animate', v: e.target.checked }));   // off: every theme on the desktop shows a still picture
 $('adaptive').addEventListener('change', e => setParam('adaptive', e.target.checked ? 1 : 0));
 $('autostartWarnOk').addEventListener('click', () => { state.autostartWarn = false; showAutostartWarn(); send({ t: 'autostartWarnSeen' }); });
 // Autostart-blocked reminder: the host only gives the security software's name; the sentence is built in the UI language
@@ -749,12 +753,13 @@ $('shareReveal').addEventListener('click', () => send({ t: 'revealShare' }));
 function onHost(m) {
   if (m.t === 'init') {
     state.langSetting = m.lang || 'auto';
-    state.langSys = m.langSys || 'zh-CN';
+    state.langSys = m.langSys || 'en';
     setLang(m.langEff || state.langSys).then(() => {        // Load the string tables for the UI language first, then draw the UI
       state.theme = themeById(m.theme) && themeById(m.theme).status === 'ready' ? m.theme : 'beach';
       state.params = m.params || {};
       state.screen = m.screen;
       $('autostart').checked = !!m.autostart;
+      $('animate').checked = m.animate !== false;
       state.autostartWarn = !!m.autostartWarn;
       state.autostartSw = m.autostartSw || '';
       showAutostartWarn();
@@ -788,6 +793,8 @@ function onHost(m) {
     updateFoot();
   } else if (m.t === 'autostart') {
     $('autostart').checked = !!m.v;
+  } else if (m.t === 'animate') {                              // animations stopped or restarted (also from the tray menu)
+    $('animate').checked = !!m.v;
   } else if (m.t === 'recProgress') {
     shareProgress(m.p);
   } else if (m.t === 'shareResult') {

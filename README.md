@@ -31,7 +31,7 @@ Added in IconScape:
 | Steampunk | Cosmos |
 | --- | --- |
 | ![Steampunk theme](prototype/thumbs/steampunk.webp) | ![Cosmos theme](prototype/thumbs/cosmos.webp) |
-| An old machine drawn by hand in pencil and watercolour: rusty patched sheets, meshing gears, pipes with pressure gauges and steam, cables with light bulbs, and a patched airship drifting by. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
+| An old machine room drawn by hand in pencil and watercolour: rusty patched sheets, an iron beam and a plank floor with working corners (a boiler and its flue, tanks piped into the wall, a store, doors with ladders and catwalks, a workbench under the electrical board), meshing gears, pipes and gauges, lit windows, hanging lamps, sparrows, a patched airship. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
 
 | Manga | Ninja Village |
 | --- | --- |
@@ -51,9 +51,10 @@ The theme list contains only these nine themes. The locked preview cards of Desk
 - **Nine complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk, Cosmos, Manga, Ninja Village and Storybook Woods is included and saved between sessions.
 - **Every monitor, one landscape:** the scene is computed over the whole desktop as your monitors are arranged, and each monitor shows its part: islands, coasts, clouds, boards and orbits continue from one monitor to the next, and a dragon, an airship or a comet crosses from one to the other. Monitors can be added, removed or rearranged while IconScape runs.
 - **Made for the desktop:** tray controls, startup on sign-in and automatic pause of each monitor that a maximized or full-screen window covers, even when that window is not in the foreground.
+- **Animations on or off:** the Animations switch in Settings, or Stop animations in the tray menu, keeps a still picture of the theme on every monitor; the choice is remembered.
 - **Private sharing:** image and animation exports use sample icons and color blocks, never a screenshot of your desktop or real file names.
 - **Independent installation:** IconScape uses its own install directory, settings, startup entry and instance identity, so it can coexist with Deskland.
-- **English, Italian and Simplified Chinese:** no sign-in, purchase restoration, update service or store API is included.
+- **Six languages:** English, Italian, Spanish, French, German and Simplified Chinese; "System default" follows Windows and falls back to English. No sign-in, purchase restoration, update service or store API is included.
 
 ## Requirements
 
@@ -127,7 +128,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 | `prototype/settings.html` | Settings interface |
 | `prototype/themes.json` | Theme definitions: pages, parameters, defaults and thumbnails |
 | `prototype/share.js` | Privacy-preserving image and animation sharing |
-| `prototype/i18n/` | Interface and theme texts: English, Italian and the interface texts in Simplified Chinese |
+| `prototype/i18n/` | Interface and theme texts in English, Italian, Spanish, French and German, and the interface texts in Simplified Chinese (its theme texts are `themes.json` itself) |
 | `prototype/assets/` | Images used by the included themes |
 | `tools/` | Installer build tooling, the version number (`version.json`), the icon generator (`make-icon.ps1`) and the browser-preview server for machines without Node.js (`serve.ps1`) |
 
@@ -146,7 +147,8 @@ Version 0.1.5, on top of Deskland Preview 0.1.3:
 - **Only included themes:** the 11 locked cards of the Deskland Wallpaper edition, with their purchase dialog and thumbnails, have been removed.
 - **Multi-monitor:** one wallpaper window per monitor instead of the primary monitor only, showing its part of one landscape computed over the whole desktop; windows are created, moved or closed when the monitor layout changes.
 - **Pause per monitor:** a monitor pauses when any maximized or full-screen window hides it, not only the foreground window; overlays that cover the screen without hiding anything are ignored.
-- **Italian interface:** settings, tray menu, messages and theme texts; the share buttons and share error messages now follow the interface language.
+- **Languages:** English is the main language, used whenever Windows uses a language that is not included; Italian, Spanish, French and German were added, and Simplified Chinese remains selectable. Settings, tray menu, messages, theme texts and the installer are translated; the share buttons and share error messages follow the interface language.
+- **Stop animations:** the tray pause is now a saved setting, also available as a switch in Settings.
 - **Seven themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk, Cosmos, Manga, Ninja Village and Storybook Woods. Their thumbnails are rendered from the themes themselves.
 - **Browser preview without Node.js:** `tools/serve.ps1`.
 
@@ -189,7 +191,7 @@ Aggiunti in IconScape:
 | Steampunk | Universo |
 | --- | --- |
 | ![Tema Steampunk](prototype/thumbs/steampunk.webp) | ![Tema Universo](prototype/thumbs/cosmos.webp) |
-| Una vecchia macchina disegnata a mano, a matita e acquerello: lamiere arrugginite e rattoppate, ingranaggi che ingranano davvero, tubi con manometri e vapore, cavi con lampadine e un dirigibile rattoppato di passaggio. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
+| Una vecchia stanza delle macchine disegnata a mano, a matita e acquerello: lamiere arrugginite e rattoppate, una trave di ferro e un pavimento di assi con le postazioni di lavoro (caldaia con canna fumaria, serbatoi con i tubi nel muro, magazzino, porte con scale e passerelle, banco sotto il quadro elettrico), ingranaggi che ingranano, tubi e manometri, finestre accese, lampade appese, passerotti, un dirigibile rattoppato. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
 
 | Manga | Villaggio ninja |
 | --- | --- |
@@ -209,9 +211,10 @@ L'elenco dei temi contiene solo questi nove. Le schede bloccate dell'edizione Wa
 - **Nove temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk, Universo, Manga, Villaggio ninja e Bosco delle fiabe sono disponibili e vengono salvate.
 - **Tutti i monitor, un solo paesaggio:** la scena è calcolata sull'intero desktop, così come sono disposti i monitor, e ogni monitor ne mostra la sua parte: isole, coste, nuvole, circuiti e orbite continuano da un monitor all'altro, e un drago, un dirigibile o una cometa passano dall'uno all'altro. I monitor si possono collegare, scollegare o ridisporre mentre IconScape è in esecuzione.
 - **Pensato per il desktop:** controlli nell'area di notifica, avvio all'accesso e pausa automatica di ogni monitor coperto da una finestra massimizzata o a schermo intero, anche se quella finestra non è in primo piano.
+- **Animazioni accese o spente:** l'interruttore Animazioni nelle impostazioni, o Ferma le animazioni nel menu dell'icona, lascia su ogni monitor un'immagine ferma del tema; la scelta viene ricordata.
 - **Condivisione rispettosa della privacy:** immagini e animazioni usano icone di esempio e blocchi di colore, mai una cattura del desktop o i nomi veri dei file.
 - **Installazione indipendente:** IconScape ha cartella di installazione, impostazioni, voce di avvio e identità dell'istanza proprie, quindi può convivere con Deskland.
-- **Italiano, inglese e cinese semplificato:** non sono inclusi accesso con account, ripristino degli acquisti, servizio di aggiornamento né interfacce dello store.
+- **Sei lingue:** inglese, italiano, spagnolo, francese, tedesco e cinese semplificato; «Predefinita di sistema» segue Windows e, per le altre lingue, usa l'inglese. Non sono inclusi accesso con account, ripristino degli acquisti, servizio di aggiornamento né interfacce dello store.
 
 ### Requisiti
 
@@ -285,7 +288,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 | `prototype/settings.html` | Interfaccia delle impostazioni |
 | `prototype/themes.json` | Definizione dei temi: pagine, parametri, valori predefiniti e miniature |
 | `prototype/share.js` | Condivisione di immagini e animazioni rispettosa della privacy |
-| `prototype/i18n/` | Testi dell'interfaccia e dei temi: inglese, italiano e testi dell'interfaccia in cinese semplificato |
+| `prototype/i18n/` | Testi dell'interfaccia e dei temi in inglese, italiano, spagnolo, francese e tedesco, e testi dell'interfaccia in cinese semplificato (i testi cinesi dei temi sono `themes.json` stesso) |
 | `prototype/assets/` | Immagini usate dai temi inclusi |
 | `tools/` | Strumenti per l'installer, numero di versione (`version.json`), generatore dell'icona (`make-icon.ps1`) e server dell'anteprima per chi non ha Node.js (`serve.ps1`) |
 
@@ -304,7 +307,8 @@ Versione 0.1.5, basata su Deskland Preview 0.1.3:
 - **Solo i temi inclusi:** sono state tolte le 11 schede bloccate dell'edizione Wallpaper di Deskland, con la finestra di acquisto e le miniature.
 - **Multi monitor:** una finestra di sfondo per ogni monitor invece del solo monitor principale, che mostra la propria parte di un unico paesaggio calcolato sull'intero desktop; le finestre vengono create, spostate o chiuse quando cambia la disposizione dei monitor.
 - **Pausa per monitor:** un monitor va in pausa quando lo nasconde una qualsiasi finestra massimizzata o a schermo intero, non solo quella in primo piano; le sovrapposizioni che coprono lo schermo senza nascondere nulla vengono ignorate.
-- **Interfaccia in italiano:** impostazioni, menu dell'icona, messaggi e testi dei temi; anche i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
+- **Lingue:** l'inglese è la lingua principale, usata quando Windows è in una lingua non inclusa; sono stati aggiunti italiano, spagnolo, francese e tedesco, e il cinese semplificato resta selezionabile. Impostazioni, menu dell'icona, messaggi, testi dei temi e installer sono tradotti; i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
+- **Ferma le animazioni:** la pausa del menu dell'icona ora è un'impostazione salvata, disponibile anche come interruttore nelle impostazioni.
 - **Sette temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk, Universo, Manga, Villaggio ninja e Bosco delle fiabe. Le loro miniature sono generate dai temi stessi.
 - **Anteprima nel browser senza Node.js:** `tools/serve.ps1`.
 
@@ -347,7 +351,7 @@ IconScape 新增：
 | 蒸汽朋克 | 宇宙 |
 | --- | --- |
 | ![蒸汽朋克主题](prototype/thumbs/steampunk.webp) | ![宇宙主题](prototype/thumbs/cosmos.webp) |
-| 铅笔加水彩手绘的旧机器：生锈打补丁的铁皮、真正咬合的齿轮、带压力表和蒸汽的管道、挂着灯泡的电线，以及偶尔飘过的打补丁飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
+| 铅笔加水彩手绘的旧机房：生锈打补丁的铁皮，铁梁和木地板之间的工作角（带烟道的锅炉、管道通进墙里的水箱、货堆、带梯子和走道的门、配电板下的工作台），咬合的齿轮、管道和压力表、亮灯的窗户、垂下的灯、麻雀和打补丁的飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
 
 | 漫画 | 忍者之村 |
 | --- | --- |
@@ -367,9 +371,10 @@ IconScape 新增：
 - **九个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克、宇宙、漫画、忍者之村和童话森林的全部参数均可调整并自动保存。
 - **所有显示器，一片风景：**场景按显示器的实际排列在整个桌面上计算，每个显示器显示其中的一部分：岛屿、海岸、云、电路和轨道从一个显示器延续到另一个，龙、飞艇或彗星会从一个显示器飞到另一个。运行中增减或重新排列显示器会自动调整。
 - **适合常驻桌面：**托盘控制、开机自动启动；某个显示器被最大化或全屏窗口遮住时（即使该窗口不在前台）只暂停这个显示器。
+- **动画开关：**设置中的“动画”开关或托盘菜单中的“停止动画”会让每个显示器停在主题的静止画面上，并记住这一选择。
 - **隐私分享：**图片和动画使用示例图标与名字色块，不截取桌面窗口或真实文件名。
 - **独立安装：**安装目录、用户数据、启动项和运行实例标识均独立，可与 Deskland 共存。
-- **简体中文、英文和意大利语：**不包含登录、购买恢复、自动更新或商店接口。
+- **六种语言：**英文、意大利语、西班牙语、法语、德语和简体中文；“跟随系统”使用 Windows 的语言，其他语言时使用英文。不包含登录、购买恢复、自动更新或商店接口。
 
 ### 系统要求
 
@@ -441,7 +446,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 | `prototype/settings.html` | 设置界面 |
 | `prototype/themes.json` | 主题定义：页面、参数、默认值和缩略图 |
 | `prototype/share.js` | 隐私保护的图片和动画分享 |
-| `prototype/i18n/` | 界面与主题文字：英文、意大利语，以及简体中文界面文字 |
+| `prototype/i18n/` | 英文、意大利语、西班牙语、法语和德语的界面与主题文字，以及简体中文界面文字（中文主题文字就是 `themes.json`） |
 | `prototype/assets/` | 随附主题图片素材 |
 | `tools/` | 安装包构建工具、版本号（`version.json`）、图标生成脚本（`make-icon.ps1`）以及无 Node.js 时使用的浏览器预览服务（`serve.ps1`） |
 
@@ -460,7 +465,8 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 - **只保留包含的主题：**移除了 Deskland 壁纸版的 11 个锁定主题卡片、购买窗口和缩略图。
 - **多显示器：**每个显示器一个壁纸窗口，不再只覆盖主显示器，各自显示在整个桌面上计算的同一片风景的一部分；显示器布局变化时自动创建、移动或关闭窗口。
 - **按显示器暂停：**任何最大化或全屏窗口遮住某个显示器时暂停该显示器，不只看前台窗口；覆盖整个屏幕但不遮挡内容的悬浮层不会触发暂停。
-- **意大利语界面：**设置、托盘菜单、提示和主题文字；分享按钮和分享错误信息也跟随界面语言。
+- **语言：**英文是主要语言，Windows 使用未包含的语言时显示英文；新增意大利语、西班牙语、法语和德语，简体中文仍可选择。设置、托盘菜单、提示、主题文字和安装包均已翻译；分享按钮和分享错误信息跟随界面语言。
+- **停止动画：**托盘菜单的暂停现在是会保存的设置，设置界面中也有对应开关。
 - **七个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克、宇宙、漫画、忍者之村和童话森林，缩略图由主题本身渲染生成。
 - **无需 Node.js 的浏览器预览：**`tools/serve.ps1`。
 

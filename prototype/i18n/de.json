@@ -1,0 +1,607 @@
+{
+  "name": "Deutsch",
+  "ui": {
+    "adaptive": "Adaptiv",
+    "themes": "Themen",
+    "collectionTitle": "Finde deine Landschaft.",
+    "collectionSubtitle": "Mach deine Symbole zu einem Teil der Landschaft.",
+    "language": "Sprache",
+    "langAuto": "Systemsprache",
+    "langAutoWith": "Systemsprache ({name})",
+    "autostart": "Mit Windows starten",
+    "autostartTitle": "IconScape bei der Anmeldung automatisch starten",
+    "animate": "Animationen",
+    "animateTitle": "Ausschalten, um ein Standbild auf dem Desktop zu behalten: Nichts bewegt sich mehr, Prozessor und Akku werden kaum belastet",
+    "autostartBlocked": "Der Start mit Windows wurde möglicherweise blockiert",
+    "autostartWarnSw": "IconScape wurde diesmal nicht automatisch gestartet: {sw} hat es möglicherweise blockiert. Öffne {sw}, suche IconScape in dessen Autostart-Verwaltung und erlaube es.",
+    "autostartWarnGeneric": "IconScape wurde diesmal nicht automatisch gestartet: Deine Sicherheitssoftware oder die Windows-Einstellungen für Autostart-Apps haben es möglicherweise blockiert. Aktiviere IconScape in der Autostart-Verwaltung deiner Sicherheitssoftware oder unter Windows-Einstellungen → Apps → Autostart.",
+    "gotIt": "Verstanden",
+    "updateAvailable": "Update verfügbar",
+    "updateVersion": "IconScape {version} ist bereit. Dein Thema und deine Einstellungen bleiben erhalten.",
+    "updateProgram": "Jetzt aktualisieren",
+    "updateRetry": "Update erneut versuchen",
+    "updateWorking": "Wird aktualisiert…",
+    "updateDownloading": "Herunterladen und installieren… {progress}",
+    "updateInstalling": "Update wird installiert… {progress}",
+    "updateCompletedTitle": "Update abgeschlossen",
+    "updateCompleted": "Das Update wurde heruntergeladen und installiert. Falls IconScape nicht von selbst neu startet, öffne es erneut.",
+    "updateDone": "Fertig",
+    "updateCanceled": "Das Update wurde abgebrochen. Du kannst es später erneut versuchen.",
+    "updateLowBattery": "Das Update konnte im Akkubetrieb nicht abgeschlossen werden. Schließe den Computer an den Strom an und versuche es erneut.",
+    "updateWifiRecommended": "Diese Verbindung ist möglicherweise kostenpflichtig. Wechsle das Netzwerk oder versuche es später.",
+    "updateWifiRequired": "Verbinde dich mit einem WLAN, um dieses Update herunterzuladen.",
+    "updateStoreRequired": "Diese Update-Methode gibt es nur in der Microsoft-Store-Edition.",
+    "updateFailed": "Das Update ist fehlgeschlagen. Prüfe die Verbindung oder den Microsoft Store und versuche es erneut.",
+    "updateCheckingTitle": "Suche nach Updates",
+    "updateChecking": "Verbindung zum Update-Server wird hergestellt und nach einer neuen Version gesucht…",
+    "updateFailedTitle": "Update nicht abgeschlossen",
+    "updateCheckFailedTitle": "Suche nach Updates nicht möglich",
+    "networkTimeout": "Die Verbindung oder der Download hat zu lange gedauert. Prüfe Netzwerk, Proxy oder Firewall und versuche es erneut. Wenn andere Websites funktionieren, antwortet der Server vielleicht langsam.",
+    "networkDns": "Die Serveradresse konnte nicht aufgelöst werden. Prüfe Netzwerk, DNS oder Proxy und versuche es erneut.",
+    "networkTls": "Es konnte keine sichere Verbindung hergestellt werden. Prüfe die Systemzeit und eine eventuelle Sicherheitsprüfung im Netzwerk oder Proxy und versuche es erneut.",
+    "networkLocal": "Die Netzwerkverbindung ist fehlgeschlagen oder wurde unterbrochen. Prüfe Netzwerk, Proxy oder Firewall und versuche es erneut.",
+    "serverUnavailable": "Der Server wurde erreicht, aber der Dienst ist vorübergehend nicht verfügbar (HTTP 5xx). Versuche es später erneut.",
+    "serverRejected": "Der Server hat die Anfrage abgelehnt (HTTP 4xx). Versuche es später erneut oder wende dich an den Support, wenn es weiter auftritt.",
+    "serverInvalid": "Der Server hat eine unbekannte Antwort zurückgegeben. Versuche es später erneut oder wende dich an den Support, wenn es weiter auftritt.",
+    "downloadInvalid": "Der Download war unvollständig oder hat die Sicherheitsprüfung nicht bestanden, deshalb wurde die Installation gestoppt. Versuche es erneut oder wende dich an den Support, wenn es weiter auftritt.",
+    "livePreview": "Live-Vorschau",
+    "previewIcons": "Live-Vorschau · mit den {n} Symbolen deines Desktops",
+    "previewNoIcons": "Live-Vorschau · die Desktopsymbole sind ausgeblendet",
+    "refresh": "Neu erzeugen",
+    "refreshTitle": "Eine neue Szene für dieses Thema erzeugen",
+    "shareImage": "Bild teilen",
+    "shareImageTitle": "Teile ein Bild deines Desktops und schütze dabei deine Privatsphäre",
+    "shareVideo": "Video teilen",
+    "shareVideoTitle": "Teile die Animation deines Desktops und schütze dabei deine Privatsphäre",
+    "generating": "Wird erzeugt…",
+    "preparingRec": "Wird vorbereitet…",
+    "recording": "Aufnahme {p} %",
+    "savingVideo": "Wird gespeichert…",
+    "shareErrNoRecorder": "dieser Computer kann kein Video aufnehmen",
+    "shareErrBusy": "die vorherige Aufnahme läuft noch",
+    "shareErrNoFrames": "das Bild hat sich nicht bewegt (der Hintergrund ist vielleicht vollständig verdeckt)",
+    "shareErrReadVideo": "das aufgenommene Video konnte nicht gelesen werden",
+    "shareErrRecordingNow": "es wird gerade ein Video aufgenommen; versuche es erneut, wenn es fertig ist",
+    "shareFailImage": "Das Bild konnte nicht erstellt werden: {msg}",
+    "shareFailVideo": "Das Video konnte nicht aufgenommen werden: {msg}",
+    "unknownReason": "unbekannter Fehler",
+    "shareReadyImage": "Das Bild deines Desktops ist fertig",
+    "shareReadyVideo": "Der Clip deines Desktops ist fertig",
+    "sharePrivacy": "Die Symbole werden durch Beispielsymbole und die Dateinamen durch Farbblöcke ersetzt, sodass keine deiner Dateien zu sehen ist.",
+    "shareCopiedImage": "Das Bild ist in der Zwischenablage: Füge es direkt in einen Chat oder Beitrag ein.",
+    "shareCopiedVideo": "Die Videodatei ist in der Zwischenablage: Füge sie in ein Chatfenster ein, um sie zu senden.",
+    "shareBrowserHint": " (Vorschau im Browser: Klicke auf „{btn}“, um herunterzuladen.)",
+    "savedTo": "Gespeichert unter {path}",
+    "openFolder": "Im Ordner anzeigen",
+    "openImage": "Bild öffnen",
+    "openVideo": "Video öffnen",
+    "saveImage": "Bild speichern",
+    "saveVideo": "Video speichern",
+    "ok": "OK",
+    "close": "Schließen",
+    "sharePreviewAlt": "Vorschau des geteilten Bildes",
+    "autosave": "Änderungen werden automatisch gespeichert und sofort auf den Desktop angewendet",
+    "basedOn": "Basiert auf Deskland Preview · GPL-3.0 · keine offizielle Version",
+    "saved": "Gespeichert ✓",
+    "resetAll": "Alles zurücksetzen",
+    "resetAllTitle": "Alle Einstellungen dieses Themas auf die Standardwerte zurücksetzen",
+    "helpButtonTitle": "Häufige Fragen und Fehlerbehebung",
+    "helpTitle": "Hilfe",
+    "helpSubtitle": "Häufige Fragen und Fehlerbehebung",
+    "helpWallpaperQ": "IconScape flackert oder startet ständig neu. Wie behebe ich das?",
+    "helpWallpaperA": "Wenn sich der normale Windows-Hintergrund automatisch ändert, kann jeder Wechsel IconScape flackern oder neu starten lassen. Verwende einen festen Hintergrund, der nicht wechselt.",
+    "helpWallpaperStep1": "Öffne Windows-Einstellungen → Personalisierung → Hintergrund.",
+    "helpWallpaperStep2": "Stelle „Hintergrund anpassen“ auf „Bild“ oder „Volltonfarbe“. Verwende weder „Diashow“ noch „Windows-Blickpunkt“.",
+    "helpWallpaperStep3": "Starte IconScape neu, nachdem du diese Einstellung geändert hast.",
+    "badgeOn": "Aktiv",
+    "badgeReady": "Verfügbar",
+    "badgeSoon": "Bald",
+    "ongoingTitle": "Es kommt noch mehr",
+    "ongoingDesc": "Mit der Zeit kommen neue Szenen und Elemente hinzu.",
+    "noParams": "Dieses Thema hat noch keine Einstellungen",
+    "resetOne": "Auf den Standardwert zurücksetzen: {v}",
+    "resetOneAria": "{label} auf den Standardwert zurücksetzen",
+    "dblclickReset": "Doppelklick zum Zurücksetzen ({v})",
+    "comingSoon": "Demnächst:"
+  },
+  "host": {
+    "traySettings": "Einstellungen…",
+    "trayPause": "Animationen anhalten",
+    "trayReload": "Neu laden",
+    "trayAutostart": "Mit Windows starten",
+    "trayExit": "Beenden (Hintergrund wiederherstellen)",
+    "welcomeTitle": "IconScape läuft",
+    "welcomeBody": "Klicke auf das IconScape-Symbol im Infobereich{hotkey}, um das Menü zu öffnen.\nNicht zu sehen? Klicke auf ^ rechts in der Taskleiste.",
+    "welcomeHotkey": " oder drücke Strg+Alt+H",
+    "errNotReady": "Der Hintergrund ist noch nicht bereit",
+    "errNoImage": "Kein Bild empfangen",
+    "errNoVideo": "Kein Video empfangen",
+    "errBusyImage": "Das vorherige Bild wird noch erzeugt",
+    "errBusyVideo": "Der vorherige Clip wird noch aufgenommen",
+    "errImageTimeout": "Das Erzeugen hat zu lange gedauert",
+    "errVideoTimeout": "Die Aufnahme hat zu lange gedauert",
+    "errBadData": "Die Seite hat unvollständige Daten zurückgegeben",
+    "errRebuilt": "Windows hat die Hintergrundebene immer wieder neu aufgebaut, deshalb wurde IconScape beendet.",
+    "errSeeLog": "Details stehen im Protokoll: {path}",
+    "errSettings": "Das Einstellungsfenster konnte nicht geöffnet werden: {msg}",
+    "errNoPage": "Seite nicht gefunden: {path}",
+    "errNoDesktop": "Das Desktopfenster wurde nicht gefunden, deshalb kann der Hintergrund nicht platziert werden.",
+    "errStart": "Start fehlgeschlagen: {msg}"
+  },
+  "themes": {
+    "woodland": {
+      "name": "Märchenwald",
+      "desc": "Ein Bilderbuchwald, gezeichnet wie ein klassischer Zeichentrickfilm: Deine Symbole schwimmen auf Teichen mit Seerosen, Fröschen und Entenfamilien; ringsum runde Bäume, rote Pilze und Blumen, Häschen, Füchse und Igel auf ihrem Spaziergang, blaue Vögel und Schmetterlinge; am Tag, bei Sonnenuntergang oder nachts mit Glühwürmchen",
+      "groups": [
+        "Teiche",
+        "Wald",
+        "Tiere"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Größe der Teiche",
+          "hint": "Wie weit sich der Teich um deine Symbole ausdehnt"
+        },
+        "warp": {
+          "label": "Unregelmäßige Ufer",
+          "hint": "Wie unregelmäßig der Umriss der Teiche ist"
+        },
+        "trees": {
+          "label": "Bäume",
+          "hint": "Wie viele Bäume und Büsche auf der Wiese wachsen"
+        },
+        "flowers": {
+          "label": "Blumen",
+          "hint": "Wie viele Blumen und Pilze auf der Wiese wachsen"
+        },
+        "time": {
+          "label": "Tageszeit",
+          "options": [
+            "Tag",
+            "Sonnenuntergang",
+            "Nacht"
+          ]
+        },
+        "animals": {
+          "label": "Kleine Tiere",
+          "hint": "Wie viele kleine Tiere auf jedem Bildschirm umherlaufen (Häschen, Füchse, Igel)",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Blaue Vögel",
+          "hint": "Vögel, die ab und zu über den Himmel fliegen",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell sich Tiere, Entenküken und Schmetterlinge bewegen"
+        }
+      }
+    },
+    "ninja": {
+      "name": "Ninja-Dorf",
+      "desc": "Ein japanisches Dorf, gezeichnet wie ein Anime der Siebzigerjahre: Häuser von oben mit Ziegeldächern, weißen Wänden und Holzbalken, geharkter Sand eines Zen-Gartens, flache Farben mit Tuschekontur, harte Schatten und Filmkorn; Steinlaternen, blühende Kirschbäume oder rote Ahorne, und ein Ninja, der in einer Rauchwolke erscheint, von Dach zu Dach springt, einen Shuriken wirft und verschwindet",
+      "groups": [
+        "Dorf",
+        "Stimmung",
+        "Ninja"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Größe der Dächer",
+          "hint": "Wie weit sich die Dächer um deine Symbole ausdehnen"
+        },
+        "warp": {
+          "label": "Umriss der Dächer",
+          "hint": "Wie unregelmäßig der Umriss der Dächer ist"
+        },
+        "rake": {
+          "label": "Geharkter Sand",
+          "hint": "Wie viele Sandrillen Dächer und Felsen umgeben; bei 0 verschwindet der Sand",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Bäume",
+          "hint": "Wie viele Bäume und Bambusbüschel auf dem Moos wachsen"
+        },
+        "lanterns": {
+          "label": "Steinlaternen",
+          "hint": "Brennende Laternen am Rand des Sandes, pro Bildschirm",
+          "unit": ""
+        },
+        "time": {
+          "label": "Tageszeit",
+          "options": [
+            "Nacht",
+            "Sonnenuntergang",
+            "Tag"
+          ]
+        },
+        "season": {
+          "label": "Jahreszeit",
+          "hint": "Im Frühling Kirschbäume und Blütenblätter, im Herbst rote Ahorne und Laub",
+          "options": [
+            "Frühling",
+            "Herbst"
+          ]
+        },
+        "leaves": {
+          "label": "Blüten und Blätter",
+          "hint": "Wie viele Blütenblätter oder Blätter auf jedem Bildschirm fallen",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell Blütenblätter und Blätter fallen"
+        },
+        "film": {
+          "label": "Filmeffekt",
+          "hint": "Korn, Kratzer und dunkle Ränder einer Animationsfilmkopie aus den Siebzigern"
+        },
+        "ninja": {
+          "label": "Ninja anzeigen",
+          "hint": "Ein Ninja, der ab und zu erscheint und von Dach zu Dach springt",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        }
+      }
+    },
+    "manga": {
+      "name": "Manga",
+      "desc": "Eine Mangaseite in Schwarzweiß: Deine Symbole liegen auf Tuscheflecken, aus denen Aufprall-Linien schießen; die Panels sind Hintergründe in Feder und Raster: Straßen in Perspektive, die Stadt bei Nacht, Gewitterwolken und Strommasten, Berge und Kiefern, Meer und Felsen, Bambus, Schreintreppen, Dächer und eine Pagode unter dem Mond, mit Lautmalereien, Kirschblütenblättern und ab und zu einer vorbeifliegenden Krähe",
+      "groups": [
+        "Tusche",
+        "Seite",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Größe des Flecks",
+          "hint": "Wie weit sich die schwarze Tusche um deine Symbole ausdehnt"
+        },
+        "warp": {
+          "label": "Unregelmäßige Ränder",
+          "hint": "Wie unregelmäßig der Umriss der Tusche ist"
+        },
+        "burst": {
+          "label": "Aufprall-Linien",
+          "hint": "Länge der Spitzen, die aus der Tusche schießen"
+        },
+        "palette": {
+          "label": "Tusche und Papier",
+          "options": [
+            "Schwarzweiß",
+            "Sepia",
+            "Blaue Tinte",
+            "Shōjo-Rosa"
+          ]
+        },
+        "panels": {
+          "label": "Panels",
+          "hint": "Wie viele Panels die Seite teilen: Je höher, desto kleiner sind sie"
+        },
+        "sfx": {
+          "label": "Lautmalereien",
+          "hint": "Wie oft Wörter wie ドン oder ゴゴゴ erscheinen"
+        },
+        "petals": {
+          "label": "Kirschblütenblätter",
+          "hint": "Wie viele Blütenblätter auf jedem Bildschirm fallen",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell die Blütenblätter fallen"
+        },
+        "crow": {
+          "label": "Krähe anzeigen",
+          "hint": "Eine Krähe, die ab und zu über die Seite fliegt",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        }
+      }
+    },
+    "cosmos": {
+      "name": "Kosmos",
+      "desc": "Der tiefe Weltraum: Jede Symbolgruppe ist ein Sternsystem, dessen Umlaufbahnen seiner Form folgen und auf denen Planeten kreisen; ringsum Nebel, eine rotierende Galaxie, Sternschnuppen, Kometen und ab und zu eine Nova",
+      "groups": [
+        "Weltraum",
+        "Sternsysteme",
+        "Tiefer Himmel"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Ausdehnung des Nebels",
+          "hint": "Wie weit sich Nebel und dunkle Leere um deine Symbole ausdehnen"
+        },
+        "palette": {
+          "label": "Farbe des Nebels",
+          "options": [
+            "Violett",
+            "Smaragd",
+            "Feuer",
+            "Eis"
+          ]
+        },
+        "stars": {
+          "label": "Sterne",
+          "hint": "Wie viele Sterne den Hintergrund füllen"
+        },
+        "orbits": {
+          "label": "Umlaufbahnen",
+          "hint": "Anzahl der Umlaufbahnen um jede Symbolgruppe",
+          "unit": ""
+        },
+        "planets": {
+          "label": "Planeten",
+          "hint": "Anzahl der Planeten auf den Umlaufbahnen",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Geschwindigkeit",
+          "hint": "Geschwindigkeit der Planeten und der Drehung der Galaxie"
+        },
+        "galaxy": {
+          "label": "Galaxie anzeigen",
+          "hint": "Eine Spiralgalaxie, die sich langsam im freien Raum dreht",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "meteors": {
+          "label": "Sternschnuppen",
+          "hint": "Wie viele Sternschnuppen über den Himmel ziehen; ab und zu kommt auch ein Komet vorbei"
+        }
+      }
+    },
+    "steampunk": {
+      "name": "Steampunk",
+      "desc": "Ein alter Maschinenraum, von Hand mit Bleistift und Aquarell gezeichnet: Deine Symbole liegen auf rostigen, geflickten Blechen; zwischen einem Eisenträger und einem Bretterboden stehen ein Kessel mit Rauchrohr und Kohle, Tanks, deren Rohre in die Wand führen, Kisten und Fässer unter einem Regal, Türen mit Schild und Lampe, Leitern und Laufstege, eine Werkbank unter dem Schaltkasten; dazu Zahnräder, die ineinandergreifen, Rohre mit Manometern und Dampf, beleuchtete Fenster, Hängelampen, Spatzen und ab und zu ein geflicktes Luftschiff",
+      "groups": [
+        "Bleche",
+        "Mechanik",
+        "Dampf"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Größe der Bleche",
+          "hint": "Wie weit sich die Bleche um deine Symbole ausdehnen"
+        },
+        "metal": {
+          "label": "Metalloberfläche",
+          "options": [
+            "Rost",
+            "Grünspan",
+            "Eisen"
+          ]
+        },
+        "gears": {
+          "label": "Zahnräder",
+          "hint": "Wie viele Zahnradgruppen den freien Raum füllen"
+        },
+        "details": {
+          "label": "Details",
+          "hint": "Wie voll der Raum ist: Arbeitsecken am Boden (Kessel, Tank, Lager, Tür mit Leiter und Laufsteg, Werkbank mit Schaltkasten), Fenster, Lampen und Ketten am Träger, Bullaugen und Schilder auf den Blechen"
+        },
+        "speed": {
+          "label": "Geschwindigkeit",
+          "hint": "Geschwindigkeit der Zahnräder und der Manometerzeiger"
+        },
+        "pipes": {
+          "label": "Rohre",
+          "hint": "Anzahl der Rohre, die von den Blechen abgehen",
+          "unit": ""
+        },
+        "steam": {
+          "label": "Dampf",
+          "hint": "Wie viel Dampf aus den Rohrverbindungen entweicht"
+        },
+        "airship": {
+          "label": "Luftschiff anzeigen",
+          "hint": "Ein Luftschiff, das ab und zu über die Maschine zieht",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        }
+      }
+    },
+    "isles": {
+      "name": "Schwebende Inseln",
+      "desc": "Grasinseln schweben in der Dämmerung über einem Wolkenmeer: Deine Symbole ruhen auf den Inseln zwischen leuchtenden Kristallen, magischen Funken und ab und zu einem vorbeifliegenden Drachen",
+      "groups": [
+        "Inseln",
+        "Himmel",
+        "Magie",
+        "Kreaturen"
+      ],
+      "params": {
+        "sky": {
+          "label": "Himmelsfarbe",
+          "hint": "Der Farbton von Himmel und Wolkenmeer unter den Inseln",
+          "options": [
+            "Dämmerung",
+            "Morgenröte",
+            "Tag",
+            "Nacht"
+          ]
+        },
+        "sigma": {
+          "label": "Größe der Inseln",
+          "hint": "Wie weit sich die Inseln um deine Symbole ausdehnen"
+        },
+        "warp": {
+          "label": "Unregelmäßige Ränder",
+          "hint": "Wie unregelmäßig der Umriss der Inseln ist"
+        },
+        "islets": {
+          "label": "Inselchen",
+          "hint": "Zusätzliche kleine Inseln, die weit weg von den Symbolen schweben",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Bäume",
+          "hint": "Wie viele Bäume auf den Inseln wachsen"
+        },
+        "crystals": {
+          "label": "Kristalle",
+          "hint": "Anzahl der leuchtenden Kristalle nahe dem Inselrand",
+          "unit": ""
+        },
+        "motes": {
+          "label": "Magische Funken",
+          "hint": "Kleine Lichtpunkte, die langsam aufsteigen",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Bewegungstempo",
+          "hint": "Wie schnell sich Wolken und Funken bewegen"
+        },
+        "dragon": {
+          "label": "Drachen anzeigen",
+          "hint": "Ein Drache, der ab und zu über den Himmel fliegt",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        }
+      }
+    },
+    "circuit": {
+      "name": "Platine",
+      "desc": "Eine dunkle Leiterplatte: Deine Symbole liegen auf Kupferflächen, die Leiterbahnen fächern sich in 45°-Winkeln auf und Datenimpulse laufen darüber",
+      "groups": [
+        "Platine",
+        "Signale"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Kupferfläche",
+          "hint": "Wie weit sich die Kupferfläche um deine Symbole ausdehnt"
+        },
+        "density": {
+          "label": "Dichte der Leiterbahnen",
+          "hint": "Wie viele Leiterbahnen, Chips und Bauteile die Platine füllen"
+        },
+        "color": {
+          "label": "Farbe",
+          "options": [
+            "Grün",
+            "Cyan",
+            "Bernstein",
+            "Magenta"
+          ]
+        },
+        "pulses": {
+          "label": "Datenimpulse",
+          "hint": "Anzahl der Lichtpunkte, die über die Leiterbahnen laufen",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Geschwindigkeit",
+          "hint": "Geschwindigkeit der Impulse, des Scanstreifens und der fallenden Ziffern"
+        },
+        "rain": {
+          "label": "Ziffernregen",
+          "hint": "Wie viele Spalten hexadezimaler Ziffern über die Platine fallen"
+        },
+        "scan": {
+          "label": "Scanstreifen",
+          "hint": "Ein Lichtstreifen, der die Leiterbahnen von oben nach unten abtastet",
+          "options": [
+            "Aus",
+            "Ein"
+          ]
+        }
+      }
+    },
+    "beach": {
+      "name": "Strand",
+      "desc": "Die Küstenlinie schmiegt sich um deine Dateien, während die Wellen den Sand hinaufrollen",
+      "groups": [
+        "Ufer",
+        "Wasser",
+        "Details"
+      ],
+      "params": {
+        "palms": {
+          "label": "Kokospalmen",
+          "hint": "Anzahl der Palmen an der Küste; 0 blendet sie aus. Bei zu wenig Sand erscheinen weniger.",
+          "unit": ""
+        },
+        "sigma": {
+          "label": "Abstand zu den Symbolen",
+          "hint": "Wie weit das Ufer von deinen Symbolen entfernt ist"
+        },
+        "warp": {
+          "label": "Gewundene Küste",
+          "hint": "Wie stark sich die Küstenlinie windet"
+        },
+        "shoal": {
+          "label": "Klares Wasser",
+          "hint": "Wie breit der Streifen klaren Wassers über dem Sand ist"
+        },
+        "shallow": {
+          "label": "Flachwasser",
+          "hint": "Auf welcher Strecke das Wasser von Türkis zu tiefem Blau übergeht"
+        },
+        "kayaks": {
+          "label": "Kajaks",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Seevögel",
+          "hint": "Möwen, die hoch oben gleiten und kreisen",
+          "unit": ""
+        }
+      }
+    },
+    "meadow": {
+      "name": "Wiese",
+      "desc": "Eine Wiese als lavierte Federzeichnung, auf der sich deine Symbole in weißen Wolken verstecken, die dunkelgrüne Schatten werfen",
+      "groups": [
+        "Rund um die Symbole",
+        "Wolken",
+        "Figuren"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Größe der Wolken",
+          "hint": "Wie weit sich die Wolken um deine Symbole ausdehnen"
+        },
+        "cover": {
+          "label": "Wolken über der Wiese",
+          "hint": "Wie viele Wolken über der offenen Wiese schweben"
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell sich die Wolken bewegen und ihre Form ändern"
+        },
+        "showBoy": {
+          "label": "Jungen anzeigen",
+          "hint": "Zeigt oder versteckt den Jungen mit seinem Drachen",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "showCat": {
+          "label": "Kätzchen anzeigen",
+          "hint": "Das schwarze Kätzchen, das im Gras ruht",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        }
+      }
+    }
+  }
+}

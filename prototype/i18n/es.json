@@ -1,0 +1,607 @@
+{
+  "name": "Español",
+  "ui": {
+    "adaptive": "Adaptable",
+    "themes": "Temas",
+    "collectionTitle": "Encuentra tu paisaje.",
+    "collectionSubtitle": "Haz que tus iconos formen parte del paisaje.",
+    "language": "Idioma",
+    "langAuto": "Predeterminado del sistema",
+    "langAutoWith": "Predeterminado del sistema ({name})",
+    "autostart": "Iniciar con Windows",
+    "autostartTitle": "Ejecutar IconScape automáticamente al iniciar sesión",
+    "animate": "Animaciones",
+    "animateTitle": "Desactívalas para dejar una imagen fija en el escritorio: nada se mueve y casi no se usa el procesador ni la batería",
+    "autostartBlocked": "Puede que el inicio con Windows se haya bloqueado",
+    "autostartWarnSw": "Esta vez IconScape no se inició automáticamente: puede que {sw} lo haya bloqueado. Abre {sw}, busca IconScape en su administrador de inicio y permítelo.",
+    "autostartWarnGeneric": "Esta vez IconScape no se inició automáticamente: puede que tu software de seguridad o la configuración de aplicaciones de inicio de Windows lo hayan bloqueado. Activa IconScape en el administrador de inicio de tu software de seguridad o en Configuración de Windows → Aplicaciones → Inicio.",
+    "gotIt": "Entendido",
+    "updateAvailable": "Actualización disponible",
+    "updateVersion": "IconScape {version} está lista. Se conservarán tu tema y tus ajustes.",
+    "updateProgram": "Actualizar ahora",
+    "updateRetry": "Reintentar la actualización",
+    "updateWorking": "Actualizando…",
+    "updateDownloading": "Descargando e instalando… {progress}",
+    "updateInstalling": "Instalando la actualización… {progress}",
+    "updateCompletedTitle": "Actualización completada",
+    "updateCompleted": "La actualización se ha descargado e instalado. Si IconScape no se reinicia solo, vuelve a abrirlo.",
+    "updateDone": "Hecho",
+    "updateCanceled": "La actualización se canceló. Puedes volver a intentarlo más tarde.",
+    "updateLowBattery": "La actualización no pudo terminar con la batería. Conecta el equipo a la corriente y vuelve a intentarlo.",
+    "updateWifiRecommended": "Esta red puede tener costes. Cambia de red o inténtalo más tarde.",
+    "updateWifiRequired": "Conéctate a una red Wi-Fi para descargar esta actualización.",
+    "updateStoreRequired": "Este método de actualización solo está disponible en la edición de Microsoft Store.",
+    "updateFailed": "La actualización falló. Comprueba la conexión o Microsoft Store y vuelve a intentarlo.",
+    "updateCheckingTitle": "Buscando actualizaciones",
+    "updateChecking": "Conectando con el servidor de actualizaciones y buscando una versión nueva…",
+    "updateFailedTitle": "Actualización no completada",
+    "updateCheckFailedTitle": "No se pudieron buscar actualizaciones",
+    "networkTimeout": "La conexión o la descarga tardó demasiado. Comprueba la red, el proxy o el cortafuegos y vuelve a intentarlo. Si otros sitios funcionan, puede que el servidor responda lentamente.",
+    "networkDns": "No se pudo resolver la dirección del servidor. Comprueba la red, el DNS o el proxy y vuelve a intentarlo.",
+    "networkTls": "No se pudo establecer una conexión segura. Comprueba la hora del sistema y cualquier inspección de seguridad de tu red o proxy, y vuelve a intentarlo.",
+    "networkLocal": "La conexión de red falló o se interrumpió. Comprueba la red, el proxy o el cortafuegos y vuelve a intentarlo.",
+    "serverUnavailable": "Se llegó al servidor, pero el servicio no está disponible temporalmente (HTTP 5xx). Inténtalo más tarde.",
+    "serverRejected": "El servidor rechazó la solicitud (HTTP 4xx). Inténtalo más tarde o contacta con el soporte si sigue ocurriendo.",
+    "serverInvalid": "El servidor devolvió una respuesta no reconocida. Inténtalo más tarde o contacta con el soporte si sigue ocurriendo.",
+    "downloadInvalid": "La descarga estaba incompleta o no superó la verificación de seguridad, así que se detuvo la instalación. Vuelve a intentarlo o contacta con el soporte si sigue ocurriendo.",
+    "livePreview": "Vista previa en vivo",
+    "previewIcons": "Vista previa en vivo · con los {n} iconos de tu escritorio",
+    "previewNoIcons": "Vista previa en vivo · los iconos del escritorio están ocultos",
+    "refresh": "Regenerar",
+    "refreshTitle": "Generar una escena nueva para este tema",
+    "shareImage": "Compartir imagen",
+    "shareImageTitle": "Comparte una imagen de tu escritorio protegiendo tu privacidad",
+    "shareVideo": "Compartir vídeo",
+    "shareVideoTitle": "Comparte la animación de tu escritorio protegiendo tu privacidad",
+    "generating": "Generando…",
+    "preparingRec": "Preparando…",
+    "recording": "Grabando {p}%",
+    "savingVideo": "Guardando…",
+    "shareErrNoRecorder": "este equipo no puede grabar vídeo",
+    "shareErrBusy": "la grabación anterior sigue en curso",
+    "shareErrNoFrames": "la imagen no se movió (puede que el fondo esté completamente tapado)",
+    "shareErrReadVideo": "no se pudo leer el vídeo grabado",
+    "shareErrRecordingNow": "se está grabando un vídeo; vuelve a intentarlo cuando termine",
+    "shareFailImage": "No se pudo crear la imagen: {msg}",
+    "shareFailVideo": "No se pudo grabar el vídeo: {msg}",
+    "unknownReason": "error desconocido",
+    "shareReadyImage": "La imagen de tu escritorio está lista",
+    "shareReadyVideo": "El clip de tu escritorio está listo",
+    "sharePrivacy": "Los iconos se sustituyen por iconos de ejemplo y los nombres de archivo por bloques de color, así que no se ve ninguno de tus archivos.",
+    "shareCopiedImage": "La imagen está en el portapapeles: pégala directamente en un chat o en una publicación.",
+    "shareCopiedVideo": "El archivo de vídeo está en el portapapeles: pégalo en una ventana de chat para enviarlo.",
+    "shareBrowserHint": " (Vista previa en el navegador: pulsa «{btn}» para descargar.)",
+    "savedTo": "Guardado en {path}",
+    "openFolder": "Mostrar en la carpeta",
+    "openImage": "Abrir imagen",
+    "openVideo": "Abrir vídeo",
+    "saveImage": "Guardar imagen",
+    "saveVideo": "Guardar vídeo",
+    "ok": "Aceptar",
+    "close": "Cerrar",
+    "sharePreviewAlt": "Vista previa de la imagen compartida",
+    "autosave": "Los cambios se guardan automáticamente y se aplican al escritorio al instante",
+    "basedOn": "Basado en Deskland Preview · GPL-3.0 · no es una versión oficial",
+    "saved": "Guardado ✓",
+    "resetAll": "Restablecer todo",
+    "resetAllTitle": "Restablecer todos los ajustes de este tema a sus valores predeterminados",
+    "helpButtonTitle": "Preguntas frecuentes y solución de problemas",
+    "helpTitle": "Ayuda",
+    "helpSubtitle": "Preguntas frecuentes y solución de problemas",
+    "helpWallpaperQ": "IconScape parpadea o se reinicia continuamente. ¿Cómo lo soluciono?",
+    "helpWallpaperA": "Si el fondo normal de Windows cambia automáticamente, cada cambio puede hacer que IconScape parpadee o se reinicie. Usa un fondo fijo que no vaya rotando.",
+    "helpWallpaperStep1": "Abre Configuración de Windows → Personalización → Fondo.",
+    "helpWallpaperStep2": "Pon «Personaliza tu fondo» en «Imagen» o «Color sólido». No uses «Presentación» ni «Contenido destacado de Windows».",
+    "helpWallpaperStep3": "Reinicia IconScape después de cambiar este ajuste.",
+    "badgeOn": "En uso",
+    "badgeReady": "Disponible",
+    "badgeSoon": "Próximamente",
+    "ongoingTitle": "Vendrán más",
+    "ongoingDesc": "Con el tiempo se añadirán escenas y elementos nuevos.",
+    "noParams": "Este tema aún no tiene ajustes",
+    "resetOne": "Restablecer al valor predeterminado: {v}",
+    "resetOneAria": "Restablecer {label} al valor predeterminado",
+    "dblclickReset": "Doble clic para restablecer ({v})",
+    "comingSoon": "Próximamente:"
+  },
+  "host": {
+    "traySettings": "Ajustes…",
+    "trayPause": "Detener animaciones",
+    "trayReload": "Recargar",
+    "trayAutostart": "Iniciar con Windows",
+    "trayExit": "Salir (restaurar el fondo)",
+    "welcomeTitle": "IconScape está en marcha",
+    "welcomeBody": "Haz clic en el icono de IconScape en la bandeja del sistema{hotkey} para abrir el menú.\n¿No lo ves? Haz clic en ^ a la derecha de la barra de tareas.",
+    "welcomeHotkey": " o pulsa Ctrl+Alt+H",
+    "errNotReady": "El fondo todavía no está listo",
+    "errNoImage": "No se recibió ninguna imagen",
+    "errNoVideo": "No se recibió ningún vídeo",
+    "errBusyImage": "La imagen anterior aún se está generando",
+    "errBusyVideo": "El clip anterior aún se está grabando",
+    "errImageTimeout": "La generación tardó demasiado",
+    "errVideoTimeout": "La grabación tardó demasiado",
+    "errBadData": "La página devolvió datos incompletos",
+    "errRebuilt": "Windows reconstruía una y otra vez la capa del fondo, así que IconScape se ha detenido.",
+    "errSeeLog": "Consulta el registro para ver los detalles: {path}",
+    "errSettings": "No se pudo abrir la ventana de ajustes: {msg}",
+    "errNoPage": "Página no encontrada: {path}",
+    "errNoDesktop": "No se encontró la ventana del escritorio, así que no se puede colocar el fondo.",
+    "errStart": "No se pudo iniciar: {msg}"
+  },
+  "themes": {
+    "woodland": {
+      "name": "Bosque de cuento",
+      "desc": "Un bosque de libro ilustrado dibujado como un dibujo animado clásico: tus iconos flotan en estanques con nenúfares, ranas y familias de patitos; alrededor, árboles redondos, setas rojas y flores, conejitos, zorros y erizos de paseo, pajarillos azules y mariposas; de día, al atardecer o de noche con luciérnagas",
+      "groups": [
+        "Estanques",
+        "Bosque",
+        "Animales"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Tamaño de los estanques",
+          "hint": "Cuánto se extiende el estanque alrededor de tus iconos"
+        },
+        "warp": {
+          "label": "Orillas irregulares",
+          "hint": "Lo irregular que es el contorno de los estanques"
+        },
+        "trees": {
+          "label": "Árboles",
+          "hint": "Cuántos árboles y arbustos crecen en el prado"
+        },
+        "flowers": {
+          "label": "Flores",
+          "hint": "Cuántas flores y setas crecen en el prado"
+        },
+        "time": {
+          "label": "Momento del día",
+          "options": [
+            "Día",
+            "Atardecer",
+            "Noche"
+          ]
+        },
+        "animals": {
+          "label": "Animalitos",
+          "hint": "Cuántos animalitos pasean por cada monitor (conejitos, zorros, erizos)",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Pajarillos azules",
+          "hint": "Pajarillos que de vez en cuando cruzan el cielo",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que se mueven los animales, los patitos y las mariposas"
+        }
+      }
+    },
+    "ninja": {
+      "name": "Aldea ninja",
+      "desc": "Una aldea japonesa dibujada como un anime de los años setenta: casas vistas desde arriba con tejados de tejas, muros blancos y vigas de madera, arena rastrillada de jardín zen, colores planos con contorno de tinta, sombras duras y grano de película; linternas de piedra, cerezos en flor o arces rojos, y un ninja que aparece en una nube de humo, salta de tejado en tejado, lanza un shuriken y desaparece",
+      "groups": [
+        "Aldea",
+        "Ambiente",
+        "Ninja"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Tamaño de los tejados",
+          "hint": "Cuánto se extienden los tejados alrededor de tus iconos"
+        },
+        "warp": {
+          "label": "Contorno de los tejados",
+          "hint": "Lo irregular que es el contorno de los tejados"
+        },
+        "rake": {
+          "label": "Arena rastrillada",
+          "hint": "Cuántos surcos de arena rodean los tejados y las rocas; con 0 desaparece la arena",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Árboles",
+          "hint": "Cuántos árboles y matas de bambú crecen sobre el musgo"
+        },
+        "lanterns": {
+          "label": "Linternas de piedra",
+          "hint": "Linternas encendidas en el borde de la arena, por monitor",
+          "unit": ""
+        },
+        "time": {
+          "label": "Momento del día",
+          "options": [
+            "Noche",
+            "Atardecer",
+            "Día"
+          ]
+        },
+        "season": {
+          "label": "Estación",
+          "hint": "En primavera, cerezos y pétalos; en otoño, arces rojos y hojas",
+          "options": [
+            "Primavera",
+            "Otoño"
+          ]
+        },
+        "leaves": {
+          "label": "Pétalos y hojas",
+          "hint": "Cuántos pétalos u hojas caen en cada monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que caen los pétalos y las hojas"
+        },
+        "film": {
+          "label": "Efecto película",
+          "hint": "Grano, arañazos y bordes oscuros de una copia de animación de los años setenta"
+        },
+        "ninja": {
+          "label": "Mostrar el ninja",
+          "hint": "Un ninja que de vez en cuando aparece y salta de tejado en tejado",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        }
+      }
+    },
+    "manga": {
+      "name": "Manga",
+      "desc": "Una página de manga en blanco y negro: tus iconos se apoyan en manchas de tinta de las que estallan líneas de impacto; las viñetas son fondos a plumilla y tramado: calles en perspectiva, la ciudad de noche, cumulonimbos y postes de la luz, montañas y pinos, mar y rocas, bambú, escalinatas de santuario, tejados y una pagoda bajo la luna, con onomatopeyas, pétalos de cerezo y, de vez en cuando, un cuervo que pasa",
+      "groups": [
+        "Tinta",
+        "Página",
+        "Animación"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Tamaño de la mancha",
+          "hint": "Cuánto se extiende la tinta negra alrededor de tus iconos"
+        },
+        "warp": {
+          "label": "Bordes irregulares",
+          "hint": "Lo irregular que es el contorno de la tinta"
+        },
+        "burst": {
+          "label": "Líneas de impacto",
+          "hint": "Longitud de las puntas que salen de la tinta"
+        },
+        "palette": {
+          "label": "Tinta y papel",
+          "options": [
+            "Blanco y negro",
+            "Sepia",
+            "Tinta azul",
+            "Rosa shōjo"
+          ]
+        },
+        "panels": {
+          "label": "Viñetas",
+          "hint": "Cuántas viñetas dividen la página: cuanto más alto, más pequeñas"
+        },
+        "sfx": {
+          "label": "Onomatopeyas",
+          "hint": "Con qué frecuencia aparecen palabras como ドン o ゴゴゴ"
+        },
+        "petals": {
+          "label": "Pétalos de cerezo",
+          "hint": "Cuántos pétalos caen en cada monitor",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que caen los pétalos"
+        },
+        "crow": {
+          "label": "Mostrar el cuervo",
+          "hint": "Un cuervo que de vez en cuando cruza la página",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        }
+      }
+    },
+    "cosmos": {
+      "name": "Universo",
+      "desc": "Espacio profundo: cada grupo de iconos es un sistema estelar, con órbitas que siguen su forma y planetas que las recorren; alrededor, nebulosas, una galaxia que gira, estrellas fugaces, cometas y alguna nova",
+      "groups": [
+        "Espacio",
+        "Sistemas estelares",
+        "Cielo profundo"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Extensión de la nebulosa",
+          "hint": "Cuánto se extienden la nebulosa y el hueco oscuro alrededor de tus iconos"
+        },
+        "palette": {
+          "label": "Color de la nebulosa",
+          "options": [
+            "Violeta",
+            "Esmeralda",
+            "Fuego",
+            "Hielo"
+          ]
+        },
+        "stars": {
+          "label": "Estrellas",
+          "hint": "Cuántas estrellas llenan el fondo"
+        },
+        "orbits": {
+          "label": "Órbitas",
+          "hint": "Número de órbitas alrededor de cada grupo de iconos",
+          "unit": ""
+        },
+        "planets": {
+          "label": "Planetas",
+          "hint": "Número de planetas que recorren las órbitas",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Velocidad",
+          "hint": "Velocidad de los planetas y del giro de la galaxia"
+        },
+        "galaxy": {
+          "label": "Mostrar la galaxia",
+          "hint": "Una galaxia espiral que gira despacio en el espacio libre",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "meteors": {
+          "label": "Estrellas fugaces",
+          "hint": "Cuántas estrellas fugaces cruzan el cielo; de vez en cuando pasa también un cometa"
+        }
+      }
+    },
+    "steampunk": {
+      "name": "Steampunk",
+      "desc": "Una vieja sala de máquinas dibujada a mano a lápiz y acuarela: tus iconos se apoyan en chapas oxidadas y remendadas; entre una viga de hierro y un suelo de tablas hay una caldera con su chimenea y el carbón, depósitos con tuberías que entran en la pared, cajas y barriles bajo una repisa, puertas con un letrero y una lámpara, escaleras y pasarelas, un banco de trabajo bajo el cuadro eléctrico; y engranajes que engranan, tuberías con manómetros y vapor, ventanas iluminadas, lámparas colgantes, gorriones y, de vez en cuando, un dirigible remendado",
+      "groups": [
+        "Chapas",
+        "Mecanismo",
+        "Vapor"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Tamaño de las chapas",
+          "hint": "Cuánto se extienden las chapas alrededor de tus iconos"
+        },
+        "metal": {
+          "label": "Acabado del metal",
+          "options": [
+            "Óxido",
+            "Verdín",
+            "Hierro"
+          ]
+        },
+        "gears": {
+          "label": "Engranajes",
+          "hint": "Cuántos grupos de engranajes llenan el espacio libre"
+        },
+        "details": {
+          "label": "Detalles",
+          "hint": "Lo concurrida que está la sala: rincones de trabajo en el suelo (caldera, depósito, almacén, puerta con escalera y pasarela, banco con cuadro eléctrico), ventanas, lámparas y cadenas colgadas de la viga, ojos de buey y letreros en las chapas"
+        },
+        "speed": {
+          "label": "Velocidad",
+          "hint": "Velocidad de los engranajes y de las agujas de los manómetros"
+        },
+        "pipes": {
+          "label": "Tuberías",
+          "hint": "Número de tuberías que salen de las chapas",
+          "unit": ""
+        },
+        "steam": {
+          "label": "Vapor",
+          "hint": "Cuánto vapor escapa de las juntas de las tuberías"
+        },
+        "airship": {
+          "label": "Mostrar el dirigible",
+          "hint": "Un dirigible que de vez en cuando pasa sobre la máquina",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        }
+      }
+    },
+    "isles": {
+      "name": "Islas flotantes",
+      "desc": "Islas de hierba flotan sobre un mar de nubes al anochecer: tus iconos descansan en las islas entre cristales luminosos, chispas mágicas y, de vez en cuando, un dragón que pasa",
+      "groups": [
+        "Islas",
+        "Cielo",
+        "Magia",
+        "Criaturas"
+      ],
+      "params": {
+        "sky": {
+          "label": "Color del cielo",
+          "hint": "El tono del cielo y del mar de nubes bajo las islas",
+          "options": [
+            "Anochecer",
+            "Amanecer",
+            "Día",
+            "Noche"
+          ]
+        },
+        "sigma": {
+          "label": "Tamaño de las islas",
+          "hint": "Cuánto se extienden las islas alrededor de tus iconos"
+        },
+        "warp": {
+          "label": "Bordes irregulares",
+          "hint": "Lo irregular que es el contorno de las islas"
+        },
+        "islets": {
+          "label": "Islotes",
+          "hint": "Islas pequeñas de más que flotan lejos de los iconos",
+          "unit": ""
+        },
+        "trees": {
+          "label": "Árboles",
+          "hint": "Cuántos árboles crecen en las islas"
+        },
+        "crystals": {
+          "label": "Cristales",
+          "hint": "Número de cristales luminosos cerca del borde de las islas",
+          "unit": ""
+        },
+        "motes": {
+          "label": "Chispas mágicas",
+          "hint": "Puntitos de luz que suben despacio",
+          "unit": ""
+        },
+        "flow": {
+          "label": "Velocidad de movimiento",
+          "hint": "Lo rápido que se mueven las nubes y las chispas"
+        },
+        "dragon": {
+          "label": "Mostrar el dragón",
+          "hint": "Un dragón que de vez en cuando cruza el cielo",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        }
+      }
+    },
+    "circuit": {
+      "name": "Circuito",
+      "desc": "Una placa de circuito impreso oscura: tus iconos se apoyan en zonas de cobre, las pistas se abren a 45° y los impulsos de datos las recorren",
+      "groups": [
+        "Placa",
+        "Señales"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zona de cobre",
+          "hint": "Cuánto se extiende la zona de cobre alrededor de tus iconos"
+        },
+        "density": {
+          "label": "Densidad de pistas",
+          "hint": "Cuántas pistas, chips y componentes llenan la placa"
+        },
+        "color": {
+          "label": "Color",
+          "options": [
+            "Verde",
+            "Cian",
+            "Ámbar",
+            "Magenta"
+          ]
+        },
+        "pulses": {
+          "label": "Impulsos de datos",
+          "hint": "Número de puntos brillantes que recorren las pistas",
+          "unit": ""
+        },
+        "speed": {
+          "label": "Velocidad",
+          "hint": "Velocidad de los impulsos, del barrido y de las cifras que caen"
+        },
+        "rain": {
+          "label": "Lluvia de cifras",
+          "hint": "Cuántas columnas de cifras hexadecimales caen sobre la placa"
+        },
+        "scan": {
+          "label": "Barrido",
+          "hint": "Una banda de luz que recorre las pistas de arriba abajo",
+          "options": [
+            "Apagado",
+            "Encendido"
+          ]
+        }
+      }
+    },
+    "beach": {
+      "name": "Playa",
+      "desc": "La orilla se curva alrededor de tus archivos mientras las olas suben por la arena",
+      "groups": [
+        "Orilla",
+        "Agua",
+        "Detalles"
+      ],
+      "params": {
+        "palms": {
+          "label": "Cocoteros",
+          "hint": "Número de palmeras en la costa; 0 para ocultarlas. Aparecen menos si no hay arena suficiente.",
+          "unit": ""
+        },
+        "sigma": {
+          "label": "Distancia a los iconos",
+          "hint": "A qué distancia de tus iconos queda la orilla"
+        },
+        "warp": {
+          "label": "Costa sinuosa",
+          "hint": "Cuánto se retuerce la línea de la costa"
+        },
+        "shoal": {
+          "label": "Aguas transparentes",
+          "hint": "Lo ancha que es la franja de agua transparente sobre la arena"
+        },
+        "shallow": {
+          "label": "Mar poco profundo",
+          "hint": "En cuánto espacio pasa el agua del turquesa al azul profundo"
+        },
+        "kayaks": {
+          "label": "Kayaks",
+          "unit": ""
+        },
+        "birds": {
+          "label": "Aves marinas",
+          "hint": "Gaviotas que planean y dan vueltas en lo alto",
+          "unit": ""
+        }
+      }
+    },
+    "meadow": {
+      "name": "Prado",
+      "desc": "Un prado a pluma y aguada donde tus iconos se esconden en nubes blancas que proyectan sombras verde oscuro",
+      "groups": [
+        "Alrededor de los iconos",
+        "Nubes",
+        "Personajes"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Tamaño de las nubes",
+          "hint": "Cuánto se extienden las nubes alrededor de tus iconos"
+        },
+        "cover": {
+          "label": "Nubes sobre el prado",
+          "hint": "Cuántas nubes flotan sobre el prado abierto"
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que se mueven las nubes y cambian sus formas"
+        },
+        "showBoy": {
+          "label": "Mostrar al niño",
+          "hint": "Muestra u oculta al niño junto con su cometa",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "showCat": {
+          "label": "Mostrar al gatito",
+          "hint": "El gatito negro que descansa en la hierba",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@
     "langAutoWith": "System default ({name})",
     "autostart": "Start with Windows",
     "autostartTitle": "Run IconScape automatically when you sign in",
+    "animate": "Animations",
+    "animateTitle": "Turn off to keep a still picture on the desktop: nothing moves and almost no processor or battery is used",
     "autostartBlocked": "Start with Windows may have been blocked",
     "autostartWarnSw": "IconScape didn't start automatically this time — {sw} may have blocked it. Open {sw}, find IconScape in its startup manager and set it to Allow.",
     "autostartWarnGeneric": "IconScape didn't start automatically this time — your security software or the Windows Startup apps setting may have blocked it. Turn IconScape on in your security software's startup manager, or in Windows Settings → Apps → Startup.",
@@ -76,6 +78,7 @@
     "saveImage": "Save image",
     "saveVideo": "Save video",
     "ok": "OK",
+    "close": "Close",
     "sharePreviewAlt": "Preview of the shared image",
     "autosave": "Changes are saved automatically and applied to your desktop right away",
     "basedOn": "Based on Deskland Preview · GPL-3.0 · not an official release",
@@ -103,7 +106,7 @@
   },
   "host": {
     "traySettings": "Settings…",
-    "trayPause": "Pause animation",
+    "trayPause": "Stop animations",
     "trayReload": "Reload",
     "trayAutostart": "Start with Windows",
     "trayExit": "Exit (restore wallpaper)",
@@ -361,7 +364,7 @@
     },
     "steampunk": {
       "name": "Steampunk",
-      "desc": "An old machine drawn by hand in pencil and watercolour: your icons sit on rusty patched sheets, gears turn and mesh, pipes lead to pressure gauges and puff steam, cables with light bulbs sag across the wall, and now and then a patched airship drifts by",
+      "desc": "An old machine room drawn by hand in pencil and watercolour: your icons sit on rusty patched sheets; between an iron beam and a plank floor stand a boiler with its flue and coal, tanks with pipes going into the wall, crates and barrels under a shelf, doors with a sign and a lamp, ladders and catwalks, a workbench under the electrical board; and gears meshing, pipes with gauges and steam, lit windows, hanging lamps, sparrows, and now and then a patched airship",
       "groups": [
         "Plates",
         "Mechanism",
@@ -383,6 +386,10 @@
         "gears": {
           "label": "Gears",
           "hint": "How many groups of gears fill the free space"
+        },
+        "details": {
+          "label": "Details",
+          "hint": "How busy the room is: working corners on the floor (boiler, tank, store, door with ladder and catwalk, workbench with electrical board), windows, lamps and chains hanging from the beam, portholes and signs on the sheets"
         },
         "speed": {
           "label": "Speed",

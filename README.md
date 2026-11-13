@@ -111,6 +111,24 @@ The first build downloads portable NSIS and Microsoft's WebView2 bootstrapper. A
 
 The installer targets the current user's `Programs\IconScape` directory and does not require administrator rights. If WebView2 is missing, its bootstrapper requires an internet connection. Uninstalling preserves user settings. No IconScape installer has been published: build it from source.
 
+## macOS (experimental)
+
+The `mac/` folder holds a macOS host written in Swift. It shows the same theme pages and settings page as the Windows host and speaks the same message protocol: one window per display above the desktop picture and below the Finder icons, icon positions read from Finder, a menu bar icon instead of the tray icon, and open at login. **It has not been tried on a real Mac yet.**
+
+Build it on a Mac with macOS 11 or later and the Xcode command line tools (`xcode-select --install`):
+
+```bash
+bash mac/build.sh
+open mac/build/IconScape.app
+```
+
+`bash mac/build.sh --dmg` also writes `dist/IconScape-<version>-mac.dmg` with its SHA256. Without a Mac, run the **macOS build** workflow from the repository's GitHub Actions (`.github/workflows/mac.yml`) and download the disk image from its artifacts.
+
+- The first time, macOS asks whether IconScape may control Finder: that is how it reads where the desktop icons are. If you refuse, the landscape ignores the icons; you can allow it later in System Settings → Privacy & Security → Automation.
+- The app is signed ad hoc, not with an Apple developer certificate: on another Mac, open it the first time with right click → Open (or allow it in System Settings → Privacy & Security).
+- Settings and logs are stored in `~/Library/Application Support/IconScape`; shared images and clips in `~/Pictures/IconScape`; open at login is `~/Library/LaunchAgents/app.iconscape.IconScape.plist`. To quit from Terminal: `mac/build/IconScape.app/Contents/MacOS/IconScape --exit`.
+- A display pauses while a window fills it or is full screen there, while the displays sleep or the screen is locked, and when the animations are stopped.
+
 ## Project layout
 
 | Path | Contents |
@@ -130,6 +148,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 | `prototype/share.js` | Privacy-preserving image and animation sharing |
 | `prototype/i18n/` | Interface and theme texts in English, Italian, Spanish, French and German, and the interface texts in Simplified Chinese (its theme texts are `themes.json` itself) |
 | `prototype/assets/` | Images used by the included themes |
+| `mac/` | macOS host: Swift sources (`mac/Sources/`), `Info.plist.in`, `build.sh` and the 1024 px icon; `.github/workflows/mac.yml` builds it on GitHub |
 | `tools/` | Installer build tooling, the version number (`version.json`), the icon generator (`make-icon.ps1`) and the browser-preview server for machines without Node.js (`serve.ps1`) |
 
 ## Known limitations
@@ -149,6 +168,7 @@ Version 0.1.5, on top of Deskland Preview 0.1.3:
 - **Pause per monitor:** a monitor pauses when any maximized or full-screen window hides it, not only the foreground window; overlays that cover the screen without hiding anything are ignored.
 - **Languages:** English is the main language, used whenever Windows uses a language that is not included; Italian, Spanish, French and German were added, and Simplified Chinese remains selectable. Settings, tray menu, messages, theme texts and the installer are translated; the share buttons and share error messages follow the interface language.
 - **Stop animations:** the tray pause is now a saved setting, also available as a switch in Settings.
+- **macOS host (experimental):** `mac/`, see [macOS](#macos-experimental).
 - **Seven themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk, Cosmos, Manga, Ninja Village and Storybook Woods. Their thumbnails are rendered from the themes themselves.
 - **Browser preview without Node.js:** `tools/serve.ps1`.
 
@@ -271,6 +291,24 @@ La prima compilazione scarica NSIS in versione portatile e il programma di insta
 
 L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e non richiede diritti di amministratore. Se manca WebView2, serve una connessione a Internet per installarlo. La disinstallazione conserva le impostazioni dell'utente. Non è stato pubblicato alcun installer di IconScape: va compilato dai sorgenti.
 
+### macOS (sperimentale)
+
+La cartella `mac/` contiene un host per macOS scritto in Swift. Mostra le stesse pagine dei temi e delle impostazioni dell'host per Windows e usa lo stesso protocollo di messaggi: una finestra per ogni monitor sopra l'immagine della scrivania e sotto le icone del Finder, posizioni delle icone lette dal Finder, un'icona nella barra dei menu al posto dell'area di notifica e l'apertura all'accesso. **Non è ancora stato provato su un Mac reale.**
+
+Si compila su un Mac con macOS 11 o successivo e gli strumenti da riga di comando di Xcode (`xcode-select --install`):
+
+```bash
+bash mac/build.sh
+open mac/build/IconScape.app
+```
+
+`bash mac/build.sh --dmg` crea anche `dist/IconScape-<versione>-mac.dmg` con il suo SHA256. Senza un Mac, avvia il workflow **macOS build** dalle GitHub Actions del repository (`.github/workflows/mac.yml`) e scarica l'immagine disco dai suoi artifact.
+
+- La prima volta macOS chiede se IconScape può controllare il Finder: è così che legge dove sono le icone della scrivania. Se rifiuti, il paesaggio ignora le icone; puoi consentirlo più tardi in Impostazioni di Sistema → Privacy e sicurezza → Automazione.
+- L'app è firmata ad hoc, non con un certificato da sviluppatore Apple: su un altro Mac aprila la prima volta con clic destro → Apri (oppure consentila in Impostazioni di Sistema → Privacy e sicurezza).
+- Impostazioni e log sono in `~/Library/Application Support/IconScape`; immagini e animazioni condivise in `~/Pictures/IconScape`; l'apertura all'accesso è `~/Library/LaunchAgents/app.iconscape.IconScape.plist`. Per uscire dal Terminale: `mac/build/IconScape.app/Contents/MacOS/IconScape --exit`.
+- Un monitor va in pausa quando una finestra lo riempie o è a schermo intero su di esso, quando i monitor sono in stop o lo schermo è bloccato, e quando le animazioni sono ferme.
+
 ### Struttura del progetto
 
 | Percorso | Contenuto |
@@ -290,6 +328,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 | `prototype/share.js` | Condivisione di immagini e animazioni rispettosa della privacy |
 | `prototype/i18n/` | Testi dell'interfaccia e dei temi in inglese, italiano, spagnolo, francese e tedesco, e testi dell'interfaccia in cinese semplificato (i testi cinesi dei temi sono `themes.json` stesso) |
 | `prototype/assets/` | Immagini usate dai temi inclusi |
+| `mac/` | Host per macOS: sorgenti Swift (`mac/Sources/`), `Info.plist.in`, `build.sh` e icona da 1024 px; `.github/workflows/mac.yml` lo compila su GitHub |
 | `tools/` | Strumenti per l'installer, numero di versione (`version.json`), generatore dell'icona (`make-icon.ps1`) e server dell'anteprima per chi non ha Node.js (`serve.ps1`) |
 
 ### Limiti noti
@@ -309,6 +348,7 @@ Versione 0.1.5, basata su Deskland Preview 0.1.3:
 - **Pausa per monitor:** un monitor va in pausa quando lo nasconde una qualsiasi finestra massimizzata o a schermo intero, non solo quella in primo piano; le sovrapposizioni che coprono lo schermo senza nascondere nulla vengono ignorate.
 - **Lingue:** l'inglese è la lingua principale, usata quando Windows è in una lingua non inclusa; sono stati aggiunti italiano, spagnolo, francese e tedesco, e il cinese semplificato resta selezionabile. Impostazioni, menu dell'icona, messaggi, testi dei temi e installer sono tradotti; i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
 - **Ferma le animazioni:** la pausa del menu dell'icona ora è un'impostazione salvata, disponibile anche come interruttore nelle impostazioni.
+- **Host per macOS (sperimentale):** `mac/`, vedi [macOS](#macos-sperimentale).
 - **Sette temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk, Universo, Manga, Villaggio ninja e Bosco delle fiabe. Le loro miniature sono generate dai temi stessi.
 - **Anteprima nel browser senza Node.js:** `tools/serve.ps1`.
 
@@ -429,6 +469,24 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 
 安装包安装到当前用户的 `Programs\IconScape` 目录，无需管理员权限。缺少 WebView2 时需要联网安装；卸载保留用户设置。IconScape 尚未发布安装包，请从源码构建。
 
+### macOS（实验性）
+
+`mac/` 目录是用 Swift 编写的 macOS 宿主。它显示与 Windows 宿主相同的主题页面和设置页面，使用相同的消息协议：每个显示器一个窗口，位于桌面图片之上、访达图标之下；图标位置从访达读取；用菜单栏图标代替托盘图标；支持登录时打开。**尚未在真实的 Mac 上测试。**
+
+在 macOS 11 或更高版本、装有 Xcode 命令行工具（`xcode-select --install`）的 Mac 上构建：
+
+```bash
+bash mac/build.sh
+open mac/build/IconScape.app
+```
+
+`bash mac/build.sh --dmg` 还会生成 `dist/IconScape-<版本>-mac.dmg` 及其 SHA256。没有 Mac 时，可在仓库的 GitHub Actions 中运行 **macOS build** 工作流（`.github/workflows/mac.yml`），从产物中下载磁盘映像。
+
+- 首次运行时 macOS 会询问是否允许 IconScape 控制“访达”：它通过访达读取桌面图标的位置。如果拒绝，风景会忽略图标；之后可在“系统设置 → 隐私与安全性 → 自动化”中允许。
+- 应用只做了临时签名，没有 Apple 开发者证书：在其他 Mac 上第一次请右键 → 打开（或在“系统设置 → 隐私与安全性”中允许）。
+- 设置与日志保存在 `~/Library/Application Support/IconScape`，分享的图片和动画保存在 `~/Pictures/IconScape`，登录时打开使用 `~/Library/LaunchAgents/app.iconscape.IconScape.plist`。从终端退出：`mac/build/IconScape.app/Contents/MacOS/IconScape --exit`。
+- 当窗口铺满某个显示器或在其上全屏、显示器睡眠或屏幕锁定、以及停止动画时，该显示器暂停。
+
 ### 目录结构
 
 | 路径 | 用途 |
@@ -448,6 +506,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 | `prototype/share.js` | 隐私保护的图片和动画分享 |
 | `prototype/i18n/` | 英文、意大利语、西班牙语、法语和德语的界面与主题文字，以及简体中文界面文字（中文主题文字就是 `themes.json`） |
 | `prototype/assets/` | 随附主题图片素材 |
+| `mac/` | macOS 宿主：Swift 源码（`mac/Sources/`）、`Info.plist.in`、`build.sh` 和 1024 像素图标；`.github/workflows/mac.yml` 在 GitHub 上构建它 |
 | `tools/` | 安装包构建工具、版本号（`version.json`）、图标生成脚本（`make-icon.ps1`）以及无 Node.js 时使用的浏览器预览服务（`serve.ps1`） |
 
 ### 已知限制
@@ -467,6 +526,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 - **按显示器暂停：**任何最大化或全屏窗口遮住某个显示器时暂停该显示器，不只看前台窗口；覆盖整个屏幕但不遮挡内容的悬浮层不会触发暂停。
 - **语言：**英文是主要语言，Windows 使用未包含的语言时显示英文；新增意大利语、西班牙语、法语和德语，简体中文仍可选择。设置、托盘菜单、提示、主题文字和安装包均已翻译；分享按钮和分享错误信息跟随界面语言。
 - **停止动画：**托盘菜单的暂停现在是会保存的设置，设置界面中也有对应开关。
+- **macOS 宿主（实验性）：**`mac/`，见上文 macOS 一节。
 - **七个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克、宇宙、漫画、忍者之村和童话森林，缩略图由主题本身渲染生成。
 - **无需 Node.js 的浏览器预览：**`tools/serve.ps1`。
 

@@ -2,7 +2,7 @@
 
 **Adaptive Windows wallpaper that makes your desktop icons part of the scenery.**
 
-> **IconScape is a modified version of [Deskland Preview](https://github.com/BLEZZ0102/Deskland)**, released under the same GPL-3.0 license. It is not an official Deskland release and is not endorsed by the Deskland authors. As they ask of modified distributions, it uses its own name and icon ([TRADEMARKS.md](TRADEMARKS.md)). Version 0.1.4, based on Deskland Preview 0.1.3; see [Changes from Deskland Preview](#changes-from-deskland-preview).
+> **IconScape is a modified version of [Deskland Preview](https://github.com/BLEZZ0102/Deskland)**, released under the same GPL-3.0 license. It is not an official Deskland release and is not endorsed by the Deskland authors. As they ask of modified distributions, it uses its own name and icon ([TRADEMARKS.md](TRADEMARKS.md)). Version 0.1.5, based on Deskland Preview 0.1.3; see [Changes from Deskland Preview](#changes-from-deskland-preview).
 
 IconScape turns the space around your icons into a living landscape. Move, add or remove an icon and the beach, meadow, islands, clouds and shadows quietly reshape around it — in real time, without AI, an account or an API key.
 
@@ -31,7 +31,7 @@ Added in IconScape:
 | Steampunk | Cosmos |
 | --- | --- |
 | ![Steampunk theme](prototype/thumbs/steampunk.webp) | ![Cosmos theme](prototype/thumbs/cosmos.webp) |
-| Riveted metal plates, meshing gears, copper pipes with pressure gauges and steam, and a passing airship. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
+| An old machine drawn by hand in pencil and watercolour: rusty patched sheets, meshing gears, pipes with pressure gauges and steam, cables with light bulbs, and a patched airship drifting by. | Every group of icons is a star system: orbits follow its shape, planets travel along them, with nebulae, a spiral galaxy, shooting stars and comets. |
 
 | Manga | Ninja Village |
 | --- | --- |
@@ -140,7 +140,7 @@ The installer targets the current user's `Programs\IconScape` directory and does
 
 ## Changes from Deskland Preview
 
-Version 0.1.4, on top of Deskland Preview 0.1.3:
+Version 0.1.5, on top of Deskland Preview 0.1.3:
 
 - **New name and icon:** IconScape, with its own executable, data folder, startup entry, install directory and instance identity.
 - **Only included themes:** the 11 locked cards of the Deskland Wallpaper edition, with their purchase dialog and thumbnails, have been removed.
@@ -162,7 +162,7 @@ The Deskland name and icon belong to the Deskland project and are not licensed a
 
 [English](#iconscape) · **Italiano** · [简体中文](#中文说明)
 
-> **IconScape è una versione modificata di [Deskland Preview](https://github.com/BLEZZ0102/Deskland)**, distribuita con la stessa licenza GPL-3.0. Non è una release ufficiale di Deskland e non è approvata dai suoi autori. Come chiedono per le versioni modificate, usa un nome e un'icona propri ([TRADEMARKS.md](TRADEMARKS.md)). Versione 0.1.4, basata su Deskland Preview 0.1.3; vedi [Differenze rispetto a Deskland Preview](#differenze-rispetto-a-deskland-preview).
+> **IconScape è una versione modificata di [Deskland Preview](https://github.com/BLEZZ0102/Deskland)**, distribuita con la stessa licenza GPL-3.0. Non è una release ufficiale di Deskland e non è approvata dai suoi autori. Come chiedono per le versioni modificate, usa un nome e un'icona propri ([TRADEMARKS.md](TRADEMARKS.md)). Versione 0.1.5, basata su Deskland Preview 0.1.3; vedi [Differenze rispetto a Deskland Preview](#differenze-rispetto-a-deskland-preview).
 
 **Uno sfondo animato per Windows che rende le icone del desktop parte del paesaggio.**
 
@@ -189,7 +189,7 @@ Aggiunti in IconScape:
 | Steampunk | Universo |
 | --- | --- |
 | ![Tema Steampunk](prototype/thumbs/steampunk.webp) | ![Tema Universo](prototype/thumbs/cosmos.webp) |
-| Piastre di metallo rivettate, ingranaggi che ingranano davvero, tubi di rame con manometri e vapore, e un dirigibile di passaggio. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
+| Una vecchia macchina disegnata a mano, a matita e acquerello: lamiere arrugginite e rattoppate, ingranaggi che ingranano davvero, tubi con manometri e vapore, cavi con lampadine e un dirigibile rattoppato di passaggio. | Ogni gruppo di icone è un sistema stellare: le orbite ne seguono la forma e i pianeti le percorrono, tra nebulose, una galassia a spirale, stelle cadenti e comete. |
 
 | Manga | Villaggio ninja |
 | --- | --- |
@@ -298,7 +298,7 @@ L'installer installa nella cartella `Programs\IconScape` dell'utente corrente e 
 
 ### Differenze rispetto a Deskland Preview
 
-Versione 0.1.4, basata su Deskland Preview 0.1.3:
+Versione 0.1.5, basata su Deskland Preview 0.1.3:
 
 - **Nome e icona nuovi:** IconScape, con eseguibile, cartella dei dati, voce di avvio, cartella di installazione e identità dell'istanza propri.
 - **Solo i temi inclusi:** sono state tolte le 11 schede bloccate dell'edizione Wallpaper di Deskland, con la finestra di acquisto e le miniature.
@@ -320,7 +320,7 @@ Il nome e l'icona di Deskland appartengono al progetto Deskland e non sono conce
 
 [English](#iconscape) · [Italiano](#italiano) · **简体中文**
 
-> **IconScape 是 [Deskland Preview](https://github.com/BLEZZ0102/Deskland) 的修改版**，同样按 GPL-3.0 发布。它不是 Deskland 官方发布，也未获 Deskland 作者认可。按照作者对修改版的要求，它使用自己的名称和图标（见 [TRADEMARKS.md](TRADEMARKS.md)）。版本 0.1.4，基于 Deskland Preview 0.1.3，详见[与 Deskland Preview 的区别](#与-deskland-preview-的区别)。
+> **IconScape 是 [Deskland Preview](https://github.com/BLEZZ0102/Deskland) 的修改版**，同样按 GPL-3.0 发布。它不是 Deskland 官方发布，也未获 Deskland 作者认可。按照作者对修改版的要求，它使用自己的名称和图标（见 [TRADEMARKS.md](TRADEMARKS.md)）。版本 0.1.5，基于 Deskland Preview 0.1.3，详见[与 Deskland Preview 的区别](#与-deskland-preview-的区别)。
 
 **让桌面图标成为风景的一部分。**
 
@@ -347,7 +347,7 @@ IconScape 新增：
 | 蒸汽朋克 | 宇宙 |
 | --- | --- |
 | ![蒸汽朋克主题](prototype/thumbs/steampunk.webp) | ![宇宙主题](prototype/thumbs/cosmos.webp) |
-| 铆接的金属板、咬合转动的齿轮、带压力表和蒸汽的铜管，以及偶尔飘过的飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
+| 铅笔加水彩手绘的旧机器：生锈打补丁的铁皮、真正咬合的齿轮、带压力表和蒸汽的管道、挂着灯泡的电线，以及偶尔飘过的打补丁飞艇。 | 每组图标都是一个恒星系：轨道顺着图标的形状展开，行星沿轨道运行，还有星云、旋涡星系、流星和彗星。 |
 
 | 漫画 | 忍者之村 |
 | --- | --- |
@@ -454,7 +454,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 
 ### 与 Deskland Preview 的区别
 
-版本 0.1.4，基于 Deskland Preview 0.1.3：
+版本 0.1.5，基于 Deskland Preview 0.1.3：
 
 - **新名称和图标：**IconScape，拥有独立的可执行文件、数据目录、启动项、安装目录和实例标识。
 - **只保留包含的主题：**移除了 Deskland 壁纸版的 11 个锁定主题卡片、购买窗口和缩略图。

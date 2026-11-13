@@ -362,7 +362,7 @@
     },
     "steampunk": {
       "name": "Steampunk",
-      "desc": "Una macchina su un banco di legno scuro: le icone poggiano su piastre di metallo rivettate, gli ingranaggi girano ingranando tra loro, i tubi di rame portano ai manometri e sbuffano vapore, e ogni tanto passa un dirigibile",
+      "desc": "Una vecchia macchina disegnata a mano, a matita e acquerello: le icone poggiano su lamiere arrugginite e rattoppate, gli ingranaggi girano ingranando tra loro, i tubi portano ai manometri e sbuffano vapore, cavi con lampadine pendono sul muro e ogni tanto passa un dirigibile rattoppato",
       "groups": [
         "Piastre",
         "Meccanismo",
@@ -374,10 +374,10 @@
           "hint": "Quanto si estendono le piastre intorno alle tue icone"
         },
         "metal": {
-          "label": "Metallo",
+          "label": "Metallo e patina",
           "options": [
-            "Ottone",
-            "Rame",
+            "Ruggine",
+            "Verderame",
             "Ferro"
           ]
         },

@@ -361,7 +361,7 @@
     },
     "steampunk": {
       "name": "Steampunk",
-      "desc": "A machine on a dark wooden bench: your icons sit on riveted metal plates, gears turn and mesh, copper pipes lead to pressure gauges and puff steam, and now and then an airship drifts over",
+      "desc": "An old machine drawn by hand in pencil and watercolour: your icons sit on rusty patched sheets, gears turn and mesh, pipes lead to pressure gauges and puff steam, cables with light bulbs sag across the wall, and now and then a patched airship drifts by",
       "groups": [
         "Plates",
         "Mechanism",
@@ -373,10 +373,10 @@
           "hint": "How far the plates extend around your icons"
         },
         "metal": {
-          "label": "Metal",
+          "label": "Metal finish",
           "options": [
-            "Brass",
-            "Copper",
+            "Rust",
+            "Verdigris",
             "Iron"
           ]
         },

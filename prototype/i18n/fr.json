@@ -134,6 +134,132 @@
     "errStart": "Échec du lancement : {msg}"
   },
   "themes": {
+    "school": {
+      "name": "École",
+      "desc": "Le tableau noir d'une salle de classe : autour de vos icônes, il vient d'être effacé et il reste la poussière de craie et les arcs de la brosse ; partout ailleurs, les leçons du jour sont écrites à la craie : équations, géométrie, fractions, un graphique, le système solaire, un atome, une plante, le cycle de l'eau, des lettres, de la musique, des solides, des tables de multiplication et une carte au trésor ; en haut les cartes de l'alphabet, des dessins aux crayons de cire tenus par des aimants, une équerre en bois, un rapporteur et un compas de tableau, et en bas l'auget avec les craies et la brosse ; de temps en temps une leçon s'écrit toute seule trait après trait puis s'efface, et un avion en papier traverse le bureau",
+      "groups": [
+        "Tableau",
+        "Leçons",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zones effacées",
+          "hint": "Jusqu'où le tableau fraîchement effacé s'étend autour de vos icônes"
+        },
+        "warp": {
+          "label": "Bords irréguliers",
+          "hint": "À quel point le bord des zones effacées est irrégulier"
+        },
+        "board": {
+          "label": "Tableau",
+          "options": [
+            "Vert",
+            "Noir",
+            "Ardoise bleue"
+          ]
+        },
+        "lessons": {
+          "label": "Leçons",
+          "hint": "À quel point le tableau est rempli : leçons, dessins aux crayons de cire et instruments du maître"
+        },
+        "color": {
+          "label": "Craies de couleur",
+          "hint": "Combien de traits et de mots sont écrits à la craie de couleur"
+        },
+        "live": {
+          "label": "Écriture en direct",
+          "hint": "Sur chaque écran, de temps en temps une leçon s'écrit à la craie trait après trait puis s'efface peu après",
+          "options": [
+            "Désactivée",
+            "Activée"
+          ]
+        },
+        "plane": {
+          "label": "Afficher l'avion en papier",
+          "hint": "Un avion en papier qui traverse parfois le bureau",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse de l'écriture, de l'avion en papier et de la poussière de craie"
+        }
+      }
+    },
+    "london": {
+      "name": "Londres",
+      "desc": "Un flat lay de voyage à Londres sur un bureau blanc couvert de gribouillis et de graffitis londoniens gris clair (ou de pois, ou de marbre blanc) : des polaroïds de vraies photos de vingt-sept lieux, Big Ben, Tower Bridge, Buckingham Palace, le London Eye, Saint-Paul, la Tour, l'abbaye de Westminster, Trafalgar Square, le Royal Albert Hall, le British Museum, Camden Lock, Covent Garden, le Cutty Sark, le Globe, Kensington Palace, Kew Gardens, Leadenhall Market, Marble Arch, le Millennium Bridge, Regent Street, le Shard, la Tate Modern et d'autres, une cabine téléphonique rouge et un bus à impériale, avec des légendes manuscrites et du masking tape ; autour, un Union Jack en tissu, une couronne ornée de pierres, de perles et d'hermine, une tasse de thé au lait, un chapeau melon, un parapluie noir fermé, une montre de gousset en or, un carnet en cuir et un stylo-plume, un plan de la ville, une carte postale avec timbre et cachet, des billets de théâtre, des pièces, des lunettes de soleil en écaille, des sablés, de l'eucalyptus, des roses rouges et des fanions, chacun avec son ombre douce ; chaque groupe d'icônes repose sur un sous-main en cuir surpiqué et doré au fer qui fait ressortir les icônes et leurs noms blancs ; la lumière du matin par la fenêtre ou la lampe du soir ; le thé fume, la montre de gousset donne l'heure réelle, de temps en temps un polaroïd se développe à nouveau et les ombres des feuilles se balancent au soleil",
+      "groups": [
+        "Icônes",
+        "Bureau",
+        "Animation"
+      ],
+      "params": {
+        "pad": {
+          "label": "Marge des sous-mains",
+          "hint": "La largeur de cuir que les sous-mains laissent autour de vos icônes"
+        },
+        "mat": {
+          "label": "Sous-main",
+          "hint": "La couleur des sous-mains en cuir sous les icônes",
+          "options": [
+            "Cuir vert",
+            "Cuir bleu marine",
+            "Cuir bordeaux"
+          ]
+        },
+        "photos": {
+          "label": "Polaroïds",
+          "hint": "Combien de polaroïds il y a sur chaque écran"
+        },
+        "decor": {
+          "label": "Objets",
+          "hint": "Combien d'objets il y a sur le bureau : le drapeau, la couronne, le thé, le chapeau melon, le parapluie et les autres"
+        },
+        "size": {
+          "label": "Taille",
+          "hint": "La taille à laquelle les photos et les objets sont dessinés"
+        },
+        "desk": {
+          "label": "Bureau",
+          "options": [
+            "Gribouillis de Londres",
+            "Pois gris",
+            "Marbre blanc"
+          ]
+        },
+        "light": {
+          "label": "Lumière",
+          "options": [
+            "Lumière du matin",
+            "Lampe du soir"
+          ]
+        },
+        "develop": {
+          "label": "Polaroïd qui se développe",
+          "hint": "De temps en temps un polaroïd s'assombrit et se développe à nouveau, lentement",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "sun": {
+          "label": "Soleil par la fenêtre",
+          "hint": "Des ombres de feuilles qui se balancent au soleil et des nuages qui le voilent parfois (lumière du matin uniquement)",
+          "options": [
+            "Masquer",
+            "Afficher"
+          ]
+        },
+        "flow": {
+          "label": "Vitesse",
+          "hint": "La vitesse de la vapeur du thé, des feuilles et des nuages"
+        }
+      }
+    },
     "woodland": {
       "name": "Bois des contes",
       "desc": "Une forêt de livre d'images dessinée comme un dessin animé classique : vos icônes flottent sur des étangs avec nénuphars, grenouilles et familles de canetons ; tout autour, arbres ronds, champignons rouges et fleurs, lapereaux, renards et hérissons en promenade, oiseaux bleus et papillons ; de jour, au coucher du soleil ou la nuit avec des lucioles",

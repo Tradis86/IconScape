@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IconScape · School</title>
+<!--
+  IconScape · school theme (original; the desktop is a classroom blackboard seen straight on; Canvas 2D)
+  Art direction: a well-used slate blackboard. Around every group of icons the board has just been wiped: a lighter cloud of chalk dust
+  with the arcs of the felt eraser. Everywhere else the day's lessons are written in chalk: equations, geometry, fractions, a graph,
+  the solar system, an atom, a plant, the water cycle, letters, music, solids, times tables, a treasure map, doodles; white chalk with
+  coloured accents. Children's crayon drawings are held up by magnets; along the bottom of every monitor runs the chalk tray, with
+  sticks of chalk and the felt eraser. Animated: on every monitor a lesson now and then writes itself, stroke by stroke, under a stick
+  of chalk, stays a while and is wiped away by the eraser; a paper airplane glides across the whole desktop; chalk dust floats down
+  - Wiped areas: the same icon field as the other themes (a sum of Gaussians around the icons, warped by noise), traced with marching
+    squares; the chalk lessons are rubbed out softly where they reach into them
+  - Chalk: strokes are densified and wobbled by noise along their length, and stroked with a grainy pattern of the chalk colour
+  - Static drawing is cached at the screen's actual pixels; when the icons move the old and new board cross-fade
+  - Everything lives in desktop coordinates; the airplane follows the shared clock, so the board continues across monitors
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #2e4a3c; }
+  #art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  /* Preview mode (?preview=1, inside the settings window) and standalone mode: translucent blocks mark where the icons are */
+  #ghosts { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.ghosts #ghosts { display: block; }
+  .ghost { position: absolute; }
+  .ghost i { position: absolute; left: 50%; top: 4px; width: 48px; height: 48px; margin-left: -24px; border-radius: 9px;
+    background: rgba(255,255,255,.88); box-shadow: 3px 6px 8px rgba(0,0,0,.35); }
+  .ghost b { position: absolute; left: 14%; right: 14%; top: 60px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.75); }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<div id="ghosts"></div>
+<script>
+'use strict';
+
+/* ======================================================================
+   Parameters
+   ====================================================================== */
+const CELL_W = 76, CELL_H = 100, GRID_X0 = 4, GRID_Y0 = 6, TASKBAR = 48;   // desktop grid (also used by share.js)
+const STEP = 6;                                  // field grid (CSS px)
+const MARGIN = 220;                              // the field reaches this far beyond the desktop, so outlines close off-screen
+const MORPH_MS = 1600;
+const LEDGE_H = 22;                              // the chalk tray along the bottom of every monitor, above the taskbar
+
+const QS = new URLSearchParams(location.search);
+const WALL = QS.has('wallpaper');                // wallpaper mode: loaded by the desktop host; messages come from the host
+const PREVIEW = QS.has('preview');               // preview mode: the preview (iframe) in the settings window; messages come from the parent page
+// The whole desktop (CSS px): the scene is computed over all monitors in these coordinates and this page draws only its own monitor,
+// which sits at (WORLD.x, WORLD.y); mons: the monitors' rectangles. Without a layout from the host the desktop is this screen alone
+let WORLD = { x: 0, y: 0, w: innerWidth, h: innerHeight, mons: [[0, 0, innerWidth, innerHeight]], set: false };
+function applyDesktop(m) {
+  const k = window.devicePixelRatio || 1;          // physical pixels → CSS pixels
+  WORLD = { x: m.x / k, y: m.y / k, w: m.w / k, h: m.h / k, mons: (m.mons || []).map(r => r.map(v => v / k)), set: true };
+  if (!WORLD.mons.length) WORLD.mons = [[WORLD.x, WORLD.y, innerWidth, innerHeight]];
+}
+const wallClock = () => Date.now() / 1000;       // shared by the pages of all monitors: things that cross from one monitor to another stay in step
+// Defaults must match the "default" values of the school theme in themes.json
+const P = { sigma: 72, warp: 30, board: 0, lessons: 0.7, color: 0.5, live: 1, plane: 1, flow: 1, adaptive: 1, cap30: true };
+const DEFAULTS = Object.assign({}, P);
+// Accepted parameters: [min, max, integer]
+const RANGES = { sigma: [40, 200], warp: [0, 80], board: [0, 2, 1], lessons: [0, 1], color: [0, 1], live: [0, 1, 1], plane: [0, 1, 1],
+  flow: [0, 3], adaptive: [0, 1, 1] };
+// Boards: slate (base, light, dark), the tray (top, front, grain), the felt eraser's back
+const BOARDS = [
+  { slate: ['#2e4b3c', '#3b5c4b', '#233b2f'], tray: ['#a57c4e', '#7a5634', '#5e4128'], eraser: '#6b4a2e' },   // green
+  { slate: ['#26292b', '#34393b', '#1b1e20'], tray: ['#b9bec2', '#868c91', '#6c7176'], eraser: '#2f4f86' },   // black, aluminium tray
+  { slate: ['#283c4e', '#355069', '#1d2d3b'], tray: ['#a87f50', '#7c5835', '#604229'], eraser: '#8a3a32' },   // blue slate
+];
+// Chalk colours: white, yellow, pink, blue, green, orange
+const CHALK = ['#f3f0e6', '#f6e27c', '#f5a7bc', '#a2d5f2', '#b9e6a2', '#f7ba7f'];
+const HAND = '"Chalkduster", "Segoe Print", "Ink Free", "Comic Sans MS", cursive';   // macOS, then Windows
+const SYMB = '"Segoe UI Symbol", "Apple Symbols", "Noto Music", serif';
+const font = (size, f) => `${size}px ${f || HAND}`;
+const GEOMETRY_KEYS = ['sigma', 'warp', 'lessons', 'color', 'adaptive'];
+
+/* ======================================================================
+   Random numbers and noise (seeded: desktop and preview show the same scene)
+   ====================================================================== */
+let seed = WALL || PREVIEW ? 7919 : (Math.random() * 1e6) | 0;   // hosted: the same default on every monitor until the settings give one
+function hash2(x, y, k = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y, k = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy, k), b = hash2(ix + 1, iy, k), c = hash2(ix, iy + 1, k), d = hash2(ix + 1, iy + 1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function fbm(x, y, k = 0) {
+  let a = 0.5, s = 0;
+  for (let i = 0; i < 4; i++) { s += a * vnoise(x, y, k + i * 7); x = x * 2.03 + 17.1; y = y * 2.03 + 17.1; a *= 0.5; }
+  return s;
+}
+function mulberry32(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const ss = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+const mod = (a, n) => ((a % n) + n) % n;
+const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+
+/* ======================================================================
+   Fields (CPU): s = signed distance to an outline (<0 is inside), as in the other themes
+   Desktop coordinates; grid point (gx, gy) is at (gx * STEP - MARGIN, gy * STEP - MARGIN)
+   ====================================================================== */
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;   // W, H: this screen (share.js uses them too)
+function buildNoise() {
+  Gw = Math.ceil((WORLD.w + 2 * MARGIN) / STEP) + 2; Gh = Math.ceil((WORLD.h + 2 * MARGIN) / STEP) + 2;
+  const N = Gw * Gh;
+  NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
+  for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
+    const i = gy * Gw + gx, x = gx * STEP - MARGIN, y = gy * STEP - MARGIN;
+    NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
+    NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
+  }
+  toneCanvas.length = 0;
+}
+// rects: { cx, cy, hw, hh, w } (w: weight; below 1 → a smaller shape)
+function computeField(rects) {
+  const N = Gw * Gh, f1 = new Float32Array(N);
+  const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
+  for (const r of rects) {
+    const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
+    const gx0 = Math.max(0, Math.floor((r.cx + MARGIN - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + MARGIN + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy + MARGIN - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + MARGIN + R) / STEP));
+    const chw = r.hw * 0.5, chh = r.hh * 0.5, w = r.w || 1;
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * Gw + gx;
+      const qx = gx * STEP - MARGIN + NZ.wx[i] * wa, qy = gy * STEP - MARGIN + NZ.wy[i] * wa;
+      let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
+      if (dx < 0) dx = 0; if (dy < 0) dy = 0;
+      f1[i] += w * Math.exp(-(dx * dx + dy * dy) * is1);
+    }
+  }
+  const c0 = Math.sqrt(-Math.log(0.35)), s = new Float32Array(N), fMin = Math.exp(-30);
+  for (let i = 0; i < N; i++) {
+    const g = Math.log(Math.max(f1[i], fMin));
+    s[i] = sig * (Math.sqrt(Math.max(-g, 0)) - c0) - sig * 0.6 * Math.max(g, 0);
+  }
+  return s;
+}
+function sampleArr(a, x, y) {
+  const fx = Math.min(Math.max((x + MARGIN) / STEP, 0), Gw - 1.001), fy = Math.min(Math.max((y + MARGIN) / STEP, 0), Gh - 1.001);
+  const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, i = iy * Gw + ix;
+  return (a[i] * (1 - tx) + a[i + 1] * tx) * (1 - ty) + (a[i + Gw] * (1 - tx) + a[i + Gw + 1] * tx) * ty;
+}
+// Marching squares at level lv; the grid is padded with "outside" so every outline is a closed loop. Returns loops of [x0, y0, x1, y1, …] (CSS px)
+function contours(s, lv) {
+  const gw = Gw + 2, gh = Gh + 2, V = new Float32Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++)
+    V[j * gw + i] = i < 1 || j < 1 || i > Gw || j > Gh ? 1e3 : s[(j - 1) * Gw + i - 1] - lv;
+  const pos = new Map(), adj = new Map();
+  const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
+  const hk = (i, j) => {
+    const k = (j * gw + i) * 2;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[j * gw + i + 1]; pos.set(k, [(i - 1 + a / (a - b)) * STEP - MARGIN, (j - 1) * STEP - MARGIN]); }
+    return k;
+  };
+  const vk = (i, j) => {
+    const k = (j * gw + i) * 2 + 1;
+    if (!pos.has(k)) { const a = V[j * gw + i], b = V[(j + 1) * gw + i]; pos.set(k, [(i - 1) * STEP - MARGIN, (j - 1 + a / (a - b)) * STEP - MARGIN]); }
+    return k;
+  };
+  for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) {
+    const a = V[j * gw + i], b = V[j * gw + i + 1], c = V[(j + 1) * gw + i + 1], d = V[(j + 1) * gw + i];
+    const code = (a < 0 ? 8 : 0) | (b < 0 ? 4 : 0) | (c < 0 ? 2 : 0) | (d < 0 ? 1 : 0);
+    if (code === 0 || code === 15) continue;
+    const E = [() => hk(i, j), () => vk(i + 1, j), () => hk(i, j + 1), () => vk(i, j)];
+    const seg = (p, q) => link(E[p](), E[q]());
+    const mid = (a + b + c + d) / 4 < 0;
+    switch (code) {
+      case 1: case 14: seg(3, 2); break;
+      case 2: case 13: seg(2, 1); break;
+      case 3: case 12: seg(3, 1); break;
+      case 4: case 11: seg(0, 1); break;
+      case 6: case 9: seg(0, 2); break;
+      case 7: case 8: seg(3, 0); break;
+      case 5: if (mid) { seg(0, 3); seg(1, 2); } else { seg(0, 1); seg(3, 2); } break;
+      case 10: if (mid) { seg(0, 1); seg(2, 3); } else { seg(0, 3); seg(1, 2); } break;
+    }
+  }
+  const loops = [], used = new Set();
+  for (const start of adj.keys()) {
+    if (used.has(start)) continue;
+    const pts = [];
+    let prev = -1, cur = start;
+    while (cur !== undefined && !used.has(cur)) {
+      used.add(cur);
+      const p = pos.get(cur); pts.push(p[0], p[1]);
+      const nb = adj.get(cur), next = nb[0] !== prev ? nb[0] : nb[1];
+      prev = cur; cur = next;
+    }
+    let area = 0;
+    for (let k = 0, n = pts.length; k < n; k += 2) area += pts[k] * pts[(k + 3) % n] - pts[(k + 2) % n] * pts[k + 1];
+    if (pts.length >= 8 && Math.abs(area) > 80) loops.push(pts);
+  }
+  return loops;
+}
+function loopsPath(loops) {
+  const path = new Path2D();
+  for (const L of loops) {
+    const n = L.length / 2;
+    path.moveTo((L[2 * n - 2] + L[0]) / 2, (L[2 * n - 1] + L[1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      path.quadraticCurveTo(L[2 * i], L[2 * i + 1], (L[2 * i] + L[2 * j]) / 2, (L[2 * i + 1] + L[2 * j + 1]) / 2);
+    }
+    path.closePath();
+  }
+  return path;
+}
+
+/* ======================================================================
+   Chalk
+   A lesson is a list of operations in writing order, in its own units (top-left at 0, 0): strokes (polylines), texts and filled
+   shapes, each with a chalk colour. Strokes are densified and wobbled along their length so they look drawn by hand; every operation
+   has an ink length, which lets a lesson write itself progressively
+   ====================================================================== */
+const MEAS = document.createElement('canvas').getContext('2d');
+function tw(s, size, f) { MEAS.font = font(size, f); return MEAS.measureText(s).width; }
+const Ink = (w, h) => ({ w, h, ops: [] });
+const sk = (it, pts, c = 0, lw = 2.4) => it.ops.push({ k: 's', pts, c, lw });
+const tx = (it, s, x, y, size, c = 0, align = 'left', f) => it.ops.push({ k: 't', s, x, y, size, c, align, f });
+const fl = (it, pts, c = 0) => it.ops.push({ k: 'f', pts, c });
+function ellP(cx, cy, rx, ry, a0, a1, n, rot = 0) {
+  const p = [], cr = Math.cos(rot), sr = Math.sin(rot);
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (a1 - a0) * i / n, ex = Math.cos(a) * rx, ey = Math.sin(a) * ry;
+    p.push(cx + ex * cr - ey * sr, cy + ex * sr + ey * cr);
+  }
+  return p;
+}
+function arrow(it, x0, y0, x1, y1, c = 0, lw = 2, hd = 8) {
+  sk(it, [x0, y0, x1, y1], c, lw);
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  sk(it, [x1 - Math.cos(a - 0.5) * hd, y1 - Math.sin(a - 0.5) * hd, x1, y1, x1 - Math.cos(a + 0.5) * hd, y1 - Math.sin(a + 0.5) * hd], c, lw);
+}
+function dashed(it, x0, y0, x1, y1, c = 0, lw = 1.8, on = 6, off = 5) {
+  const L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L;
+  for (let d = 0; d < L; d += on + off) { const e = Math.min(L, d + on); sk(it, [x0 + ux * d, y0 + uy * d, x0 + ux * e, y0 + uy * e], c, lw); }
+}
+function dot(it, x, y, r, c = 0) { fl(it, ellP(x, y, r, r, 0, 6.2832, 10), c); }
+// the closing operation: densify and wobble the strokes, measure every operation
+function finishItem(it, k0) {
+  let n = 0;
+  it.ink = 0;
+  for (const o of it.ops) {
+    n++;
+    if (o.k === 't') { o.len = tw(o.s, o.size, o.f); it.ink += o.len; continue; }
+    if (o.k === 'f') { o.len = 24; it.ink += 24; continue; }
+    const p = o.pts, out = [];
+    for (let i = 0; i + 3 < p.length; i += 2) {
+      const ax = p[i], ay = p[i + 1], bx = p[i + 2], by = p[i + 3], m = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 5));
+      for (let j = i === 0 ? 0 : 1; j <= m; j++) out.push(ax + (bx - ax) * j / m, ay + (by - ay) * j / m);
+    }
+    const w = [];
+    let acc = 0;
+    for (let i = 0; i < out.length; i += 2) {
+      const j0 = Math.max(0, i - 2), j1 = Math.min(out.length - 2, i + 2), dx = out[j1] - out[j0], dy = out[j1 + 1] - out[j0 + 1], l = Math.hypot(dx, dy) || 1;
+      if (i) acc += Math.hypot(out[i] - out[i - 2], out[i + 1] - out[i - 1]);
+      const off = (vnoise(acc * 0.09, k0 + n * 7.3, 5) - 0.5) * 1.7;
+      w.push(out[i] - dy / l * off, out[i + 1] + dx / l * off);
+    }
+    o.pts = w; o.len = Math.max(1, acc); it.ink += o.len;
+  }
+  return it;
+}
+
+// Grainy chalk: the colour with alpha varying pixel by pixel (dry chalk skips over the slate); one pattern per colour and context
+const chalkSrc = [];
+function chalkCanvas(c) {
+  if (chalkSrc[c]) return chalkSrc[c];
+  const N = 64, k = makeCanvas(N, N), g = k.getContext('2d'), img = g.createImageData(N, N), [R, G, B] = rgb(CHALK[c]), r = mulberry32(911 + c * 17);
+  for (let i = 0; i < N * N; i++) {
+    const q = r();
+    let a = 0.62 + 0.38 * r();
+    if (q < 0.2) a *= 0.12; else if (q < 0.33) a *= 0.5;
+    img.data[i * 4] = R; img.data[i * 4 + 1] = G; img.data[i * 4 + 2] = B; img.data[i * 4 + 3] = a * 255;
+  }
+  g.putImageData(img, 0, 0);
+  return (chalkSrc[c] = k);
+}
+const patCache = new WeakMap();
+function pat(x, c) {
+  let a = patCache.get(x);
+  if (!a) patCache.set(x, (a = []));
+  return a[c] || (a[c] = x.createPattern(chalkCanvas(c), 'repeat'));
+}
+// Draws one operation, the first `frac` of it (writing order); returns where the chalk is (item units)
+function drawOp(x, o, frac = 1) {
+  if (o.k === 's') {
+    const p = o.pts;
+    x.strokeStyle = pat(x, o.c); x.lineWidth = o.lw;
+    x.beginPath(); x.moveTo(p[0], p[1]);
+    let px = p[0], py = p[1], left = o.len * frac;
+    for (let i = 2; i < p.length; i += 2) {
+      const l = Math.hypot(p[i] - px, p[i + 1] - py);
+      if (frac < 1 && l >= left) { const t = left / (l || 1); px += (p[i] - px) * t; py += (p[i + 1] - py) * t; x.lineTo(px, py); break; }
+      left -= l; px = p[i]; py = p[i + 1]; x.lineTo(px, py);
+    }
+    x.stroke();
+    return [px, py];
+  }
+  if (o.k === 't') {
+    const x0 = o.align === 'right' ? -o.len : o.align === 'center' ? -o.len / 2 : 0;
+    x.save(); x.font = font(o.size, o.f); x.textAlign = o.align; x.textBaseline = 'alphabetic'; x.fillStyle = pat(x, o.c);
+    if (frac < 1) { x.beginPath(); x.rect(o.x + x0 - 3, o.y - o.size * 1.3, o.len * frac + 3, o.size * 1.8); x.clip(); }
+    x.fillText(o.s, o.x, o.y); x.restore();
+    return [o.x + x0 + o.len * frac, o.y - o.size * 0.35];
+  }
+  const p = o.pts;
+  x.fillStyle = pat(x, o.c); x.beginPath(); x.moveTo(p[0], p[1]);
+  for (let i = 2; i < p.length; i += 2) x.lineTo(p[i], p[i + 1]);
+  x.closePath(); x.fill();
+  return [p[0], p[1]];
+}
+function drawItem(x, L) {
+  x.save(); x.translate(L.x, L.y); x.scale(L.k, L.k);
+  for (const o of L.it.ops) drawOp(x, o, 1);
+  x.restore();
+}
+
+/* ----------------------------------------------------------------------
+   The lessons. Each builder gets a random generator and acc(), which picks an accent colour (or white, by the colour parameter)
+   ---------------------------------------------------------------------- */
+const BUILD = {
+  equation(r, acc) {
+    const a = 2 + ((r() * 7) | 0), v = 2 + ((r() * 9) | 0), b = 1 + ((r() * 15) | 0), c = a * v + b, ca = acc();
+    const l1 = `${a}x + ${b} = ${c}`, l2 = `${a}x = ${c} - ${b}`, l3 = `x = ${v}`, it = Ink(Math.max(tw(l1, 24), tw(l2, 24)) + 14, 128);
+    tx(it, l1, 6, 30, 24); tx(it, l2, 6, 66, 24); tx(it, l3, 12, 106, 26, ca);
+    const w3 = tw(l3, 26);
+    sk(it, ellP(12 + w3 / 2, 97, w3 / 2 + 16, 21, -2.5, 3.55, 30), ca, 2.2);
+    return it;
+  },
+  pythagoras(r, acc) {
+    const it = Ink(0, 172), ca = acc(), cb = acc(), A = [26, 114], B = [26 + 110 + r() * 34, 114], C = [26, 114 - 66 - r() * 22];
+    sk(it, [A[0] - 4, A[1], B[0] + 4, B[1]]); sk(it, [B[0] + 3, B[1] + 2, C[0] - 2, C[1] - 3]); sk(it, [C[0], C[1] - 4, A[0], A[1] + 4]);
+    sk(it, [A[0], A[1] - 13, A[0] + 13, A[1] - 13, A[0] + 13, A[1]], 0, 1.6);
+    tx(it, 'a', A[0] - 20, (A[1] + C[1]) / 2 + 8, 22, ca); tx(it, 'b', (A[0] + B[0]) / 2 - 6, A[1] + 24, 22, ca);
+    tx(it, 'c', (B[0] + C[0]) / 2 + 10, (B[1] + C[1]) / 2 - 6, 22, ca);
+    tx(it, 'a² + b² = c²', 4, 166, 24, cb);
+    it.w = Math.max(B[0] + 12, tw('a² + b² = c²', 24) + 10);
+    return it;
+  },
+  circle(r, acc) {
+    const R = 42 + r() * 10, cx = 8 + R, cy = 70, it = Ink(0, 142), ca = acc(), ang = -0.4 - r() * 1.2;
+    sk(it, ellP(cx, cy, R, R, -0.25, 6.2832 + 0.06, 52));
+    sk(it, [cx - 3, cy - 3, cx + 3, cy + 3], 0, 1.6); sk(it, [cx - 3, cy + 3, cx + 3, cy - 3], 0, 1.6);
+    sk(it, [cx, cy, cx + Math.cos(ang) * R, cy + Math.sin(ang) * R], ca, 2);
+    tx(it, 'r', cx + Math.cos(ang) * R * 0.5 + 6, cy + Math.sin(ang) * R * 0.5 + 2, 20, ca);
+    const x2 = cx + R + 22;
+    tx(it, 'A = πr²', x2, 60, 23); tx(it, 'C = 2πr', x2, 100, 23, acc());
+    it.w = x2 + Math.max(tw('A = πr²', 23), tw('C = 2πr', 23)) + 8;
+    return it;
+  },
+  column(r, acc) {
+    const a = 100 + ((r() * 899) | 0), b = 100 + ((r() * 899) | 0), sum = a + b, X = 130, D = 19, it = Ink(150, 132), ca = acc();
+    const row = (str, y, c) => { for (let i = 0; i < str.length; i++) tx(it, str[str.length - 1 - i], X - i * D, y, 26, c, 'right'); };
+    let carry = 0;
+    for (let i = 0; i < 3; i++) {                  // carried digits, small, above the next column
+      const d = Math.floor(a / 10 ** i) % 10 + Math.floor(b / 10 ** i) % 10 + carry;
+      carry = d >= 10 ? 1 : 0;
+      if (carry) tx(it, '1', X - (i + 1) * D - 2, 14, 14, ca, 'right');
+    }
+    row(String(a), 40); row(String(b), 74);
+    tx(it, '+', X - 4 * D - 2, 74, 26, 0, 'right');
+    sk(it, [X - 4 * D - 18, 86, X + 6, 85]);
+    row(String(sum), 120, ca);
+    return it;
+  },
+  fraction(r, acc) {
+    const n = r() < 0.5 ? 4 : 8, k = 1 + ((r() * (n - 1)) | 0), cx = 52, cy = 60, R = 44, it = Ink(0, 122), ca = acc(1);
+    for (let j = 0; j < k; j++) {                  // the coloured slices, scribbled in
+      const a0 = -1.5708 + j * 6.2832 / n, a1 = a0 + 6.2832 / n;
+      for (let t = a0 + 0.06; t < a1 - 0.03; t += 0.11) sk(it, [cx + Math.cos(t) * 5, cy + Math.sin(t) * 5, cx + Math.cos(t) * (R - 4), cy + Math.sin(t) * (R - 4)], ca, 2.2);
+    }
+    sk(it, ellP(cx, cy, R, R, -1.5, 6.2832 - 1.4, 50));
+    for (let i = 0; i < n; i++) { const a = -1.5708 + i * 6.2832 / n; sk(it, [cx, cy, cx + Math.cos(a) * R, cy + Math.sin(a) * R], 0, 1.7); }
+    const g = gcd(k, n), num = String(k / g), den = String(n / g), fx = cx + R + 30;
+    tx(it, num, fx + 16, 52, 30, ca, 'center'); sk(it, [fx, 62, fx + 32, 61], 0, 2.2); tx(it, den, fx + 16, 96, 30, 0, 'center');
+    it.w = fx + 44;
+    return it;
+  },
+  graph(r, acc) {
+    const it = Ink(220, 152), ca = acc(1), para = r() < 0.5;
+    arrow(it, 20, 126, 208, 126, 0, 2.2); arrow(it, 36, 144, 36, 10, 0, 2.2);
+    for (let x = 60; x < 200; x += 24) sk(it, [x, 122, x, 130], 0, 1.4);
+    for (let y = 102; y > 20; y -= 22) sk(it, [32, y, 40, y], 0, 1.4);
+    tx(it, 'x', 204, 146, 18); tx(it, 'y', 14, 20, 18);
+    const pts = [];
+    if (para) for (let t = -1; t <= 1.0001; t += 0.05) pts.push(120 + t * 72, 116 - 92 * (1 - t * t));
+    else for (let t = 0; t <= 1.0001; t += 0.025) pts.push(40 + t * 160, 72 - 38 * Math.sin(t * 6.2832 * 1.25));
+    sk(it, pts, ca, 2.6);
+    for (let i = 4; i < pts.length - 2; i += 12) sk(it, ellP(pts[i], pts[i + 1], 3, 3, 0, 6.3, 8), acc(), 1.6);
+    return it;
+  },
+  solar(r, acc) {
+    const it = Ink(272, 122), sc = acc(1), cx = 26, cy = 62;
+    sk(it, ellP(cx, cy, 16, 16, 0, 6.35, 24), sc, 2.4);
+    for (let i = 0; i < 10; i++) { const a = i * 0.628; sk(it, [cx + Math.cos(a) * 21, cy + Math.sin(a) * 21, cx + Math.cos(a) * 28, cy + Math.sin(a) * 28], sc, 1.8); }
+    for (let k = 0; k < 4; k++) {
+      const rx = 58 + k * 50, ry = 16 + k * 10, ph = (r() - 0.5) * 1.6, pr = [4, 6, 8, 6][k];
+      sk(it, ellP(cx, cy, rx, ry, -1.2, 1.2, 34), 0, 1.4);
+      const px = cx + Math.cos(ph) * rx, py = cy + Math.sin(ph) * ry, pc = acc();
+      sk(it, ellP(px, py, pr, pr, 0, 6.35, 14), pc, 2);
+      if (k === 2) sk(it, ellP(px, py, pr * 2, pr * 0.5, 0.25, 6.0, 20, -0.25), pc, 1.5);
+    }
+    return it;
+  },
+  atom(r, acc) {
+    const it = Ink(160, 152), cx = 80, cy = 76, ca = acc(1), cb = acc();
+    for (let k = 0; k < 3; k++) {
+      const o = ellP(cx, cy, 66, 22, 0, 6.35, 44, k * 1.0472);
+      sk(it, o, 0, 1.8);
+      const e = 6 + ((r() * 30) | 0);
+      dot(it, o[e * 2], o[e * 2 + 1], 4, cb);
+    }
+    for (let k = 0; k < 5; k++) { const a = k * 1.26, d = k ? 6 : 0; sk(it, ellP(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 5, 5, 0, 6.35, 10), k % 2 ? ca : 0, 2); }
+    return it;
+  },
+  plant(r, acc) {
+    const it = Ink(212, 182), gc = acc(4), fc = acc(2), sc = acc(1);
+    sk(it, [8, 130, 60, 128, 120, 131, 204, 129]);
+    const stem = []; for (let t = 0; t <= 1.0001; t += 0.1) stem.push(100 + Math.sin(t * 3) * 4, 130 - t * 82);
+    sk(it, stem, gc, 2.4);
+    sk(it, [100, 104, 84, 94, 70, 96, 64, 104, 76, 110, 100, 104], gc, 2);       // leaves
+    sk(it, [102, 86, 118, 74, 134, 74, 140, 80, 128, 88, 102, 86], gc, 2);
+    for (let k = 0; k < 6; k++) { const a = k * 1.047; sk(it, ellP(102 + Math.cos(a) * 12, 42 + Math.sin(a) * 12, 9, 5, 0, 6.35, 14, a), fc, 2); }
+    dot(it, 102, 42, 5, sc);
+    for (const [a, l] of [[0.3, 26], [-0.4, 30], [1.2, 18], [-1.1, 20]]) sk(it, [100, 132, 100 + Math.sin(a) * l * 0.6, 132 + l * 0.5, 100 + Math.sin(a) * l, 132 + l], 0, 1.6);   // roots
+    sk(it, ellP(28, 30, 12, 12, 0, 6.35, 20), sc, 2.2);
+    for (let i = 0; i < 8; i++) { const a = i * 0.785; sk(it, [28 + Math.cos(a) * 16, 30 + Math.sin(a) * 16, 28 + Math.cos(a) * 22, 30 + Math.sin(a) * 22], sc, 1.6); }
+    arrow(it, 44, 44, 70, 84, sc, 1.6, 7);
+    tx(it, 'H₂O', 132, 164, 18); arrow(it, 130, 158, 112, 150, 0, 1.4, 6);
+    tx(it, 'CO₂', 158, 66, 18); arrow(it, 156, 62, 140, 72, 0, 1.4, 6);
+    return it;
+  },
+  water(r, acc) {
+    const it = Ink(250, 172), wc = acc(3), sc = acc(1);
+    const sea = []; for (let x = 6; x <= 150; x += 4) sea.push(x, 150 + Math.sin(x * 0.18) * 3); sk(it, sea, wc, 2.2);
+    sk(it, [140, 154, 190, 82, 244, 154]); sk(it, [178, 98, 190, 82, 203, 99, 196, 95, 190, 101, 184, 95, 178, 98], 0, 1.8);   // mountain, snow cap
+    sk(it, [80, 46, 82, 32, 96, 26, 108, 30, 116, 20, 134, 20, 142, 32, 158, 32, 164, 44, 156, 52, 84, 52, 80, 46]);              // cloud
+    for (let i = 0; i < 5; i++) sk(it, [92 + i * 14, 62, 86 + i * 14, 78], wc, 1.8);
+    sk(it, ellP(28, 30, 12, 12, 0, 6.35, 20), sc, 2.2);
+    for (let i = 0; i < 8; i++) { const a = i * 0.785; sk(it, [28 + Math.cos(a) * 16, 30 + Math.sin(a) * 16, 28 + Math.cos(a) * 22, 30 + Math.sin(a) * 22], sc, 1.6); }
+    for (let t = 0; t < 1; t += 0.16) { const a = t, b = t + 0.08; sk(it, [40 + a * 30, 140 - a * 80, 40 + b * 30, 140 - b * 80], wc, 1.6); }   // evaporation, dashed
+    arrow(it, 64, 52, 72, 46, wc, 1.6, 7);
+    const riv = []; for (let t = 0; t <= 1.0001; t += 0.1) riv.push(196 - t * 40, 120 + t * 28 + Math.sin(t * 8) * 3); sk(it, riv, wc, 1.8);
+    return it;
+  },
+  letters(r, acc) {
+    const L = ['Aa Bb Cc', 'Dd Ee Ff', 'Gg Hh Ii', 'Mm Nn Oo'], i = (r() * 3) | 0, a = L[i], b = L[i + 1], ca = acc();
+    const it = Ink(Math.max(tw(a, 30), tw(b, 30)) + 24, 116);
+    for (const y of [46, 104]) { sk(it, [4, y, it.w - 4, y], 0, 1.1); sk(it, [4, y - 18, it.w - 4, y - 18], 0, 0.8); }
+    tx(it, a, 10, 46, 30, ca); tx(it, b, 10, 104, 30);
+    return it;
+  },
+  music(r, acc) {
+    const it = Ink(250, 104), ca = acc(), cb = acc();
+    for (let i = 0; i < 5; i++) sk(it, [6, 30 + i * 11, 244, 30 + i * 11], 0, 1.2);
+    tx(it, '𝄞', 8, 84, 64, 0, 'left', SYMB);
+    let prev = null;
+    for (let i = 0; i < 6; i++) {
+      const x = 70 + i * 30, pos = (r() * 9) | 0, y = 74 - pos * 5.5, c = i % 3 === 2 ? cb : ca, up = pos < 5;
+      fl(it, ellP(x, y, 6.5, 4.6, 0, 6.2832, 14, -0.4), c);
+      const sx = up ? x + 6 : x - 6, sy = up ? y - 32 : y + 32;
+      sk(it, [sx, y, sx, sy], c, 1.8);
+      if (i === 3 && prev && prev.up === up) sk(it, [prev.sx, prev.sy, sx, sy], c, 4);
+      prev = { sx, sy, up };
+    }
+    return it;
+  },
+  solids(r, acc) {
+    const it = Ink(286, 132), ca = acc(), cb = acc(), cc = acc();
+    const f = [14, 46, 70, 102], d = [24, -22];      // cube: front square, depth offset; hidden edges dashed
+    sk(it, [f[0], f[1], f[2], f[1], f[2], f[3], f[0], f[3], f[0], f[1]], ca);
+    sk(it, [f[0], f[1], f[0] + d[0], f[1] + d[1], f[2] + d[0], f[1] + d[1], f[2], f[1]], ca);
+    sk(it, [f[2] + d[0], f[1] + d[1], f[2] + d[0], f[3] + d[1], f[2], f[3]], ca);
+    dashed(it, f[0], f[3], f[0] + d[0], f[3] + d[1], ca); dashed(it, f[0] + d[0], f[3] + d[1], f[2] + d[0], f[3] + d[1], ca); dashed(it, f[0] + d[0], f[1] + d[1], f[0] + d[0], f[3] + d[1], ca);
+    const px = 150, base = [[112, 106], [176, 106], [194, 88], [130, 88]], apex = [px, 22];   // pyramid
+    sk(it, [base[0][0], base[0][1], base[1][0], base[1][1], base[2][0], base[2][1]], cb);
+    dashed(it, base[2][0], base[2][1], base[3][0], base[3][1], cb); dashed(it, base[3][0], base[3][1], base[0][0], base[0][1], cb);
+    for (const b of [base[0], base[1], base[2]]) sk(it, [apex[0], apex[1], b[0], b[1]], cb);
+    dashed(it, apex[0], apex[1], base[3][0], base[3][1], cb);
+    sk(it, ellP(250, 32, 26, 9, 0, 6.35, 30), cc);   // cylinder
+    sk(it, [224, 32, 224, 104], cc); sk(it, [276, 32, 276, 104], cc);
+    sk(it, ellP(250, 104, 26, 9, 0, 3.1416, 18), cc);
+    const back = ellP(250, 104, 26, 9, 3.1416, 6.2832, 18);
+    for (let i = 0; i + 5 < back.length; i += 6) sk(it, back.slice(i, i + 4), cc, 1.6);
+    return it;
+  },
+  times(r, acc) {
+    const it = Ink(0, 126), ca = acc(), L = [];
+    for (let i = 0; i < 3; i++) { const a = 2 + ((r() * 8) | 0), b = 2 + ((r() * 8) | 0); L.push(i < 2 ? `${a} × ${b} = ${a * b}` : `${a} × ${b} = ?`); }
+    L.forEach((s, i) => tx(it, s, 6, 32 + i * 38, 24, i === 2 ? ca : 0));
+    it.w = Math.max(...L.map(s => tw(s, 24))) + 14;
+    return it;
+  },
+  map(r, acc) {
+    const it = Ink(252, 162), ca = acc(5), cb = acc(3), isl = [], cx = 158, cy = 86;
+    for (let k = 0; k <= 40; k++) { const a = k / 40 * 6.2832, rr = 52 * (0.72 + 0.4 * vnoise(Math.cos(a) * 1.6 + 5, Math.sin(a) * 1.6 + 5, 9 + ((r() * 9) | 0))); isl.push(cx + Math.cos(a) * rr * 1.3, cy + Math.sin(a) * rr * 0.85); }
+    sk(it, isl);
+    for (let i = 0; i < 5; i++) { const wx = 100 + r() * 140, wy = i % 2 ? 22 + r() * 10 : 146 + r() * 8; sk(it, [wx, wy, wx + 5, wy - 3, wx + 10, wy, wx + 15, wy - 3], cb, 1.4); }
+    let px = 120, py = 116;
+    for (let t = 0; t < 7; t++) { const nx = px + 9, ny = py - 7 + Math.sin(t) * 5; sk(it, [px, py, px + (nx - px) * 0.6, py + (ny - py) * 0.6], 0, 1.6); px = nx; py = ny; }
+    sk(it, [px + 4, py - 8, px + 16, py + 4], ca, 2.8); sk(it, [px + 16, py - 8, px + 4, py + 4], ca, 2.8);
+    const star = []; for (let k = 0; k <= 8; k++) { const a = -1.5708 + k * 0.785, rr = k % 2 ? 8 : 28; star.push(44 + Math.cos(a) * rr, 64 + Math.sin(a) * rr); }
+    sk(it, star, 0, 1.8); tx(it, 'N', 44, 28, 18, ca, 'center');
+    return it;
+  },
+  doodle(r, acc) {
+    const it = Ink(92, 84), kind = (r() * 4) | 0, c = acc();
+    if (kind === 0) {                               // a smiling sun
+      sk(it, ellP(46, 42, 20, 20, 0, 6.35, 28), c); for (let i = 0; i < 10; i++) { const a = i * 0.628; sk(it, [46 + Math.cos(a) * 26, 42 + Math.sin(a) * 26, 46 + Math.cos(a) * 34, 42 + Math.sin(a) * 34], c, 1.8); }
+      dot(it, 39, 37, 2.2, c); dot(it, 53, 37, 2.2, c); sk(it, ellP(46, 44, 10, 7, 0.4, 2.74, 10), c, 1.8);
+    } else if (kind === 1) {                        // a star
+      const p = []; for (let k = 0; k <= 10; k++) { const a = -1.5708 + k * 0.6283, rr = k % 2 ? 14 : 34; p.push(46 + Math.cos(a) * rr, 46 + Math.sin(a) * rr); } sk(it, p, c);
+    } else if (kind === 2) {                        // noughts and crosses
+      sk(it, [34, 10, 32, 76]); sk(it, [58, 10, 60, 76]); sk(it, [12, 32, 80, 30]); sk(it, [12, 54, 80, 56]);
+      sk(it, [16, 14, 28, 26], c); sk(it, [28, 14, 16, 26], c); sk(it, ellP(46, 43, 7, 7, 0, 6.35, 14)); sk(it, [64, 60, 76, 72], c); sk(it, [76, 60, 64, 72], c);
+    } else {                                         // a heart
+      sk(it, [46, 74, 18, 44, 14, 28, 22, 16, 34, 14, 46, 28, 58, 14, 70, 16, 78, 28, 74, 44, 46, 74], c);
+    }
+    return it;
+  },
+};
+const LESSONS = ['equation', 'pythagoras', 'graph', 'solar', 'letters', 'circle', 'plant', 'music', 'fraction', 'column', 'water', 'atom', 'solids', 'times', 'map'];
+const LIVE = ['equation', 'pythagoras', 'circle', 'column', 'times', 'graph', 'fraction', 'atom', 'doodle'];
+function makeItem(kind, r) {
+  const acc = pref => (r() < P.color ? (pref && r() < 0.6 ? pref : 1 + ((r() * 5) | 0)) : 0);
+  return finishItem(BUILD[kind](r, acc), (r() * 1000) | 0);
+}
+
+/* ======================================================================
+   Board geometry (CSS px, desktop coordinates): wiped areas, the chalk trays, children's drawings, lessons, the spots where lessons
+   write themselves
+   ====================================================================== */
+let icons = [];                                  // this screen's coordinates (share.js draws them); all monitors' icons, the others fall outside the screen
+let iconsW = [];                                 // the same icons in desktop coordinates, set by buildGeometry
+const iconRects = () => iconsW.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+function pointOnMonitors(rnd, m) {
+  const mon = WORLD.mons[(rnd() * WORLD.mons.length) | 0];
+  return [mon[0] + m + (mon[2] - 2 * m) * rnd(), mon[1] + m + (mon[3] - TASKBAR - 2 * m) * rnd()];
+}
+function wipeRects() {
+  if (P.adaptive) return iconRects();
+  const rnd = mulberry32(seed * 7 + 3), out = [];   // not adapting: a few wiped patches of their own (3 per monitor)
+  for (let i = 0; i < 3 * WORLD.mons.length; i++) { const [x, y] = pointOnMonitors(rnd, 140); out.push({ cx: x, cy: y, hw: 50 + 100 * rnd(), hh: 40 + 80 * rnd(), w: 1 }); }
+  return out;
+}
+const ledgeTop = m => m[1] + m[3] - TASKBAR - LEDGE_H;
+function buildGeometry() {
+  iconsW = icons.map(ic => ({ x: ic.x + WORLD.x, y: ic.y + WORLD.y, w: ic.w, h: ic.h }));
+  const s = computeField(wipeRects()), nMon = WORLD.mons.length;
+  const geo = { s, wiped: loopsPath(contours(s, 0)), core: loopsPath(contours(s, -24)), mask: loopsPath(contours(s, 10)),
+    arcs: [], cards: [], papers: [], tools: [], lessons: [], live: [], trays: [], rasters: [] };
+  const boxes = [];
+  // a box fits when it lies inside one monitor, below the alphabet cards and above its chalk tray, clear of the wiped areas and of the other boxes
+  const fits = (x, y, w, h, clear) => {
+    const m = WORLD.mons.find(m => x >= m[0] + 14 && x + w <= m[0] + m[2] - 14 && y >= m[1] + 12 && y + h <= ledgeTop(m) - 14);
+    if (!m) return false;
+    for (let j = 0; j <= 2; j++) for (let i = 0; i <= 2; i++) if (sampleArr(s, x + w * i / 2, y + h * j / 2) < clear) return false;
+    return boxes.every(b => x > b.x + b.w + 12 || x + w < b.x - 12 || y > b.y + b.h + 12 || y + h < b.y - 12);
+  };
+  for (let cy = 0; cy * 46 < WORLD.h + 46; cy++) for (let cx = 0; cx * 46 < WORLD.w + 46; cx++) {   // the eraser's arcs, inside the wiped areas
+    const x = (cx + hash2(cx, cy, 11)) * 46, y = (cy + hash2(cx, cy, 12)) * 46;
+    if (hash2(cx, cy, 13) > 0.6 || sampleArr(s, x, y) > -6) continue;
+    const a0 = hash2(cx, cy, 14) * 6.28;
+    geo.arcs.push({ x, y, r: 36 + 54 * hash2(cx, cy, 15), a0, a1: a0 + 1.1 + 1.3 * hash2(cx, cy, 16), w: 18 + 10 * hash2(cx, cy, 17) });
+  }
+  for (const m of WORLD.mons) {                    // chalk tray: sticks of chalk and the felt eraser
+    const tr = mulberry32(seed * 29 + Math.round(m[0] * 3 + m[1] * 7)), y = ledgeTop(m), sticks = [];
+    let x = m[0] + 40 + tr() * 80;
+    while (x < m[0] + m[2] - 60) {
+      const L = tr() < 0.35 ? 9 + tr() * 9 : 26 + tr() * 22;
+      sticks.push({ x, L, c: tr() < 0.55 ? 0 : 1 + ((tr() * 5) | 0), rot: (tr() - 0.5) * 0.06 });
+      x += L + 14 + tr() * (tr() < 0.25 ? 260 : 60);
+    }
+    const ex = m[0] + m[2] * (0.25 + 0.5 * tr());
+    geo.trays.push({ x0: m[0], x1: m[0] + m[2], y, sticks: sticks.filter(st => st.x + st.L < ex - 8 || st.x > ex + 80), eraser: ex });
+  }
+  let letter = 0;
+  for (const m of WORLD.mons) {                    // the alphabet cards along the top of the board, missing where the board was wiped
+    const n = Math.floor((m[2] - 40) / 54), x0 = m[0] + (m[2] - n * 54) / 2;
+    for (let i = 0; i < n; i++, letter++) {
+      const x = x0 + i * 54 + 5, y = m[1] + 10;
+      if (sampleArr(s, x + 22, y + 28) < 10 || sampleArr(s, x + 22, y + 60) < 0) continue;
+      geo.cards.push({ x, y, ch: String.fromCharCode(65 + (letter % 26)), c: letter % 3, rot: (hash2(letter, 1, 61) - 0.5) * 0.05 });
+      boxes.push({ x, y: y - 4, w: 44, h: 62 });
+    }
+  }
+  const rnd = mulberry32(seed * 31 + 17);
+  for (let mi = 0; mi < nMon; mi++) {              // where lessons can write themselves: free spots kept on every monitor
+    const m = WORLD.mons[mi], spots = [];
+    for (let t = 0; t < 300 && spots.length < 1; t++) {
+      const w = 220, h = 150, x = m[0] + 16 + rnd() * (m[2] - w - 32), y = m[1] + 80 + rnd() * (m[3] - TASKBAR - h - 120);
+      if (!fits(x, y, w, h, 24)) continue;
+      boxes.push({ x, y, w, h }); spots.push({ x, y, w, h });
+    }
+    geo.live.push(spots);
+  }
+  if (P.lessons > 0.05) for (let mi = 0; mi < nMon; mi++) {   // children's drawings, held up by magnets: two per monitor
+    const m = WORLD.mons[mi], k0 = (rnd() * 4) | 0;
+    for (let n = 0, t = 0; n < (m[2] >= 1500 ? 2 : 1) && t < 160; t++) {
+      const w = 96 + rnd() * 18, h = w * 1.28, x = m[0] + 20 + rnd() * (m[2] - w - 40), y = m[1] + 80 + rnd() * (m[3] - TASKBAR - h - 120);
+      if (!fits(x - 8, y - 8, w + 16, h + 16, 20)) continue;
+      boxes.push({ x: x - 8, y: y - 8, w: w + 16, h: h + 16 });
+      geo.papers.push({ x: x + w / 2, y: y + h / 2, w, h, rot: (rnd() - 0.5) * 0.14, kind: (k0 + n) % 4, mag: (rnd() * 4) | 0, two: rnd() < 0.4 });
+      n++;
+    }
+    for (let n = 0, t = 0, kind = (rnd() * 3) | 0; n < 1 && t < 160; t++) {   // the teacher's big tools hanging on the board
+      const [w, h] = [[170, 132], [190, 110], [96, 190]][kind], x = m[0] + 20 + rnd() * (m[2] - w - 40), y = m[1] + 80 + rnd() * (m[3] - TASKBAR - h - 120);
+      if (!fits(x, y, w, h, 16)) continue;
+      boxes.push({ x, y, w, h });
+      geo.tools.push({ kind, x, y, w, h, rot: (rnd() - 0.5) * 0.25, flip: rnd() < 0.5 });
+      n++; kind = (kind + 1 + ((rnd() * 2) | 0)) % 3;
+    }
+  }
+  // the lessons: candidate spots in random order, each taking the next subject of a rotation shuffled with the seed, until the board is as
+  // full as the "lessons" parameter asks
+  const order = LESSONS.slice();
+  for (let i = order.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; [order[i], order[j]] = [order[j], order[i]]; }
+  let free = 0;
+  for (let y = 0; y < WORLD.h; y += 40) for (let x = 0; x < WORLD.w; x += 40) if (sampleArr(s, x, y) > 30) free++;
+  const target = Math.round(P.lessons * free * 1600 / 34000);
+  let turn = 0, miss = 0, doodles = 0;
+  const used = {}, pick = start => {             // the next subject in the rotation that has not been used more than the others
+    const cap = 2 + Math.floor(geo.lessons.length / order.length);
+    for (let k = 0; k < order.length; k++) { const c = order[(start + k) % order.length]; if ((used[c] || 0) < cap) return c; }
+    return order[start % order.length];
+  };
+  for (let t = 0; t < 2600 && geo.lessons.length < target; t++) {
+    const [px, py] = pointOnMonitors(rnd, 16), filler = geo.lessons.length > 3 && rnd() < 0.2 && doodles < 3 * nMon;
+    const kind = filler ? 'doodle' : pick(turn + Math.floor(miss / 25));   // a subject that finds no room gives way to the next
+    const ir = mulberry32(seed * 977 + t * 131 + 7), it = makeItem(kind, ir), k = 0.9 + 0.22 * rnd();
+    const w = it.w * k, h = it.h * k;
+    if (!fits(px, py, w, h, 2)) { miss++; continue; }
+    boxes.push({ x: px, y: py, w, h });
+    geo.lessons.push({ x: px, y: py, k, it });
+    used[kind] = (used[kind] || 0) + 1;
+    if (filler) doodles++; else { turn += 1 + Math.floor(miss / 25); miss = 0; }
+  }
+  return geo;
+}
+
+/* ======================================================================
+   Canvas and cached layers (drawn at the canvas's actual pixels; at most two sizes are kept: the screen and a share/recording size)
+   ====================================================================== */
+const cv = document.getElementById('art');
+const ctx = cv.getContext('2d', { alpha: false });
+function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; }
+function cached(list, build) {
+  const w = cv.width, h = cv.height, key = P.board;
+  let hit = list.find(e => e.w === w && e.h === h && e.key === key);
+  if (!hit) { hit = { w, h, key, c: build(w, h, cv._scale) }; list.unshift(hit); if (list.length > 2) list.pop(); }
+  return hit.c;
+}
+// A filled rounded rectangle (without roundRect, which older WebKit versions lack)
+function rrFill(x, x0, y0, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r);
+  x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); x.fill();
+}
+
+// The slate: broad mottling from the field noise (low resolution, enlarged smoothly), fine grain, light from the top, the ghosts of old lessons
+const toneCanvas = [];
+function tone() {
+  if (toneCanvas[P.board]) return toneCanvas[P.board];
+  const c = makeCanvas(Gw, Gh), x = c.getContext('2d'), img = x.createImageData(Gw, Gh), [b, l, d] = BOARDS[P.board].slate.map(rgb);
+  for (let i = 0; i < Gw * Gh; i++) {
+    const a = NZ.wx[i] + 0.47, q = NZ.wy[i] + 0.47;
+    let col = b.map((v, k) => v + (l[k] - v) * ss(0.45, 0.8, a) * 0.7);
+    col = col.map((v, k) => v + (d[k] - v) * ss(0.5, 0.82, q) * 0.8);
+    img.data.set([col[0], col[1], col[2], 255], i * 4);
+  }
+  x.putImageData(img, 0, 0);
+  return (toneCanvas[P.board] = c);
+}
+let grainSrc = null;
+function grain(x) {
+  if (!grainSrc) {
+    const N = 96, k = makeCanvas(N, N), g = k.getContext('2d'), img = g.createImageData(N, N), r = mulberry32(4242);
+    for (let i = 0; i < N * N; i++) { const v = r() < 0.5 ? 0 : 255; img.data.set([v, v, v, 6 + r() * 14], i * 4); }
+    g.putImageData(img, 0, 0); grainSrc = k;
+  }
+  return x.createPattern(grainSrc, 'repeat');
+}
+const GHOSTS = ['3 + 4 = 7', 'E = mc²', 'x² - 1', '12 : 4 = 3', 'abc', '√16 = 4', 'y = 2x + 1', '1 2 3 4 5', 'H₂O', '7 × 8 = 56', 'Aa Bb', '½ + ¼', 'π', '100'];
+const baseCache = [];
+function buildBase(cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), VX = WORLD.x, VY = WORLD.y;
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);   // desktop coordinates: the board continues across monitors
+  x.imageSmoothingQuality = 'high'; x.drawImage(tone(), -MARGIN, -MARGIN, Gw * STEP, Gh * STEP);
+  const light = x.createLinearGradient(0, 0, 0, WORLD.h);
+  light.addColorStop(0, 'rgba(255,255,255,0.05)'); light.addColorStop(0.6, 'rgba(0,0,0,0)'); light.addColorStop(1, 'rgba(0,0,0,0.12)');
+  x.fillStyle = light; x.fillRect(VX, VY, W, H);
+  x.fillStyle = grain(x); x.fillRect(VX, VY, W, H);
+  x.globalAlpha = 0.07; x.textBaseline = 'alphabetic';   // the ghosts of lessons erased long ago
+  for (let cy = Math.floor(VY / 230) - 1; cy * 230 < VY + H + 230; cy++) for (let cx = Math.floor(VX / 300) - 1; cx * 300 < VX + W + 300; cx++) {
+    if (hash2(cx, cy, 91) > 0.55) continue;
+    const gx = (cx + hash2(cx, cy, 92)) * 300, gy = (cy + hash2(cx, cy, 93)) * 230, size = 22 + 16 * hash2(cx, cy, 94);
+    x.save(); x.translate(gx, gy); x.rotate((hash2(cx, cy, 95) - 0.5) * 0.12);
+    x.font = font(size); x.fillStyle = pat(x, 0); x.fillText(GHOSTS[(hash2(cx, cy, 96) * GHOSTS.length) | 0], 0, 0);
+    x.restore();
+  }
+  x.globalAlpha = 1;
+  for (let cy = Math.floor(VY / 120) - 1; cy * 120 < VY + H + 120; cy++) for (let cx = Math.floor(VX / 160) - 1; cx * 160 < VX + W + 160; cx++) {   // old eraser smears
+    if (hash2(cx, cy, 97) > 0.4) continue;
+    const ex = (cx + hash2(cx, cy, 98)) * 160, ey = (cy + hash2(cx, cy, 99)) * 120, rr = 50 + 70 * hash2(cx, cy, 100), a0 = hash2(cx, cy, 101) * 6.28;
+    x.strokeStyle = 'rgba(255,255,255,0.025)'; x.lineWidth = 22; x.lineCap = 'round';
+    x.beginPath(); x.arc(ex, ey, rr, a0, a0 + 1 + hash2(cx, cy, 102)); x.stroke();
+  }
+  return c;
+}
+
+// Children's crayon drawings on paper
+function crayon(x, pts, col, lw = 3) {
+  x.strokeStyle = col; x.lineCap = 'round'; x.lineJoin = 'round';
+  for (const [a, w, o] of [[0.85, lw, 0], [0.4, lw * 0.6, 0.8]]) {
+    x.globalAlpha = a; x.lineWidth = w; x.beginPath(); x.moveTo(pts[0] + o, pts[1] + o);
+    for (let i = 2; i < pts.length; i += 2) x.lineTo(pts[i] + o, pts[i + 1] + o * (i % 4 ? -1 : 1));
+    x.stroke();
+  }
+  x.globalAlpha = 1;
+}
+function scribble(x, path, col, x0, y0, x1, y1) {   // filled in with diagonal crayon strokes, kept inside the shape
+  x.save(); x.clip(path); x.strokeStyle = col; x.globalAlpha = 0.7; x.lineWidth = 2.6; x.beginPath();
+  for (let d = x0 - (y1 - y0); d < x1; d += 3.2) { x.moveTo(d, y1); x.lineTo(d + (y1 - y0), y0); }
+  x.stroke(); x.restore(); x.globalAlpha = 1;
+}
+function drawPaper(x, p, s) {
+  const w = p.w, h = p.h, hw = w / 2, hh = h / 2;
+  x.save(); x.translate(p.x, p.y); x.rotate(p.rot);
+  x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = 9 * s; x.shadowOffsetX = 3 * s; x.shadowOffsetY = 6 * s;
+  x.fillStyle = '#f6f1e3'; x.fillRect(-hw, -hh, w, h);
+  x.shadowColor = 'transparent';
+  x.fillStyle = 'rgba(160,140,100,0.12)'; x.fillRect(-hw, hh - 10, w, 10);
+  const L = (a, b) => [-hw + a * w, -hh + b * h];
+  if (p.kind === 0) {                              // a house with the sun
+    const g = new Path2D(); g.rect(-hw + 4, hh - 30, w - 8, 26); scribble(x, g, '#5cb85c', -hw, hh - 30, hw, hh);
+    const body = new Path2D(); body.rect(...L(0.22, 0.48), w * 0.5, h * 0.3); scribble(x, body, '#e8a33d', -hw, -hh, hw, hh);
+    const roof = new Path2D(); roof.moveTo(...L(0.16, 0.5)); roof.lineTo(...L(0.47, 0.28)); roof.lineTo(...L(0.78, 0.5)); roof.closePath(); scribble(x, roof, '#d9443a', -hw, -hh, hw, hh);
+    crayon(x, [...L(0.22, 0.48), ...L(0.72, 0.48), ...L(0.72, 0.78), ...L(0.22, 0.78), ...L(0.22, 0.48)], '#7a4a22', 2);
+    crayon(x, [...L(0.4, 0.78), ...L(0.4, 0.62), ...L(0.52, 0.62), ...L(0.52, 0.78)], '#5a3418', 2);
+    const sun = new Path2D(); sun.arc(...L(0.8, 0.13), w * 0.1, 0, 6.2832); scribble(x, sun, '#f5c518', -hw, -hh, hw, hh);
+    for (let i = 0; i < 8; i++) { const a = i * 0.785, [sx, sy] = L(0.8, 0.13); crayon(x, [sx + Math.cos(a) * w * 0.13, sy + Math.sin(a) * w * 0.13, sx + Math.cos(a) * w * 0.19, sy + Math.sin(a) * w * 0.19], '#f5a518', 2); }
+  } else if (p.kind === 1) {                       // a rainbow between clouds
+    ['#e8443a', '#f39a2a', '#f5d02a', '#5cb85c', '#3a8ee8', '#7a5ad8'].forEach((col, i) => {
+      const pts = []; for (let a = 3.25; a <= 6.18; a += 0.12) pts.push(Math.cos(a) * (w * 0.4 - i * 4.5), h * 0.12 + Math.sin(a) * (w * 0.4 - i * 4.5)); crayon(x, pts, col, 4);
+    });
+    for (const [cx, cy] of [L(0.2, 0.62), L(0.8, 0.62)]) { const cl = new Path2D(); cl.arc(cx - 8, cy, 9, 0, 6.28); cl.arc(cx + 3, cy - 5, 11, 0, 6.28); cl.arc(cx + 12, cy + 1, 8, 0, 6.28); scribble(x, cl, '#a8cff0', cx - 20, cy - 18, cx + 22, cy + 12); }
+    const g = new Path2D(); g.rect(-hw + 4, hh - 22, w - 8, 18); scribble(x, g, '#5cb85c', -hw, hh - 24, hw, hh);
+  } else if (p.kind === 2) {                       // a chart of gold stars
+    crayon(x, [...L(0.15, 0.1), ...L(0.85, 0.1)], '#3a5ad8', 2.4);
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 3; i++) {
+      const [cx, cy] = L(0.22 + i * 0.28, 0.27 + j * 0.2), st = new Path2D();
+      for (let k = 0; k <= 10; k++) { const a = -1.5708 + k * 0.6283, rr = k % 2 ? 4.5 : 10.5; k ? st.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : st.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+      if (hash2(i + j * 3, p.mag, 61) < 0.7) scribble(x, st, '#f5c518', cx - 12, cy - 12, cx + 12, cy + 12);
+      x.strokeStyle = '#c99a10'; x.lineWidth = 1.2; x.stroke(st);
+    }
+  } else {                                         // a big flower
+    const [cx, cy] = L(0.5, 0.4);
+    crayon(x, [cx, cy + 10, cx - 3, cy + 40, cx + 2, hh - 8], '#3f9a3f', 3.2);
+    const lf = new Path2D(); lf.ellipse(cx - 13, cy + 34, 12, 5, -0.5, 0, 6.28); scribble(x, lf, '#5cb85c', cx - 28, cy + 24, cx, cy + 44);
+    for (let k = 0; k < 6; k++) { const a = k * 1.047, pe = new Path2D(); pe.ellipse(cx + Math.cos(a) * 14, cy + Math.sin(a) * 14, 11, 7, a, 0, 6.28); scribble(x, pe, k % 2 ? '#f07aa8' : '#e8508a', cx - 30, cy - 30, cx + 30, cy + 30); }
+    const ce = new Path2D(); ce.arc(cx, cy, 8, 0, 6.28); scribble(x, ce, '#f5c518', cx - 9, cy - 9, cx + 9, cy + 9);
+  }
+  const MAG = [['#e0493a', '#8a1e14'], ['#3b74d8', '#163a80'], ['#f2c232', '#a07810'], ['#46b04a', '#1d6420']][p.mag];
+  for (const mx of p.two ? [-hw + 12, hw - 12] : [0]) {   // magnets: a shadow, a glossy dome
+    x.fillStyle = 'rgba(0,0,0,0.35)'; x.beginPath(); x.ellipse(mx + 2, -hh + 5, 9, 8, 0, 0, 6.2832); x.fill();
+    const g = x.createRadialGradient(mx - 3, -hh - 3, 1, mx, -hh, 9);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, MAG[0]); g.addColorStop(1, MAG[1]);
+    x.fillStyle = g; x.beginPath(); x.arc(mx, -hh, 8, 0, 6.2832); x.fill();
+  }
+  x.restore();
+}
+function drawTray(x, t, bd, s) {
+  const y = t.y, x0 = t.x0, x1 = t.x1, [top, front, dark] = bd.tray;
+  const sh = x.createLinearGradient(0, y - 16, 0, y);   // the tray's shadow on the board
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.38)');
+  x.fillStyle = sh; x.fillRect(x0, y - 16, x1 - x0, 16);
+  x.fillStyle = top; x.fillRect(x0, y, x1 - x0, 9);
+  x.fillStyle = front; x.fillRect(x0, y + 9, x1 - x0, LEDGE_H - 9);
+  x.fillStyle = 'rgba(255,255,255,0.2)'; x.fillRect(x0, y, x1 - x0, 1.4);
+  x.fillStyle = 'rgba(0,0,0,0.32)'; x.fillRect(x0, y + 9, x1 - x0, 1.2);
+  x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(x0, y + LEDGE_H - 1.5, x1 - x0, 1.5);
+  x.strokeStyle = dark; x.lineWidth = 0.8; x.globalAlpha = 0.5;   // grain along the front
+  for (let i = 0; i < (x1 - x0) / 30; i++) { const gx = x0 + i * 30 + hash2(i, 3, 71) * 20, gy = y + 12 + hash2(i, 4, 71) * 7; x.beginPath(); x.moveTo(gx, gy); x.quadraticCurveTo(gx + 20, gy + 1.5, gx + 40 + 30 * hash2(i, 5, 71), gy); x.stroke(); }
+  x.globalAlpha = 1;
+  x.fillStyle = 'rgba(245,242,232,0.24)';           // chalk dust on the tray
+  for (let i = 0; i < (x1 - x0) / 5; i++) if (hash2(i, 6, 71) < 0.5) x.fillRect(x0 + i * 5 + hash2(i, 7, 71) * 5, y + 1.5 + hash2(i, 8, 71) * 6.5, 1.2 + hash2(i, 9, 71) * 2.4, 1.1);
+  for (const st of t.sticks) {                     // sticks of chalk lying on the tray
+    x.save(); x.translate(st.x, y + 3); x.rotate(st.rot);
+    const col = CHALK[st.c], g = x.createLinearGradient(0, -8, 0, 1);
+    g.addColorStop(0, 'rgba(255,255,255,0.4)'); g.addColorStop(0.35, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,0.38)');
+    x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(2, -0.5, st.L, 3);
+    x.fillStyle = col; rrFill(x, 0, -8.5, st.L, 8.5, 4);
+    x.fillStyle = g; rrFill(x, 0, -8.5, st.L, 8.5, 4);
+    x.fillStyle = 'rgba(0,0,0,0.12)'; rrFill(x, st.L - 4, -8.5, 4, 8.5, 2);
+    x.restore();
+  }
+  const ex = t.eraser;                              // the felt eraser: the back and the dusty felt
+  x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(ex + 3, y + 3, 76, 3);
+  x.fillStyle = bd.eraser; rrFill(x, ex, y - 22, 76, 16, 5);
+  x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(ex + 4, y - 20, 68, 2);
+  x.fillStyle = 'rgba(0,0,0,0.2)'; x.fillRect(ex + 4, y - 10, 68, 2);
+  x.fillStyle = '#7d7972'; x.fillRect(ex + 1, y - 7, 74, 10);
+  x.fillStyle = 'rgba(250,248,240,0.6)'; for (let i = 0; i < 30; i++) x.fillRect(ex + 2 + hash2(i, 1, 72) * 70, y - 6 + hash2(i, 2, 72) * 8, 1 + hash2(i, 3, 72) * 3, 1);
+}
+// An alphabet card pinned along the top of the board
+function drawCard(x, cd, s) {
+  x.save(); x.translate(cd.x + 22, cd.y); x.rotate(cd.rot); x.translate(-22, 0);
+  x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 5 * s; x.shadowOffsetX = 2 * s; x.shadowOffsetY = 4 * s;
+  x.fillStyle = '#f7f2e2'; x.fillRect(0, 0, 44, 56);
+  x.shadowColor = 'transparent';
+  x.fillStyle = 'rgba(214,72,64,0.5)'; x.fillRect(3, 44, 38, 1);
+  x.fillStyle = 'rgba(64,110,200,0.35)'; for (let i = 3; i < 41; i += 4) x.fillRect(i, 30, 2, 0.8);
+  x.fillStyle = ['#c23a2e', '#2e5aa8', '#2f8a4a'][cd.c]; x.font = font(21); x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillText(cd.ch + cd.ch.toLowerCase(), 22, 43);
+  x.fillStyle = '#d23a32'; x.beginPath(); x.arc(22, 5, 3, 0, 6.2832); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.arc(21, 4, 1, 0, 6.2832); x.fill();
+  x.restore();
+}
+// The teacher's big tools, hanging on the board: a wooden set square, a plastic protractor, a blackboard compass
+function drawTool(x, t, s) {
+  const hw = t.w / 2, hh = t.h / 2;
+  x.save(); x.translate(t.x + hw, t.y + hh); x.rotate(t.rot); if (t.flip) x.scale(-1, 1);
+  x.shadowColor = 'rgba(0,0,0,0.42)'; x.shadowBlur = 8 * s; x.shadowOffsetX = 4 * s * (t.flip ? -1 : 1); x.shadowOffsetY = 7 * s;
+  if (t.kind === 0) {
+    const sq = new Path2D(); sq.moveTo(-hw, -hh); sq.lineTo(-hw, hh); sq.lineTo(hw, hh); sq.closePath();
+    sq.moveTo(-hw + 20, -hh + 52); sq.lineTo(hw - 54, hh - 20); sq.lineTo(-hw + 20, hh - 20); sq.closePath();
+    const g = x.createLinearGradient(-hw, -hh, hw, hh); g.addColorStop(0, '#dcae6e'); g.addColorStop(1, '#b07a40');
+    x.fillStyle = g; x.fill(sq, 'evenodd'); x.shadowColor = 'transparent';
+    x.save(); x.clip(sq, 'evenodd'); x.strokeStyle = 'rgba(120,70,30,0.25)'; x.lineWidth = 1;
+    for (let i = 0; i < 14; i++) { const y = -hh + i * t.h / 14 + hash2(i, 1, 75) * 6; x.beginPath(); x.moveTo(-hw, y); x.bezierCurveTo(-hw / 2, y + 4, hw / 2, y - 3, hw, y + 2); x.stroke(); }
+    x.restore();
+    x.strokeStyle = 'rgba(80,45,15,0.7)'; x.lineWidth = 1.2; x.stroke(sq);
+    x.strokeStyle = 'rgba(60,35,10,0.75)'; x.lineWidth = 1; x.beginPath();
+    for (let i = 1; i < (t.w - 8) / 7; i++) { const lx = -hw + i * 7, l = i % 5 ? 4 : 8; x.moveTo(lx, hh); x.lineTo(lx, hh - l); }
+    for (let i = 1; i < (t.h - 8) / 7; i++) { const ly = hh - i * 7, l = i % 5 ? 4 : 8; x.moveTo(-hw, ly); x.lineTo(-hw + l, ly); }
+    x.stroke();
+    x.fillStyle = '#5a4a3a'; x.beginPath(); x.arc(-hw + 10, -hh + 22, 3.5, 0, 6.2832); x.fill();   // the hook it hangs from
+  } else if (t.kind === 1) {
+    const R = hw - 4, cy = hh - 4, pr = new Path2D();
+    pr.moveTo(-R, cy); pr.arc(0, cy, R, Math.PI, 2 * Math.PI); pr.closePath();
+    pr.moveTo(R * 0.42, cy); pr.arc(0, cy, R * 0.42, 0, Math.PI, true); pr.closePath();
+    x.fillStyle = 'rgba(246,206,110,0.55)'; x.fill(pr, 'evenodd'); x.shadowColor = 'transparent';
+    x.strokeStyle = 'rgba(150,100,20,0.8)'; x.lineWidth = 1.3; x.stroke(pr);
+    x.strokeStyle = 'rgba(90,60,10,0.85)'; x.lineWidth = 0.9; x.beginPath();
+    for (let d = 0; d <= 180; d += 5) { const a = Math.PI + d * Math.PI / 180, l = d % 30 ? (d % 10 ? 4 : 8) : 12; x.moveTo(Math.cos(a) * R, cy + Math.sin(a) * R); x.lineTo(Math.cos(a) * (R - l), cy + Math.sin(a) * (R - l)); }
+    x.stroke();
+    x.fillStyle = 'rgba(90,60,10,0.9)'; x.font = '9px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    for (let d = 0; d <= 180; d += 30) { const a = Math.PI + d * Math.PI / 180; x.fillText(String(d), Math.cos(a) * (R - 21), cy + Math.sin(a) * (R - 21)); }
+    x.strokeStyle = 'rgba(90,60,10,0.9)'; x.beginPath(); x.moveTo(-5, cy - 1); x.lineTo(5, cy - 1); x.moveTo(0, cy - 6); x.lineTo(0, cy); x.stroke();
+  } else {
+    const hx = 0, hy = -hh + 26, A = [-32, hh - 10], B = [30, hh - 18];
+    for (const [ex, ey] of [A, B]) { x.strokeStyle = '#a5743e'; x.lineWidth = 10; x.beginPath(); x.moveTo(hx, hy); x.lineTo(ex, ey); x.stroke(); }
+    x.shadowColor = 'transparent';
+    for (const [ex, ey] of [A, B]) { x.strokeStyle = 'rgba(255,230,180,0.45)'; x.lineWidth = 2.5; x.beginPath(); x.moveTo(hx - 2, hy); x.lineTo(ex - 2, ey); x.stroke(); }
+    x.fillStyle = '#3a2a24'; x.beginPath(); x.ellipse(A[0], A[1] + 4, 9, 5, 0, 0, 6.2832); x.fill();   // the suction cup
+    x.fillStyle = '#9aa0a6'; x.fillRect(B[0] - 6, B[1] - 2, 12, 8);   // the chalk holder and its chalk
+    x.fillStyle = CHALK[0]; x.fillRect(B[0] - 3, B[1] + 6, 6, 12);
+    x.fillStyle = '#6a4a2a'; x.beginPath(); x.arc(hx, hy, 9, 0, 6.2832); x.fill();
+    x.fillStyle = '#c9b48a'; x.beginPath(); x.arc(hx, hy, 4, 0, 6.2832); x.fill();
+    x.strokeStyle = '#6a4a2a'; x.lineWidth = 7; x.beginPath(); x.moveTo(hx, hy - 6); x.lineTo(hx, hy - 22); x.stroke();   // the handle
+  }
+  x.restore();
+}
+function buildBoard(geo, cw, ch, s) {
+  const c = makeCanvas(cw, ch), x = c.getContext('2d'), VX = WORLD.x, VY = WORLD.y, bd = BOARDS[P.board];
+  const vis = (px, py, w, h) => px + w > VX - 20 && px < VX + W + 20 && py + h > VY - 20 && py < VY + H + 20;
+  x.setTransform(s, 0, 0, s, -VX * s, -VY * s);
+  x.lineJoin = 'round'; x.lineCap = 'round';
+  // wiped areas: a soft cloud of chalk dust, denser in the middle, the eraser's arcs with the felt's lines, dust where the eraser stopped
+  x.filter = `blur(${Math.max(1, Math.round(10 * s))}px)`; x.fillStyle = 'rgba(232,236,226,0.10)'; x.fill(geo.wiped, 'evenodd');
+  x.filter = `blur(${Math.max(1, Math.round(16 * s))}px)`; x.fillStyle = 'rgba(232,236,226,0.05)'; x.fill(geo.core, 'evenodd');
+  x.filter = `blur(${Math.max(1, Math.round(3 * s))}px)`; x.lineWidth = 5; x.strokeStyle = 'rgba(240,240,230,0.05)'; x.stroke(geo.wiped);
+  x.filter = 'none';
+  x.save(); x.clip(geo.wiped, 'evenodd');
+  for (const a of geo.arcs) {
+    if (!vis(a.x - a.r - 30, a.y - a.r - 30, 2 * a.r + 60, 2 * a.r + 60)) continue;
+    x.strokeStyle = 'rgba(255,255,255,0.035)'; x.lineWidth = a.w; x.beginPath(); x.arc(a.x, a.y, a.r, a.a0, a.a1); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,0.04)'; x.lineWidth = 1;
+    for (let k = -2; k <= 2; k++) { x.beginPath(); x.arc(a.x, a.y, a.r + k * a.w * 0.2, a.a0 + 0.05, a.a1 - 0.05); x.stroke(); }
+  }
+  x.restore();
+  for (const cd of geo.cards) if (vis(cd.x, cd.y, 44, 60)) drawCard(x, cd, s);
+  for (const t of geo.tools) if (vis(t.x - 20, t.y - 20, t.w + 40, t.h + 40)) drawTool(x, t, s);
+  for (const p of geo.papers) if (vis(p.x - p.w, p.y - p.h, 2 * p.w, 2 * p.h)) drawPaper(x, p, s);
+  // the lessons, on their own layer, then rubbed out softly where they reach into the wiped areas
+  const lc = makeCanvas(cw, ch), lx = lc.getContext('2d');
+  lx.setTransform(s, 0, 0, s, -VX * s, -VY * s); lx.lineJoin = 'round'; lx.lineCap = 'round';
+  for (const L of geo.lessons) if (vis(L.x, L.y, L.it.w * L.k, L.it.h * L.k)) drawItem(lx, L);
+  lx.globalCompositeOperation = 'destination-out'; lx.filter = `blur(${Math.max(1, Math.round(8 * s))}px)`;
+  lx.fillStyle = '#000'; lx.fill(geo.mask, 'evenodd'); lx.filter = 'none'; lx.globalCompositeOperation = 'source-over';
+  x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(lc, 0, 0); x.setTransform(s, 0, 0, s, -VX * s, -VY * s);
+  for (const t of geo.trays) if (t.x1 > VX && t.x0 < VX + W) drawTray(x, t, bd, s);
+  return c;
+}
+
+/* ======================================================================
+   What moves
+   ---------------------------------------------------------------------- */
+// A lesson writing itself: on every monitor, in slots of LIVE_SLOT seconds, a subject is written at one of the free spots, stays, and is
+// wiped away by the eraser; the slot, the spot and the subject follow from the clock and the seed
+const LIVE_SLOT = PREVIEW ? 28 : 46;
+const liveItems = new Map();
+function liveAt(g, mi, T) {
+  const slot = Math.floor(T / LIVE_SLOT), u = T - slot * LIVE_SLOT, spots = g.live[mi];
+  if (!spots || !spots.length) return null;
+  const r = mulberry32(seed * 53 + slot * 977 + mi * 31);
+  if (!PREVIEW && r() < 0.2) return null;
+  const sp = spots[(r() * spots.length) | 0], kind = LIVE[(r() * LIVE.length) | 0], key = mi + ':' + slot + ':' + P.color;
+  let it = liveItems.get(key);
+  if (!it) {
+    it = makeItem(kind, mulberry32(seed * 59 + slot * 13 + mi));
+    liveItems.set(key, it);
+    if (liveItems.size > 8) liveItems.delete(liveItems.keys().next().value);
+  }
+  const k = Math.min(1.1, sp.w / it.w, sp.h / it.h);
+  return { u, sp, it, k, x: sp.x + (sp.w - it.w * k) / 2, y: sp.y + (sp.h - it.h * k) / 2 };
+}
+function drawChalkStick(x, px, py, c, T) {
+  x.save(); x.translate(px, py); x.rotate(-0.75 + Math.sin(T * 9) * 0.05);
+  x.fillStyle = 'rgba(0,0,0,0.25)'; rrFill(x, 3, 2, 28, 7, 3.5);
+  x.fillStyle = CHALK[c]; rrFill(x, 0, -3.5, 28, 7, 3.5);
+  x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(2, 1.2, 25, 2.2);
+  x.fillStyle = 'rgba(255,255,255,0.55)'; x.fillRect(3, -2.6, 23, 1.2);
+  x.restore();
+}
+function drawEraser(x, ex, ey, wob) {
+  x.save(); x.translate(ex, ey); x.rotate(wob);
+  x.fillStyle = 'rgba(0,0,0,0.3)'; rrFill(x, -33, -9, 72, 26, 5);
+  x.fillStyle = BOARDS[P.board].eraser; rrFill(x, -36, -13, 72, 16, 5);
+  x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(-32, -11, 64, 2);
+  x.fillStyle = '#8a8680'; x.fillRect(-35, 3, 70, 9);
+  x.fillStyle = 'rgba(250,248,240,0.6)'; for (let i = 0; i < 18; i++) x.fillRect(-34 + hash2(i, 1, 73) * 66, 4 + hash2(i, 2, 73) * 7, 1 + hash2(i, 3, 73) * 3, 1);
+  x.restore();
+}
+function drawLive(x, L, T, vis) {
+  const { u, sp, it } = L, f = Math.max(0.3, P.flow), DW = Math.min(16, it.ink / (75 * f)), E0 = LIVE_SLOT - 12, E1 = E0 + 5;
+  if (!vis(sp.x, sp.y, 260)) return;
+  const RH = 22, n = Math.max(1, Math.ceil((sp.h + 8) / RH)), y0 = sp.y - 4;
+  let row = -1, ex = 0;
+  if (u >= E0 && u < E1) { const q = (u - E0) / (E1 - E0) * n; row = Math.floor(q); const fr = q - row; ex = row % 2 ? sp.x + sp.w - fr * sp.w : sp.x + fr * sp.w; }
+  if (u < E1) {                                    // the lesson, as far as it has been written, minus what the eraser has already taken
+    x.save();
+    if (row >= 0) {
+      x.beginPath(); x.rect(sp.x - 8, y0 + (row + 1) * RH, sp.w + 16, sp.h + 16);
+      if (row % 2) x.rect(sp.x - 8, y0 + row * RH, ex - sp.x + 8, RH); else x.rect(ex, y0 + row * RH, sp.x + sp.w + 8 - ex, RH);
+      x.clip();
+    }
+    x.translate(L.x, L.y); x.scale(L.k, L.k);
+    const prog = u < DW ? (u / DW) * it.ink : it.ink;
+    let done = 0, tip = null, tc = 0;
+    for (const o of it.ops) {
+      if (done + o.len <= prog) { drawOp(x, o, 1); done += o.len; continue; }
+      tip = drawOp(x, o, (prog - done) / o.len); tc = o.c; break;
+    }
+    x.restore();
+    if (tip && u < DW) {                            // the stick of chalk at the tip, a little dust falling from it
+      const px = L.x + tip[0] * L.k, py = L.y + tip[1] * L.k;
+      drawChalkStick(x, px, py, tc, T);
+      x.fillStyle = 'rgba(245,242,232,0.5)';
+      for (let j = 0; j < 5; j++) { const a = mod(u * 1.6 + j * 0.21, 1); x.globalAlpha = (1 - a) * 0.6; x.fillRect(px - 3 + hash2(j, Math.floor(u * 1.6 + j * 0.21), 74) * 8, py + 4 + a * 24, 1.4, 1.4); }
+      x.globalAlpha = 1;
+    }
+  }
+  // the smear the eraser leaves, fading once it is done
+  const fade = u < E0 ? 0 : u < E1 ? 1 : Math.max(0, 1 - (u - E1) / (LIVE_SLOT - E1));
+  if (fade > 0) {
+    const rows = u < E1 ? row : n;                // one soft swipe per row, with the felt's lines along it
+    for (let r = 0; r <= Math.min(rows, n - 1); r++) {
+      const ry = y0 + r * RH + RH / 2, full = r < rows;
+      const a = full ? sp.x : row % 2 ? ex : sp.x, b = full ? sp.x + sp.w : row % 2 ? sp.x + sp.w : ex;
+      if (b - a < 2) continue;
+      x.strokeStyle = `rgba(235,238,228,${0.035 * fade})`; x.lineWidth = RH + 4; x.lineCap = 'round';
+      x.beginPath(); x.moveTo(a, ry); x.quadraticCurveTo((a + b) / 2, ry + 3 * Math.sin(r * 1.7), b, ry); x.stroke();
+      x.strokeStyle = `rgba(255,255,255,${0.025 * fade})`; x.lineWidth = 1;
+      for (let k = -8; k <= 8; k += 4) { x.beginPath(); x.moveTo(a, ry + k); x.quadraticCurveTo((a + b) / 2, ry + k + 3 * Math.sin(r * 1.7), b, ry + k); x.stroke(); }
+    }
+  }
+  if (row >= 0) drawEraser(x, ex, y0 + row * RH + RH / 2, Math.sin(T * 14) * 0.06);
+}
+// The paper airplane: now and then it glides across the whole desktop, rising and dipping
+const PLANE_PERIOD = PREVIEW ? 12 : 34;
+function planeAt(T) {
+  if (!P.plane) return null;
+  for (const slot of [Math.floor(T / PLANE_PERIOD), Math.floor(T / PLANE_PERIOD) - 1]) {
+    const r = mulberry32(seed * 41 + slot);
+    if (!PREVIEW && r() < 0.3) continue;
+    const start = slot * PLANE_PERIOD + r() * PLANE_PERIOD * 0.35, fromLeft = r() < 0.5, y0 = WORLD.h * (0.12 + 0.45 * r()), y1 = WORLD.h * (0.15 + 0.5 * r());
+    const x0 = fromLeft ? -90 : WORLD.w + 90, x1 = fromLeft ? WORLD.w + 90 : -90, spd = 210 * Math.max(0.35, P.flow), dur = Math.abs(x1 - x0) / spd, u = (T - start) / dur;
+    if (u < 0 || u >= 1) continue;
+    const amp = 16 + 28 * r(), wav = 1.5 + 2.5 * r(), ph = r() * 6.28, w = u * wav * 6.2832 + ph;
+    return { x: x0 + (x1 - x0) * u, y: y0 + (y1 - y0) * u + Math.sin(w) * amp, dx: x1 - x0, dy: (y1 - y0) + Math.cos(w) * amp * wav * 6.2832, bank: Math.cos(w) };
+  }
+  return null;
+}
+function drawPlane(x, p, s) {
+  const dir = p.dx >= 0 ? 1 : -1, a = Math.atan2(p.dy, Math.abs(p.dx)), sy = 1 - 0.22 * p.bank;
+  const shape = (fill, lineCol) => {
+    const far = [[26, 0], [-20, -14], [-13, -2]], keel = [[26, 0], [-15, 1], [-19, 7]], near = [[26, 0], [-23, 12], [-14, 2]];
+    for (const [poly, col] of [[far, fill ? '#e3e7ea' : null], [keel, fill ? '#c3cad0' : null], [near, fill ? '#fdfdfb' : null]]) {
+      x.beginPath(); x.moveTo(poly[0][0], poly[0][1]); for (let i = 1; i < poly.length; i++) x.lineTo(poly[i][0], poly[i][1]); x.closePath();
+      x.fillStyle = col || fill; x.fill();
+      if (lineCol) { x.strokeStyle = lineCol; x.lineWidth = 0.8; x.stroke(); }
+    }
+    if (lineCol) { x.beginPath(); x.moveTo(26, 0); x.lineTo(-14, 1.5); x.stroke(); }
+  };
+  x.save(); x.translate(p.x + 12, p.y + 22); x.scale(dir, 1); x.rotate(a); x.scale(1, sy);   // the shadow on the board, a little blurred
+  x.filter = `blur(${Math.max(1, Math.round(2.5 * s))}px)`; shape('rgba(0,0,0,0.28)', null); x.filter = 'none';
+  x.restore();
+  x.save(); x.translate(p.x, p.y); x.scale(dir, 1); x.rotate(a); x.scale(1, sy);
+  shape(null, '#8d979f');
+  x.restore();
+}
+
+/* ======================================================================
+   Frame
+   ====================================================================== */
+let geoOld = null, geoNew = null, morphT0 = -1e9, morphDur = MORPH_MS;
+function commit(fromEmpty = false) {
+  const g = buildGeometry();
+  geoOld = fromEmpty ? null : geoNew; geoNew = g;
+  morphT0 = performance.now(); morphDur = fromEmpty ? 2400 : MORPH_MS;
+  if (paused) { morphT0 = -1e9; draw(performance.now()); }   // paused: show the final state right away
+}
+let rebuildT = 0;
+function rebuildSoon() { clearTimeout(rebuildT); rebuildT = setTimeout(() => commit(false), PREVIEW ? 40 : 160); }
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  // Preview mode: the page is laid out at the full desktop size and then scaled down as a whole, so the canvas only needs a low resolution
+  const scale = PREVIEW ? 0.45 : devicePixelRatio || 1;
+  // Use the size the canvas actually occupies (with decimals), otherwise the browser rescales the whole picture and blurs it
+  const box = cv.getBoundingClientRect();
+  cv.width = Math.round((box.width || W) * scale); cv.height = Math.round((box.height || H) * scale); cv._scale = scale;
+  if (!WORLD.set) WORLD = { x: 0, y: 0, w: W, h: H, mons: [[0, 0, W, H]], set: false };   // no layout from the host: the desktop is this screen
+  buildNoise();
+  baseCache.length = 0;
+}
+// The host told us where this monitor sits in the whole desktop (or that the desktop changed): recompute the scene over the new desktop
+function setLayout(m) {
+  const before = JSON.stringify(WORLD);
+  applyDesktop(m);
+  if (JSON.stringify(WORLD) === before) return;
+  buildNoise(); baseCache.length = 0;
+  if (iconsSeen) { commit(false); morphT0 = -1e9; }
+}
+function initMovers() { liveItems.clear(); }      // what moves is computed from the clock and the geometry: nothing else to set up
+
+let lastT = 0, frameN = 0;
+let paused = false;                              // host notification: a maximized / fullscreen window hides this monitor → pause
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (paused) { lastT = 0; return; }
+  if (P.cap30 && now - lastT < 31) return;
+  lastT = now;
+  draw(now);
+  frameN++;
+}
+function draw(now) {
+  const s = cv._scale, T = wallClock(), e = Math.min(Math.max((now - morphT0) / morphDur, 0), 1);
+  const VX = WORLD.x, VY = WORLD.y, vis = (px, py, m) => px > VX - m && px < VX + W + m && py > VY - m && py < VY + H + m;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.filter = 'none';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(cached(baseCache, buildBase), 0, 0);
+  const aOld = geoOld && e < 1 ? 1 - ss(0.35, 1, e) : 0, aNew = geoNew ? (geoOld ? ss(0, 0.65, e) : ss(0, 1, e)) : 0;
+  if (aOld > 0) { ctx.globalAlpha = aOld; ctx.drawImage(cached(geoOld.rasters, (w, h, k) => buildBoard(geoOld, w, h, k)), 0, 0); }
+  if (aNew > 0) { ctx.globalAlpha = aNew; ctx.drawImage(cached(geoNew.rasters, (w, h, k) => buildBoard(geoNew, w, h, k)), 0, 0); }
+  ctx.globalAlpha = 1;
+  ctx.setTransform(s, 0, 0, s, -VX * s, -VY * s);  // desktop coordinates from here on
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const g = geoNew;
+  if (g && aNew > 0.5 && P.live && P.flow > 0) for (let mi = 0; mi < WORLD.mons.length; mi++) { const L = liveAt(g, mi, T); if (L) drawLive(ctx, L, T, vis); }
+  ctx.fillStyle = '#f3f0e6';                       // chalk dust floating down
+  for (let mi = 0; mi < WORLD.mons.length; mi++) {
+    const m = WORLD.mons[mi];
+    if (m[0] > VX + W || m[0] + m[2] < VX) continue;
+    for (let i = 0; i < 16; i++) {
+      const sp = 6 + 10 * hash2(i, mi, 81), fx = m[0] + hash2(i, mi, 82) * m[2] + Math.sin(T * 0.3 + i) * 30, fy = m[1] + mod(hash2(i, mi, 83) * m[3] + T * sp * P.flow, m[3] - TASKBAR);
+      if (!vis(fx, fy, 4)) continue;
+      ctx.globalAlpha = 0.08 + 0.14 * hash2(i, mi, 84); ctx.fillRect(fx, fy, 1.2 + hash2(i, mi, 85) * 1.4, 1.2 + hash2(i, mi, 85) * 1.4);
+    }
+  }
+  ctx.globalAlpha = 1;
+  const pl = planeAt(T);
+  if (pl && vis(pl.x, pl.y, 70)) drawPlane(ctx, pl, s);
+}
+
+/* ======================================================================
+   Hosted mode: the scene is driven from outside
+   - Wallpaper mode (?wallpaper=1): the desktop host sends messages through WebView2
+   - Preview mode (?preview=1): the settings window sends messages through the iframe's postMessage
+   Messages: layout (where this monitor sits in the desktop) / icons (real icon rectangles, physical pixels) /
+   settings (parameters, partial update) / reset (restore defaults) / pause
+   ====================================================================== */
+let iconsSeen = false;
+function reseed(v) {
+  seed = v; buildNoise(); baseCache.length = 0; initMovers();
+  if (iconsSeen) commit(true);
+}
+function applySettings(v) {
+  if (typeof v.seed === 'number' && v.seed !== seed) reseed(v.seed);   // "Refresh" in the settings window: new scene (desktop and preview use the same seed)
+  let geometry = false, redraw = false;
+  for (const k in v) {
+    const r = RANGES[k];
+    if (!r || typeof v[k] !== 'number' || !Number.isFinite(v[k])) continue;
+    const val = Math.min(r[1], Math.max(r[0], r[2] ? Math.round(v[k]) : v[k]));
+    if (P[k] === val) continue;
+    P[k] = val;
+    if (GEOMETRY_KEYS.includes(k)) geometry = true;
+    if (k === 'board') redraw = true;            // the cached layers are kept per board: nothing to rebuild
+  }
+  if (geometry && iconsSeen) rebuildSoon();
+  else if (redraw && paused && iconsSeen) draw(performance.now());
+}
+function drawGhosts() {
+  document.getElementById('ghosts').innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');
+}
+function startHostedMode() {
+  if (PREVIEW) document.body.classList.add('ghosts');
+  let first = true;
+  const settlePaused = () => { if (paused && iconsSeen) { morphT0 = -1e9; draw(performance.now()); } };
+  const handle = m => {
+    if (m.t === 'pause') { paused = PREVIEW ? false : m.v; settlePaused(); return; }
+    if (m.t === 'settings') { applySettings(m.v || {}); return; }
+    if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t === 'layout') { setLayout(m); return; }
+    if (m.t !== 'icons') return;
+    const k = window.devicePixelRatio || 1;       // physical pixels → CSS pixels
+    icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];
+    if (PREVIEW) drawGhosts();
+    iconsSeen = true;
+    clearTimeout(rebuildT);
+    commit(first);                                // first time: the board fades in; afterwards: old and new board cross-fade
+    first = false;
+  };
+  if (PREVIEW) {
+    addEventListener('message', ev => { if (ev.source === parent) handle(typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data); });
+    parent.postMessage(JSON.stringify({ t: 'ready' }), '*');
+    return;
+  }
+  const host = window.chrome && window.chrome.webview;
+  if (!host) return;
+  host.addEventListener('message', ev => handle(JSON.parse(ev.data)));
+  host.postMessage('ready');
+}
+// Opened directly in a browser: a sample desktop (for work on the theme); R = new scene
+function startStandalone() {
+  document.body.classList.add('ghosts');
+  const cell = (c, r) => ({ x: GRID_X0 + c * CELL_W, y: GRID_Y0 + r * CELL_H, w: CELL_W, h: 92 });
+  icons = [];
+  for (let c = 0; c < 2; c++) for (let r = 0; r < Math.min(7, Math.floor((H - TASKBAR) / CELL_H)); r++) icons.push(cell(c, r));
+  for (const [c, r] of [[7, 1], [8, 1], [8, 2], [13, 4], [14, 4], [19, 0], [19, 1]]) if (GRID_X0 + (c + 1) * CELL_W < W) icons.push(cell(c, r));
+  drawGhosts();
+  iconsSeen = true;
+  commit(true);
+  addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') reseed((Math.random() * 1e6) | 0); });
+}
+
+let resizeT = 0;
+addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => { resize(); initMovers(); if (iconsSeen) { commit(false); morphT0 = -1e9; } }, 100);
+});
+
+resize();
+initMovers();
+if (WALL || PREVIEW) startHostedMode(); else startStandalone();
+requestAnimationFrame(frame);
+</script>
+<script src="share.js"></script>   <!-- Share image / share animation (sample icons, names as color blocks) -->
+</body>
+</html>

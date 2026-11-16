@@ -45,15 +45,18 @@ $WebView2Bootstrapper = [IO.Path]::GetFullPath($WebView2Bootstrapper)
 $sources = @('.gitattributes', '.gitignore', 'AGENTS.md', 'LICENSE', 'NOTICE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
     'host\DesktopHost.cs', 'host\Themes.cs', 'host\IconScape.ico', 'host\README.md', 'host\app.manifest', 'host\build.ps1', 'host\inspect.ps1',
     'tools\build-installer.ps1', 'tools\installer.nsi', 'tools\version.json', 'tools\make-icon.ps1', 'tools\serve.ps1')
-$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'manga.html', 'ninja.html', 'woodland.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
+$themeFiles = @('flat.html', 'meadow.html', 'isles.html', 'circuit.html', 'steam.html', 'cosmos.html', 'manga.html', 'ninja.html', 'woodland.html', 'school.html', 'london.html', 'settings.html', 'thumbs-data.js', 'share.js', 'serve.mjs', 'themes.json', 'beach-palms.js', 'meadow-boy.js', 'meadow-cat.js',
     'i18n\en.json', 'i18n\it.json', 'i18n\es.json', 'i18n\fr.json', 'i18n\de.json', 'i18n\zh-CN.json', 'thumbs\beach.webp', 'thumbs\meadow.webp',
     'assets\beach-coconut-palm-v2.png', 'assets\beach-coconut-palm-curved.png', 'assets\beach-coconut-palm-airy.png', 'assets\beach-coconut-palm-windswept.png', 'assets\beach-coconut-palm-arch.png',
-    'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png')
+    'assets\meadow-black-kitten.png', 'assets\meadow-kite-boy-level-face.png', 'assets\meadow-kite-boy-diagonal-run.png') +
+    @('abbey', 'alberthall', 'albertmem', 'battersea', 'bigben', 'britishmuseum', 'buckingham', 'camden', 'coventgarden', 'cuttysark', 'eye',
+      'globe', 'kensington', 'kew', 'leadenhall', 'marblearch', 'millennium', 'phonebox', 'regent', 'routemaster', 'shard', 'stpauls', 'tate',
+      'tower', 'towerbridge', 'trafalgar', 'westminster' | ForEach-Object { "assets\london\$_.jpg" })   # the London theme's photos (credits in THIRD_PARTY_NOTICES.md)
 $themes = (Get-Content -LiteralPath (Join-Path $root 'prototype\themes.json') -Raw -Encoding UTF8 | ConvertFrom-Json).themes
 $ready = @($themes | Where-Object { $_.status -eq 'ready' -and $_.locked -ne $true -and $_.page })
 # IconScape lists only the themes it includes: no locked or paid preview cards
-if ($themes.Count -ne 9 -or $ready.Count -ne 9 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,manga,meadow,ninja,steampunk,woodland')) {
-    throw 'Expected exactly nine usable themes and no locked ones'
+if ($themes.Count -ne 11 -or $ready.Count -ne 11 -or (($ready.id | Sort-Object) -join ',' -ne 'beach,circuit,cosmos,isles,london,manga,meadow,ninja,school,steampunk,woodland')) {
+    throw 'Expected exactly eleven usable themes and no locked ones'
 }
 foreach ($theme in $themes) {
     $match = [regex]::Match([string]$theme.thumb, 'url\(thumbs/([^\)?]+)')

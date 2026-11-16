@@ -38,17 +38,22 @@ Added in IconScape:
 | ![Manga theme](prototype/thumbs/manga.webp) | ![Ninja Village theme](prototype/thumbs/ninja.webp) |
 | A black-and-white manga page: icons on ink splashes bursting with impact lines; panels of pen-and-hatching backgrounds (streets in perspective, the city at night, cumulonimbus and utility poles, mountains and pines, sea and rocks, bamboo, shrine steps, a pagoda under the moon) and sound effects, cherry petals and a passing crow; four ink-and-paper palettes. | A Japanese village drawn like a 1970s anime: houses seen from above with tiled hip roofs, white walls and timber, raked sand, flat colours with ink outlines, hard shadows and film grain, at night, sunset or day; an original ninja appears in smoke, leaps from roof to roof and throws a shuriken. |
 
-| Storybook Woods |
-| --- |
-| ![Storybook Woods theme](prototype/thumbs/woodland.webp) |
-| A picture-book wood drawn like a classic cartoon, with original characters: icons float on ponds with water lilies, frogs and families of ducklings; around them round trees, red toadstools and flowers, bunnies, foxes and hedgehogs out for a stroll, bluebirds and butterflies; by day, at sunset or at night with fireflies. |
+| Storybook Woods | School |
+| --- | --- |
+| ![Storybook Woods theme](prototype/thumbs/woodland.webp) | ![School theme](prototype/thumbs/school.webp) |
+| A picture-book wood drawn like a classic cartoon, with original characters: icons float on ponds with water lilies, frogs and families of ducklings; around them round trees, red toadstools and flowers, bunnies, foxes and hedgehogs out for a stroll, bluebirds and butterflies; by day, at sunset or at night with fireflies. | A classroom blackboard, green, black or blue slate: freshly wiped around the icons, elsewhere the day's lessons in white and coloured chalk (equations, geometry, fractions, graphs, the solar system, an atom, a plant, the water cycle, letters, music, solids, times tables, a treasure map), alphabet cards, crayon drawings under magnets, the teacher's set square, protractor and compass, the chalk tray; a lesson now and then writes itself and is wiped away, and a paper airplane glides across. |
 
-The theme list contains only these nine themes. The locked preview cards of Deskland's paid Wallpaper edition, which Deskland Preview shows, are not part of IconScape.
+| London |
+| --- |
+| ![London theme](prototype/thumbs/london.webp) |
+| A London travel flat lay on a white desk covered in light grey London doodles and graffiti tags (or polka dots, or marble): polaroids of real photographs of 27 sights (Big Ben, Tower Bridge, Buckingham Palace, the London Eye, St Paul's, the Tower, the Abbey, the Royal Albert Hall, the British Museum, Camden Lock, Covent Garden, the Cutty Sark, the Globe, Kew Gardens, the Shard, Tate Modern and more) with handwritten captions and washi tape, a fabric Union flag, a crown, a cup of tea, a bowler hat, an umbrella, a pocket watch showing the real time, a notebook, a map, a postcard, stamps, tickets and bunting, all with soft shadows; every group of icons rests on a stitched, gold-tooled leather desk pad (green, navy or burgundy) that makes it stand out; morning light with leaf shadows swaying in the sun, or an evening lamp; the tea steams and now and then a polaroid develops again. |
+
+The theme list contains only these eleven themes. The locked preview cards of Deskland's paid Wallpaper edition, which Deskland Preview shows, are not part of IconScape.
 
 ## Features
 
 - **Adaptive scenery:** uses the real positions of desktop icons and transitions smoothly when they move.
-- **Nine complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk, Cosmos, Manga, Ninja Village and Storybook Woods is included and saved between sessions.
+- **Eleven complete themes:** every setting for Beach, Meadow, Floating Isles, Circuit, Steampunk, Cosmos, Manga, Ninja Village, Storybook Woods, School and London is included and saved between sessions.
 - **Every monitor, one landscape:** the scene is computed over the whole desktop as your monitors are arranged, and each monitor shows its part: islands, coasts, clouds, boards and orbits continue from one monitor to the next, and a dragon, an airship or a comet crosses from one to the other. Monitors can be added, removed or rearranged while IconScape runs.
 - **Made for the desktop:** tray controls, startup on sign-in and automatic pause of each monitor that a maximized or full-screen window covers, even when that window is not in the foreground.
 - **Animations on or off:** the Animations switch in Settings, or Stop animations in the tray menu, keeps a still picture of the theme on every monitor; the choice is remembered.
@@ -143,6 +148,8 @@ open mac/build/IconScape.app
 | `prototype/manga.html` | Manga theme |
 | `prototype/ninja.html` | Ninja Village theme |
 | `prototype/woodland.html` | Storybook Woods theme |
+| `prototype/school.html` | School theme |
+| `prototype/london.html` | London theme (photos in `prototype/assets/london/`) |
 | `prototype/settings.html` | Settings interface |
 | `prototype/themes.json` | Theme definitions: pages, parameters, defaults and thumbnails |
 | `prototype/share.js` | Privacy-preserving image and animation sharing |
@@ -169,12 +176,12 @@ Version 0.1.5, on top of Deskland Preview 0.1.3:
 - **Languages:** English is the main language, used whenever Windows uses a language that is not included; Italian, Spanish, French and German were added, and Simplified Chinese remains selectable. Settings, tray menu, messages, theme texts and the installer are translated; the share buttons and share error messages follow the interface language.
 - **Stop animations:** the tray pause is now a saved setting, also available as a switch in Settings.
 - **macOS host (experimental):** `mac/`, see [macOS](#macos-experimental).
-- **Seven themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk, Cosmos, Manga, Ninja Village and Storybook Woods. Their thumbnails are rendered from the themes themselves.
+- **Nine themes:** Floating Isles (with a choice of sky color), Circuit, Steampunk, Cosmos, Manga, Ninja Village, Storybook Woods, School and London. Their thumbnails are rendered from the themes themselves.
 - **Browser preview without Node.js:** `tools/serve.ps1`.
 
 ## Credits and license
 
-IconScape is based on [Deskland Preview](https://github.com/BLEZZ0102/Deskland) by the Deskland authors ([deskland.app](https://deskland.app)). Source code and included theme assets are released under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). Third-party dependencies are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+IconScape is based on [Deskland Preview](https://github.com/BLEZZ0102/Deskland) by the Deskland authors ([deskland.app](https://deskland.app)). Source code and included theme assets are released under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). The exception are the photographs in the London theme (`prototype/assets/london/`), from Wikimedia Commons, which keep their authors' Creative Commons licences. Third-party dependencies and the photographs' credits are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 The Deskland name and icon belong to the Deskland project and are not licensed as trademarks; see [TRADEMARKS.md](TRADEMARKS.md). Please report IconScape problems to this project, not to the Deskland authors.
 
@@ -218,17 +225,22 @@ Aggiunti in IconScape:
 | ![Tema Manga](prototype/thumbs/manga.webp) | ![Tema Villaggio ninja](prototype/thumbs/ninja.webp) |
 | Una tavola di manga in bianco e nero: le icone su macchie d'inchiostro da cui esplodono linee d'impatto; vignette di fondali a pennino e tratteggio (strade in prospettiva, città notturna, cumulonembi e pali della luce, montagne e pini, mare e scogli, bambù, santuario, pagoda sotto la luna) e onomatopee, petali di ciliegio e un corvo di passaggio; quattro combinazioni di inchiostro e carta. | Un villaggio giapponese disegnato come un anime degli anni Settanta: case viste dall'alto con tetti di tegole a padiglione, muri bianchi e travi, sabbia rastrellata, tinte piatte con contorni neri, ombre nette e grana di pellicola, di notte, al tramonto o di giorno; un ninja originale compare nel fumo, salta di tetto in tetto e lancia uno shuriken. |
 
-| Bosco delle fiabe |
-| --- |
-| ![Tema Bosco delle fiabe](prototype/thumbs/woodland.webp) |
-| Un bosco da libro di fiabe disegnato come un cartone animato classico, con personaggi originali: le icone galleggiano su stagni con ninfee, rane e famiglie di anatroccoli; intorno alberi tondi, funghi rossi e fiori, coniglietti, volpi e ricci che passeggiano, uccellini azzurri e farfalle; di giorno, al tramonto o di notte con le lucciole. |
+| Bosco delle fiabe | Scuola |
+| --- | --- |
+| ![Tema Bosco delle fiabe](prototype/thumbs/woodland.webp) | ![Tema Scuola](prototype/thumbs/school.webp) |
+| Un bosco da libro di fiabe disegnato come un cartone animato classico, con personaggi originali: le icone galleggiano su stagni con ninfee, rane e famiglie di anatroccoli; intorno alberi tondi, funghi rossi e fiori, coniglietti, volpi e ricci che passeggiano, uccellini azzurri e farfalle; di giorno, al tramonto o di notte con le lucciole. | La lavagna di un'aula, verde, nera o in ardesia blu: appena cancellata intorno alle icone, altrove le lezioni del giorno col gesso bianco e colorato (equazioni, geometria, frazioni, grafici, il sistema solare, un atomo, una pianta, il ciclo dell'acqua, lettere, musica, solidi, tabelline, una mappa del tesoro), le carte dell'alfabeto, i disegni a pastello sotto le calamite, squadra, goniometro e compasso della maestra, la mensola dei gessetti; ogni tanto una lezione si scrive da sola e viene cancellata, e passa un aeroplanino di carta. |
 
-L'elenco dei temi contiene solo questi nove. Le schede bloccate dell'edizione Wallpaper a pagamento di Deskland, presenti in Deskland Preview, non fanno parte di IconScape.
+| Londra |
+| --- |
+| ![Tema Londra](prototype/thumbs/london.webp) |
+| Un flat lay di viaggio a Londra su una scrivania bianca piena di scarabocchi e scritte graffiti di Londra in grigio chiaro (oppure a pois o di marmo): polaroid con foto vere di 27 attrazioni (Big Ben, Tower Bridge, Buckingham Palace, il London Eye, St Paul's, la Torre, l'abbazia, la Royal Albert Hall, il British Museum, Camden Lock, Covent Garden, il Cutty Sark, il Globe, Kew Gardens, lo Shard, la Tate Modern e altre) con didascalie scritte a mano e nastro washi, una Union Jack di stoffa, una corona, una tazza di tè, una bombetta, un ombrello, un orologio da tasca che segna l'ora vera, un taccuino, una mappa, una cartolina, francobolli, biglietti e festoni, tutti con ombre morbide; ogni gruppo di icone sta su un tappetino da scrivania in pelle (verde, blu o bordeaux) con impunture e filetti dorati, che lo fa risaltare; luce del mattino con le ombre delle foglie che ondeggiano nel sole, o la lampada della sera; il tè fuma e ogni tanto una polaroid si sviluppa di nuovo. |
+
+L'elenco dei temi contiene solo questi undici. Le schede bloccate dell'edizione Wallpaper a pagamento di Deskland, presenti in Deskland Preview, non fanno parte di IconScape.
 
 ### Funzioni
 
 - **Paesaggio adattivo:** usa le posizioni reali delle icone del desktop e passa in modo fluido da una disposizione all'altra quando si spostano.
-- **Nove temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk, Universo, Manga, Villaggio ninja e Bosco delle fiabe sono disponibili e vengono salvate.
+- **Undici temi completi:** tutte le impostazioni di Spiaggia, Prato, Isole sospese, Circuito, Steampunk, Universo, Manga, Villaggio ninja, Bosco delle fiabe, Scuola e Londra sono disponibili e vengono salvate.
 - **Tutti i monitor, un solo paesaggio:** la scena è calcolata sull'intero desktop, così come sono disposti i monitor, e ogni monitor ne mostra la sua parte: isole, coste, nuvole, circuiti e orbite continuano da un monitor all'altro, e un drago, un dirigibile o una cometa passano dall'uno all'altro. I monitor si possono collegare, scollegare o ridisporre mentre IconScape è in esecuzione.
 - **Pensato per il desktop:** controlli nell'area di notifica, avvio all'accesso e pausa automatica di ogni monitor coperto da una finestra massimizzata o a schermo intero, anche se quella finestra non è in primo piano.
 - **Animazioni accese o spente:** l'interruttore Animazioni nelle impostazioni, o Ferma le animazioni nel menu dell'icona, lascia su ogni monitor un'immagine ferma del tema; la scelta viene ricordata.
@@ -323,6 +335,8 @@ open mac/build/IconScape.app
 | `prototype/manga.html` | Tema Manga |
 | `prototype/ninja.html` | Tema Villaggio ninja |
 | `prototype/woodland.html` | Tema Bosco delle fiabe |
+| `prototype/school.html` | Tema Scuola |
+| `prototype/london.html` | Tema Londra (foto in `prototype/assets/london/`) |
 | `prototype/settings.html` | Interfaccia delle impostazioni |
 | `prototype/themes.json` | Definizione dei temi: pagine, parametri, valori predefiniti e miniature |
 | `prototype/share.js` | Condivisione di immagini e animazioni rispettosa della privacy |
@@ -349,12 +363,12 @@ Versione 0.1.5, basata su Deskland Preview 0.1.3:
 - **Lingue:** l'inglese è la lingua principale, usata quando Windows è in una lingua non inclusa; sono stati aggiunti italiano, spagnolo, francese e tedesco, e il cinese semplificato resta selezionabile. Impostazioni, menu dell'icona, messaggi, testi dei temi e installer sono tradotti; i pulsanti e gli errori della condivisione seguono la lingua dell'interfaccia.
 - **Ferma le animazioni:** la pausa del menu dell'icona ora è un'impostazione salvata, disponibile anche come interruttore nelle impostazioni.
 - **Host per macOS (sperimentale):** `mac/`, vedi [macOS](#macos-sperimentale).
-- **Sette temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk, Universo, Manga, Villaggio ninja e Bosco delle fiabe. Le loro miniature sono generate dai temi stessi.
+- **Nove temi:** Isole sospese (con scelta del colore del cielo), Circuito, Steampunk, Universo, Manga, Villaggio ninja, Bosco delle fiabe, Scuola e Londra. Le loro miniature sono generate dai temi stessi.
 - **Anteprima nel browser senza Node.js:** `tools/serve.ps1`.
 
 ### Crediti e licenza
 
-IconScape è basato su [Deskland Preview](https://github.com/BLEZZ0102/Deskland) degli autori di Deskland ([deskland.app](https://deskland.app)). Il codice sorgente e le risorse dei temi inclusi sono rilasciati con licenza [GPL-3.0](LICENSE); vedi [NOTICE](NOTICE). Le dipendenze di terze parti sono elencate in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+IconScape è basato su [Deskland Preview](https://github.com/BLEZZ0102/Deskland) degli autori di Deskland ([deskland.app](https://deskland.app)). Il codice sorgente e le risorse dei temi inclusi sono rilasciati con licenza [GPL-3.0](LICENSE); vedi [NOTICE](NOTICE). Fanno eccezione le foto del tema Londra (`prototype/assets/london/`), prese da Wikimedia Commons, che mantengono le licenze Creative Commons dei loro autori. Le dipendenze di terze parti e i crediti delle foto sono elencati in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Il nome e l'icona di Deskland appartengono al progetto Deskland e non sono concessi in licenza come marchi; vedi [TRADEMARKS.md](TRADEMARKS.md). Segnala i problemi di IconScape a questo progetto, non agli autori di Deskland.
 
@@ -398,17 +412,22 @@ IconScape 新增：
 | ![漫画主题](prototype/thumbs/manga.webp) | ![忍者之村主题](prototype/thumbs/ninja.webp) |
 | 黑白漫画的一页：图标落在迸出集中线的浓墨上；分镜格是钢笔排线画的背景（透视街道、夜晚城市、积雨云与电线杆、山与松、海与礁石、竹林、神社、月下五重塔），还有拟声词，樱花飘落，偶尔有乌鸦飞过；四种墨与纸的配色。 | 七十年代日本动画风格的村落：俯瞰的瓦顶房屋有白墙和木梁，周围是枯山水沙纹，平涂上色、黑色描线、硬朗阴影和胶片颗粒，可选夜晚、黄昏或白天；原创忍者在烟雾中现身，在屋顶间跳跃并掷出手里剑。 |
 
-| 童话森林 |
-| --- |
-| ![童话森林主题](prototype/thumbs/woodland.webp) |
-| 经典卡通风格的童话森林：图标浮在长满睡莲的池塘上，有青蛙和一家小鸭子；周围是圆圆的树、红色蘑菇和小花，小兔子、狐狸和刺猬在散步，还有小蓝鸟和蝴蝶；可选白天、黄昏或有萤火虫的夜晚。 |
+| 童话森林 | 学校 |
+| --- | --- |
+| ![童话森林主题](prototype/thumbs/woodland.webp) | ![学校主题](prototype/thumbs/school.webp) |
+| 经典卡通风格的童话森林：图标浮在长满睡莲的池塘上，有青蛙和一家小鸭子；周围是圆圆的树、红色蘑菇和小花，小兔子、狐狸和刺猬在散步，还有小蓝鸟和蝴蝶；可选白天、黄昏或有萤火虫的夜晚。 | 教室黑板（绿色、黑色或蓝灰）：图标周围刚被擦过，其余地方用白色和彩色粉笔写满了课程（方程、几何、分数、函数图像、太阳系、原子、植物、水循环、字母、五线谱、立体图形、乘法表、藏宝图），还有字母卡、磁铁吸着的蜡笔画、三角板、量角器和圆规以及粉笔槽；时常有一道题自己写出来又被擦掉，纸飞机从桌面上飞过。 |
 
-主题列表只包含这九个主题。Deskland Preview 中展示的 Deskland 付费壁纸版锁定主题卡片不属于 IconScape。
+| 伦敦 |
+| --- |
+| ![伦敦主题](prototype/thumbs/london.webp) |
+| 白色书桌上的伦敦旅行平铺摆拍，桌面满是浅灰色的伦敦涂鸦和涂鸦字（也可选圆点或大理石）：拍立得里是 27 处名胜的真实照片（大本钟、塔桥、白金汉宫、伦敦眼、圣保罗大教堂、伦敦塔、西敏寺、皇家阿尔伯特音乐厅、大英博物馆、卡姆登水闸、考文特花园、卡蒂萨克号、环球剧场、邱园、碎片大厦、泰特现代美术馆等），配有手写标题和和纸胶带，还有布制英国国旗、王冠、一杯茶、圆顶礼帽、雨伞、显示真实时间的怀表、笔记本、地图、明信片、邮票、门票和彩旗，都带着柔和的阴影；每组图标都放在带缝线和烫金边框的皮革桌垫（绿色、藏青或酒红）上，十分醒目；晨光里树叶的影子在阳光中摇曳，或者晚间台灯亮着；茶冒着热气，不时有一张拍立得重新显影。 |
+
+主题列表只包含这十一个主题。Deskland Preview 中展示的 Deskland 付费壁纸版锁定主题卡片不属于 IconScape。
 
 ### 功能
 
 - **图标自适应：**读取真实桌面图标的位置，在移动、添加或删除时平滑调整场景。
-- **九个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克、宇宙、漫画、忍者之村和童话森林的全部参数均可调整并自动保存。
+- **十一个完整主题：**沙滩、草地、浮空岛、电路板、蒸汽朋克、宇宙、漫画、忍者之村、童话森林、学校和伦敦 的全部参数均可调整并自动保存。
 - **所有显示器，一片风景：**场景按显示器的实际排列在整个桌面上计算，每个显示器显示其中的一部分：岛屿、海岸、云、电路和轨道从一个显示器延续到另一个，龙、飞艇或彗星会从一个显示器飞到另一个。运行中增减或重新排列显示器会自动调整。
 - **适合常驻桌面：**托盘控制、开机自动启动；某个显示器被最大化或全屏窗口遮住时（即使该窗口不在前台）只暂停这个显示器。
 - **动画开关：**设置中的“动画”开关或托盘菜单中的“停止动画”会让每个显示器停在主题的静止画面上，并记住这一选择。
@@ -501,6 +520,8 @@ open mac/build/IconScape.app
 | `prototype/manga.html` | 漫画主题 |
 | `prototype/ninja.html` | 忍者之村主题 |
 | `prototype/woodland.html` | 童话森林主题 |
+| `prototype/school.html` | 学校主题 |
+| `prototype/london.html` | 伦敦主题（照片在 `prototype/assets/london/`） |
 | `prototype/settings.html` | 设置界面 |
 | `prototype/themes.json` | 主题定义：页面、参数、默认值和缩略图 |
 | `prototype/share.js` | 隐私保护的图片和动画分享 |
@@ -527,11 +548,11 @@ open mac/build/IconScape.app
 - **语言：**英文是主要语言，Windows 使用未包含的语言时显示英文；新增意大利语、西班牙语、法语和德语，简体中文仍可选择。设置、托盘菜单、提示、主题文字和安装包均已翻译；分享按钮和分享错误信息跟随界面语言。
 - **停止动画：**托盘菜单的暂停现在是会保存的设置，设置界面中也有对应开关。
 - **macOS 宿主（实验性）：**`mac/`，见上文 macOS 一节。
-- **七个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克、宇宙、漫画、忍者之村和童话森林，缩略图由主题本身渲染生成。
+- **九个主题：**浮空岛（可选天空颜色）、电路板、蒸汽朋克、宇宙、漫画、忍者之村、童话森林、学校和伦敦，缩略图由主题本身渲染生成。
 - **无需 Node.js 的浏览器预览：**`tools/serve.ps1`。
 
 ### 许可与反馈
 
-IconScape 基于 Deskland 作者的 [Deskland Preview](https://github.com/BLEZZ0102/Deskland)（[deskland.app](https://deskland.app)）。项目源码和随附主题素材按 [GPL-3.0](LICENSE) 发布，见 [NOTICE](NOTICE)；第三方依赖见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+IconScape 基于 Deskland 作者的 [Deskland Preview](https://github.com/BLEZZ0102/Deskland)（[deskland.app](https://deskland.app)）。项目源码和随附主题素材按 [GPL-3.0](LICENSE) 发布，见 [NOTICE](NOTICE)；伦敦主题的照片（`prototype/assets/london/`）除外，它们来自 Wikimedia Commons，保留原作者的知识共享许可。第三方依赖和照片署名见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 Deskland 名称与图标属于 Deskland 项目，不作为商标授权授予，详见 [TRADEMARKS.md](TRADEMARKS.md)。IconScape 的问题请反馈给本项目，而不是 Deskland 作者。

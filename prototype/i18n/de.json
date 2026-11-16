@@ -134,6 +134,132 @@
     "errStart": "Start fehlgeschlagen: {msg}"
   },
   "themes": {
+    "school": {
+      "name": "Schule",
+      "desc": "Die Tafel eines Klassenzimmers: Rund um deine Symbole wurde sie gerade gewischt, Kreidestaub und die Bögen des Tafelwischers sind geblieben; überall sonst stehen die Lektionen des Tages in Kreide: Gleichungen, Geometrie, Brüche, ein Funktionsgraph, das Sonnensystem, ein Atom, eine Pflanze, der Wasserkreislauf, Buchstaben, Musik, Körper, das Einmaleins und eine Schatzkarte; oben die Alphabetkarten, Wachsmalbilder der Kinder an Magneten, ein hölzernes Tafeldreieck, ein Winkelmesser und ein Tafelzirkel, unten die Kreideablage mit Kreide und Tafelwischer; ab und zu schreibt sich eine Lektion Strich für Strich von selbst und wird wieder gewischt, und ein Papierflieger gleitet über den Desktop",
+      "groups": [
+        "Tafel",
+        "Lektionen",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Gewischte Flächen",
+          "hint": "Wie weit sich die frisch gewischte Tafel um deine Symbole ausdehnt"
+        },
+        "warp": {
+          "label": "Unregelmäßige Ränder",
+          "hint": "Wie unregelmäßig der Rand der gewischten Flächen ist"
+        },
+        "board": {
+          "label": "Tafel",
+          "options": [
+            "Grün",
+            "Schwarz",
+            "Blauer Schiefer"
+          ]
+        },
+        "lessons": {
+          "label": "Lektionen",
+          "hint": "Wie voll die Tafel ist: Lektionen, Wachsmalbilder und Werkzeuge der Lehrkraft"
+        },
+        "color": {
+          "label": "Farbige Kreide",
+          "hint": "Wie viele Linien und Wörter mit farbiger Kreide geschrieben sind"
+        },
+        "live": {
+          "label": "Live-Schreiben",
+          "hint": "Auf jedem Bildschirm wird ab und zu eine Lektion Strich für Strich mit Kreide geschrieben und kurz darauf gewischt",
+          "options": [
+            "Aus",
+            "Ein"
+          ]
+        },
+        "plane": {
+          "label": "Papierflieger anzeigen",
+          "hint": "Ein Papierflieger, der ab und zu über den Desktop gleitet",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell sich Schrift, Papierflieger und Kreidestaub bewegen"
+        }
+      }
+    },
+    "london": {
+      "name": "London",
+      "desc": "Ein London-Reise-Flatlay auf einem weißen Schreibtisch voller hellgrauer London-Kritzeleien und Graffiti-Schriftzüge (oder Punkte, oder weißer Marmor): Polaroids mit echten Fotos von siebenundzwanzig Sehenswürdigkeiten, Big Ben, Tower Bridge, Buckingham Palace, das London Eye, St Paul's, der Tower, die Westminster Abbey, der Trafalgar Square, die Royal Albert Hall, das British Museum, Camden Lock, Covent Garden, die Cutty Sark, das Globe, Kensington Palace, Kew Gardens, der Leadenhall Market, der Marble Arch, die Millennium Bridge, die Regent Street, der Shard, die Tate Modern und mehr, eine rote Telefonzelle und ein Doppeldeckerbus, mit handgeschriebenen Bildunterschriften und Washi-Tape; ringsum ein Union Jack aus Stoff, eine Krone mit Edelsteinen, Perlen und Hermelin, eine Tasse Tee mit Milch, eine Melone, ein geschlossener schwarzer Regenschirm, eine goldene Taschenuhr, ein Lederbuch mit Füller, ein Stadtplan, eine Postkarte mit Briefmarke und Poststempel, Theaterkarten, Münzen, Sonnenbrillen in Schildpatt, Shortbread, Eukalyptus, rote Rosen und Wimpelketten, alle mit weichen Schatten; jede Gruppe von Symbolen liegt auf einer abgesteppten, goldgeprägten Schreibunterlage aus Leder, auf der die Symbole und ihre weißen Namen gut hervortreten; Morgenlicht vom Fenster oder das Licht einer Abendlampe; der Tee dampft, die Taschenuhr zeigt die echte Uhrzeit, ab und zu entwickelt sich ein Polaroid neu und die Schatten von Blättern wiegen sich im Sonnenlicht",
+      "groups": [
+        "Symbole",
+        "Schreibtisch",
+        "Animation"
+      ],
+      "params": {
+        "pad": {
+          "label": "Rand der Unterlagen",
+          "hint": "Wie viel Leder die Schreibunterlagen um deine Symbole lassen"
+        },
+        "mat": {
+          "label": "Schreibunterlage",
+          "hint": "Die Farbe der Lederunterlagen unter den Symbolen",
+          "options": [
+            "Grünes Leder",
+            "Marineblaues Leder",
+            "Bordeauxrotes Leder"
+          ]
+        },
+        "photos": {
+          "label": "Polaroids",
+          "hint": "Wie viele Polaroids auf jedem Bildschirm liegen"
+        },
+        "decor": {
+          "label": "Gegenstände",
+          "hint": "Wie viele Gegenstände auf dem Schreibtisch liegen: die Flagge, die Krone, der Tee, die Melone, der Schirm und die anderen"
+        },
+        "size": {
+          "label": "Größe",
+          "hint": "Wie groß die Fotos und die Gegenstände gezeichnet werden"
+        },
+        "desk": {
+          "label": "Schreibtisch",
+          "options": [
+            "London-Kritzeleien",
+            "Graue Punkte",
+            "Weißer Marmor"
+          ]
+        },
+        "light": {
+          "label": "Licht",
+          "options": [
+            "Morgenlicht",
+            "Abendlampe"
+          ]
+        },
+        "develop": {
+          "label": "Polaroid entwickelt sich",
+          "hint": "Ab und zu wird ein Polaroid dunkel und entwickelt sich langsam neu",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "sun": {
+          "label": "Sonne vom Fenster",
+          "hint": "Blätterschatten, die sich im Sonnenlicht wiegen, und Wolken, die ab und zu die Sonne verdecken (nur bei Morgenlicht)",
+          "options": [
+            "Ausblenden",
+            "Anzeigen"
+          ]
+        },
+        "flow": {
+          "label": "Geschwindigkeit",
+          "hint": "Wie schnell sich der Dampf des Tees, die Blätter und die Wolken bewegen"
+        }
+      }
+    },
     "woodland": {
       "name": "Märchenwald",
       "desc": "Ein Bilderbuchwald, gezeichnet wie ein klassischer Zeichentrickfilm: Deine Symbole schwimmen auf Teichen mit Seerosen, Fröschen und Entenfamilien; ringsum runde Bäume, rote Pilze und Blumen, Häschen, Füchse und Igel auf ihrem Spaziergang, blaue Vögel und Schmetterlinge; am Tag, bei Sonnenuntergang oder nachts mit Glühwürmchen",

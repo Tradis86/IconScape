@@ -134,6 +134,132 @@
     "errStart": "No se pudo iniciar: {msg}"
   },
   "themes": {
+    "school": {
+      "name": "Escuela",
+      "desc": "La pizarra de un aula: alrededor de tus iconos se acaba de borrar y quedan el polvo de tiza y los arcos del borrador; en el resto están escritas con tiza las lecciones del día: ecuaciones, geometría, fracciones, una gráfica, el sistema solar, un átomo, una planta, el ciclo del agua, letras, música, cuerpos geométricos, tablas de multiplicar y un mapa del tesoro; arriba las tarjetas del abecedario, dibujos a cera de los niños sujetos con imanes, una escuadra de madera, un transportador y un compás de pizarra, y abajo la repisa con tizas y el borrador; de vez en cuando una lección se escribe sola trazo a trazo y se borra, y un avión de papel cruza el escritorio",
+      "groups": [
+        "Pizarra",
+        "Lecciones",
+        "Animación"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zonas borradas",
+          "hint": "Cuánto se extiende la pizarra recién borrada alrededor de tus iconos"
+        },
+        "warp": {
+          "label": "Bordes irregulares",
+          "hint": "Lo irregular que es el borde de las zonas borradas"
+        },
+        "board": {
+          "label": "Pizarra",
+          "options": [
+            "Verde",
+            "Negra",
+            "Pizarra azul"
+          ]
+        },
+        "lessons": {
+          "label": "Lecciones",
+          "hint": "Lo llena que está la pizarra: lecciones, dibujos a cera y útiles del maestro"
+        },
+        "color": {
+          "label": "Tizas de colores",
+          "hint": "Cuántas líneas y palabras se escriben con tizas de colores"
+        },
+        "live": {
+          "label": "Escritura en vivo",
+          "hint": "En cada monitor, de vez en cuando se escribe una lección con tiza trazo a trazo y poco después se borra",
+          "options": [
+            "Apagada",
+            "Encendida"
+          ]
+        },
+        "plane": {
+          "label": "Mostrar el avión de papel",
+          "hint": "Un avión de papel que de vez en cuando cruza el escritorio",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que se mueven la escritura, el avión de papel y el polvo de tiza"
+        }
+      }
+    },
+    "london": {
+      "name": "Londres",
+      "desc": "Un flat lay de viaje a Londres sobre un escritorio blanco lleno de garabatos y grafitis de Londres en gris claro (o de lunares, o de mármol blanco): polaroids con fotos reales de veintisiete lugares, el Big Ben, el Tower Bridge, el palacio de Buckingham, el London Eye, San Pablo, la Torre, la abadía de Westminster, Trafalgar Square, el Royal Albert Hall, el British Museum, Camden Lock, Covent Garden, el Cutty Sark, el Globe, el palacio de Kensington, Kew Gardens, el Leadenhall Market, el Marble Arch, el Millennium Bridge, Regent Street, el Shard, la Tate Modern y más, una cabina telefónica roja y un autobús de dos pisos, con pies de foto escritos a mano y cinta washi; alrededor, una Union Jack de tela, una corona con gemas, perlas y armiño, una taza de té con leche, un bombín, un paraguas negro cerrado, un reloj de bolsillo de oro, una libreta de piel con pluma estilográfica, un mapa de la ciudad, una postal con sello y matasellos, entradas de teatro, monedas, gafas de sol de carey, galletas de mantequilla, eucalipto, rosas rojas y banderines, todo con sus sombras suaves; cada grupo de iconos descansa sobre un vade de piel con pespuntes y filetes dorados que hace resaltar los iconos y sus nombres blancos; luz de la mañana desde la ventana o la lámpara de la noche; el té humea, el reloj de bolsillo marca la hora real, de vez en cuando una polaroid se revela de nuevo y las sombras de las hojas se mecen al sol",
+      "groups": [
+        "Iconos",
+        "Escritorio",
+        "Animación"
+      ],
+      "params": {
+        "pad": {
+          "label": "Margen de los vades",
+          "hint": "Cuánta piel dejan los vades alrededor de tus iconos"
+        },
+        "mat": {
+          "label": "Vade",
+          "hint": "El color de los vades de piel bajo los iconos",
+          "options": [
+            "Piel verde",
+            "Piel azul marino",
+            "Piel burdeos"
+          ]
+        },
+        "photos": {
+          "label": "Polaroids",
+          "hint": "Cuántas polaroids hay en cada monitor"
+        },
+        "decor": {
+          "label": "Objetos",
+          "hint": "Cuántos objetos hay en el escritorio: la bandera, la corona, el té, el bombín, el paraguas y los demás"
+        },
+        "size": {
+          "label": "Tamaño",
+          "hint": "Lo grandes que se dibujan las fotos y los objetos"
+        },
+        "desk": {
+          "label": "Escritorio",
+          "options": [
+            "Garabatos de Londres",
+            "Lunares grises",
+            "Mármol blanco"
+          ]
+        },
+        "light": {
+          "label": "Luz",
+          "options": [
+            "Luz de la mañana",
+            "Lámpara de la noche"
+          ]
+        },
+        "develop": {
+          "label": "Polaroid revelándose",
+          "hint": "De vez en cuando una polaroid se oscurece y se revela de nuevo poco a poco",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "sun": {
+          "label": "Sol de la ventana",
+          "hint": "Sombras de hojas que se mecen al sol y nubes que de vez en cuando lo velan (solo con la luz de la mañana)",
+          "options": [
+            "Ocultar",
+            "Mostrar"
+          ]
+        },
+        "flow": {
+          "label": "Velocidad",
+          "hint": "Lo rápido que se mueven el vapor del té, las hojas y las nubes"
+        }
+      }
+    },
     "woodland": {
       "name": "Bosque de cuento",
       "desc": "Un bosque de libro ilustrado dibujado como un dibujo animado clásico: tus iconos flotan en estanques con nenúfares, ranas y familias de patitos; alrededor, árboles redondos, setas rojas y flores, conejitos, zorros y erizos de paseo, pajarillos azules y mariposas; de día, al atardecer o de noche con luciérnagas",

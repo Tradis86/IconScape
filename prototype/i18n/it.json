@@ -134,6 +134,132 @@
     "errStart": "Impossibile avviare: {msg}"
   },
   "themes": {
+    "school": {
+      "name": "Scuola",
+      "desc": "La lavagna di un'aula: intorno alle icone è appena stata cancellata e restano la polvere di gesso e gli archi del cancellino; nel resto ci sono le lezioni del giorno scritte col gesso: equazioni, geometria, frazioni, un grafico, il sistema solare, un atomo, una pianta, il ciclo dell'acqua, le lettere, la musica, i solidi, le tabelline e una mappa del tesoro; in alto le carte dell'alfabeto, i disegni a pastello dei bambini attaccati con le calamite, una squadra di legno, un goniometro e un compasso da lavagna, e sotto la mensola con i gessetti e il cancellino; ogni tanto una lezione si scrive da sola tratto dopo tratto e viene cancellata, e un aeroplanino di carta attraversa il desktop",
+      "groups": [
+        "Lavagna",
+        "Lezioni",
+        "Animazione"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Zone cancellate",
+          "hint": "Quanto si estende intorno alle icone la lavagna appena cancellata"
+        },
+        "warp": {
+          "label": "Bordi irregolari",
+          "hint": "Quanto è irregolare il bordo delle zone cancellate"
+        },
+        "board": {
+          "label": "Lavagna",
+          "options": [
+            "Verde",
+            "Nera",
+            "Ardesia blu"
+          ]
+        },
+        "lessons": {
+          "label": "Lezioni",
+          "hint": "Quanto è piena la lavagna: lezioni, disegni a pastello e strumenti della maestra"
+        },
+        "color": {
+          "label": "Gessetti colorati",
+          "hint": "Quante linee e scritte sono fatte con i gessetti colorati"
+        },
+        "live": {
+          "label": "Scrittura dal vivo",
+          "hint": "Su ogni monitor ogni tanto una lezione viene scritta col gesso tratto dopo tratto e poco dopo cancellata",
+          "options": [
+            "Spenta",
+            "Accesa"
+          ]
+        },
+        "plane": {
+          "label": "Mostra l'aeroplanino",
+          "hint": "Un aeroplanino di carta che ogni tanto attraversa il desktop",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "flow": {
+          "label": "Velocità",
+          "hint": "Quanto si muovono veloci la scrittura, l'aeroplanino e la polvere di gesso"
+        }
+      }
+    },
+    "london": {
+      "name": "Londra",
+      "desc": "Un flat lay di viaggio a Londra su una scrivania bianca piena di scarabocchi e scritte graffiti di Londra in grigio chiaro (oppure a pois o di marmo bianco): polaroid con foto vere di ventisette attrazioni, Big Ben, Tower Bridge, Buckingham Palace, il London Eye, St Paul's, la Torre, l'abbazia di Westminster, Trafalgar Square, la Royal Albert Hall, il British Museum, Camden Lock, Covent Garden, il Cutty Sark, il Globe, Kensington Palace, Kew Gardens, il Leadenhall Market, Marble Arch, il Millennium Bridge, Regent Street, lo Shard, la Tate Modern e altre ancora, una cabina telefonica rossa e un autobus a due piani, con didascalie scritte a mano e nastro washi; intorno una Union Jack di stoffa, una corona con gemme, perle ed ermellino, una tazza di tè con il latte, una bombetta, un ombrello nero chiuso, un orologio da tasca d'oro, un taccuino di pelle con la stilografica, una mappa della città, una cartolina con francobollo e timbro, biglietti del teatro, monete, occhiali da sole tartarugati, biscotti di frolla, eucalipto, rose rosse e festoni, tutti con le loro ombre morbide; ogni gruppo di icone sta su un tappetino da scrivania in pelle con impunture e filetti dorati, che fa risaltare le icone e i loro nomi bianchi; luce del mattino dalla finestra o la lampada della sera; il tè fuma, l'orologio da tasca segna l'ora vera, ogni tanto una polaroid si sviluppa di nuovo e le ombre delle foglie ondeggiano nel sole",
+      "groups": [
+        "Icone",
+        "Scrivania",
+        "Animazione"
+      ],
+      "params": {
+        "pad": {
+          "label": "Margine dei tappetini",
+          "hint": "Quanta pelle lasciano i tappetini intorno alle icone"
+        },
+        "mat": {
+          "label": "Tappetino",
+          "hint": "Il colore dei tappetini di pelle sotto le icone",
+          "options": [
+            "Pelle verde",
+            "Pelle blu",
+            "Pelle bordeaux"
+          ]
+        },
+        "photos": {
+          "label": "Polaroid",
+          "hint": "Quante polaroid ci sono su ogni monitor"
+        },
+        "decor": {
+          "label": "Oggetti",
+          "hint": "Quanti oggetti ci sono sulla scrivania: la bandiera, la corona, il tè, la bombetta, l'ombrello e gli altri"
+        },
+        "size": {
+          "label": "Grandezza",
+          "hint": "Quanto sono grandi le foto e gli oggetti"
+        },
+        "desk": {
+          "label": "Scrivania",
+          "options": [
+            "Scarabocchi di Londra",
+            "Pois grigi",
+            "Marmo bianco"
+          ]
+        },
+        "light": {
+          "label": "Luce",
+          "options": [
+            "Luce del mattino",
+            "Lampada della sera"
+          ]
+        },
+        "develop": {
+          "label": "Polaroid che si sviluppa",
+          "hint": "Ogni tanto una polaroid diventa scura e si sviluppa di nuovo, piano piano",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "sun": {
+          "label": "Sole dalla finestra",
+          "hint": "Le ombre delle foglie che ondeggiano nel sole e le nuvole che ogni tanto lo velano (solo con la luce del mattino)",
+          "options": [
+            "Nascondi",
+            "Mostra"
+          ]
+        },
+        "flow": {
+          "label": "Velocità",
+          "hint": "Quanto si muovono veloci il vapore del tè, le foglie e le nuvole"
+        }
+      }
+    },
     "woodland": {
       "name": "Bosco delle fiabe",
       "desc": "Un bosco da libro di fiabe disegnato come un cartone animato classico: le icone galleggiano su stagni con ninfee, rane e famiglie di anatroccoli; intorno alberi tondi, funghi rossi e fiori, coniglietti, volpi e ricci che passeggiano, uccellini azzurri e farfalle; di giorno, al tramonto o di notte con le lucciole",

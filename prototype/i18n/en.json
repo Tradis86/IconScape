@@ -134,6 +134,132 @@
     "errStart": "Couldn't start: {msg}"
   },
   "themes": {
+    "school": {
+      "name": "School",
+      "desc": "A classroom blackboard: around your icons the board has just been wiped, leaving chalk dust and the eraser's arcs; everywhere else the day's lessons are written in chalk: equations, geometry, fractions, a graph, the solar system, an atom, a plant, the water cycle, letters, music, solids, times tables and a treasure map; alphabet cards along the top, children's crayon drawings held up by magnets, a wooden set square, a protractor and a blackboard compass, and the chalk tray with chalk and an eraser; now and then a lesson writes itself stroke by stroke and is wiped away, and a paper airplane glides across the desktop",
+      "groups": [
+        "Board",
+        "Lessons",
+        "Animation"
+      ],
+      "params": {
+        "sigma": {
+          "label": "Wiped areas",
+          "hint": "How far the freshly wiped board reaches around your icons"
+        },
+        "warp": {
+          "label": "Irregular edges",
+          "hint": "How irregular the edge of the wiped areas is"
+        },
+        "board": {
+          "label": "Board",
+          "options": [
+            "Green",
+            "Black",
+            "Blue slate"
+          ]
+        },
+        "lessons": {
+          "label": "Lessons",
+          "hint": "How much is on the board: lessons, crayon drawings and the teacher's tools"
+        },
+        "color": {
+          "label": "Coloured chalk",
+          "hint": "How many lines and words are written in coloured chalk"
+        },
+        "live": {
+          "label": "Live writing",
+          "hint": "On every monitor, now and then a lesson is written stroke by stroke in chalk and wiped away a while later",
+          "options": [
+            "Off",
+            "On"
+          ]
+        },
+        "plane": {
+          "label": "Show the paper airplane",
+          "hint": "A paper airplane that now and then glides across the desktop",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        },
+        "flow": {
+          "label": "Speed",
+          "hint": "How fast the writing, the paper airplane and the chalk dust move"
+        }
+      }
+    },
+    "london": {
+      "name": "London",
+      "desc": "A London travel flat lay on a white desk covered in light grey London doodles and graffiti tags (or polka dots, or white marble): polaroids of real photographs of twenty-seven sights, Big Ben, Tower Bridge, Buckingham Palace, the London Eye, St Paul's, the Tower, Westminster Abbey, Trafalgar Square, the Royal Albert Hall, the British Museum, Camden Lock, Covent Garden, the Cutty Sark, the Globe, Kensington Palace, Kew Gardens, Leadenhall Market, Marble Arch, the Millennium Bridge, Regent Street, the Shard, Tate Modern and more, a red phone box and a double-decker bus, with handwritten captions and washi tape; around them a fabric Union flag, a crown with jewels, pearls and ermine, a cup of tea with milk, a bowler hat, a furled black umbrella, a gold pocket watch, a leather notebook with a fountain pen, a city map, a postcard with stamp and postmark, theatre tickets, coins, tortoiseshell sunglasses, shortbread, eucalyptus, red roses and bunting, all casting soft shadows; every group of icons rests on a stitched, gold-tooled leather desk pad that makes the icons and their white names stand out; morning light from the window or the evening glow of a lamp; the tea steams, the pocket watch shows the real time, now and then a polaroid develops again and the shadows of leaves sway in the sunlight",
+      "groups": [
+        "Icons",
+        "Desk",
+        "Animation"
+      ],
+      "params": {
+        "pad": {
+          "label": "Desk pad margin",
+          "hint": "How much leather the desk pads leave around your icons"
+        },
+        "mat": {
+          "label": "Desk pad",
+          "hint": "The colour of the leather pads under the icons",
+          "options": [
+            "Green leather",
+            "Navy leather",
+            "Burgundy leather"
+          ]
+        },
+        "photos": {
+          "label": "Polaroids",
+          "hint": "How many polaroids lie on each monitor"
+        },
+        "decor": {
+          "label": "Objects",
+          "hint": "How many of the flag, the crown, the tea, the hat, the umbrella and the other objects are on the desk"
+        },
+        "size": {
+          "label": "Size",
+          "hint": "How big the photos and the objects are drawn"
+        },
+        "desk": {
+          "label": "Desk",
+          "options": [
+            "London doodles",
+            "Grey polka dots",
+            "White marble"
+          ]
+        },
+        "light": {
+          "label": "Light",
+          "options": [
+            "Morning light",
+            "Evening lamp"
+          ]
+        },
+        "develop": {
+          "label": "Developing polaroid",
+          "hint": "Now and then a polaroid turns dark and slowly develops again",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        },
+        "sun": {
+          "label": "Sunlight from the window",
+          "hint": "Leaf shadows swaying in the sunlight and clouds that now and then veil the sun (morning light only)",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        },
+        "flow": {
+          "label": "Speed",
+          "hint": "How fast the tea's steam, the leaves and the clouds move"
+        }
+      }
+    },
     "woodland": {
       "name": "Storybook Woods",
       "desc": "A picture-book wood drawn like a classic cartoon: your icons float on ponds with water lilies, frogs and families of ducklings; around them round trees, red toadstools and flowers, bunnies, foxes and hedgehogs out for a stroll, bluebirds and butterflies; by day, at sunset or at night with fireflies",

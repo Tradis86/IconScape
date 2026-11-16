@@ -970,6 +970,241 @@
           ]
         }
       ]
+    },
+    {
+      "id": "school",
+      "adaptive": true,
+      "name": "学校",
+      "desc": "教室里的黑板：图标周围刚被板擦擦过，留下粉笔灰和板擦的弧线；其余地方写满了粉笔课程——方程、几何、分数、函数图像、太阳系、原子、植物、水循环、字母、五线谱、立体图形、乘法表和藏宝图；顶上贴着字母卡，磁铁吸着孩子们的蜡笔画，挂着木三角板、量角器和黑板圆规，下面是放着粉笔和板擦的粉笔槽；时常有一道题自己一笔一笔写出来又被擦掉，纸飞机从桌面上飞过",
+      "page": "school.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/school.webp?v=62f285b067) center / cover no-repeat, radial-gradient(ellipse 16% 30% at 12% 45%, rgba(232,236,226,.25) 70%, transparent 80%), linear-gradient(180deg, #3b5c4b 0%, #2e4b3c 85%, #a57c4e 88%, #7a5634 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "黑板",
+          "params": [
+            {
+              "key": "sigma",
+              "label": "擦过的区域",
+              "hint": "图标周围刚被擦干净的区域有多大",
+              "min": 40,
+              "max": 200,
+              "step": 1,
+              "default": 72,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "边缘不规则",
+              "hint": "擦过区域的边缘有多不规则",
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "default": 30
+            },
+            {
+              "key": "board",
+              "label": "黑板",
+              "options": [
+                "绿色",
+                "黑色",
+                "蓝灰"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "课程",
+          "params": [
+            {
+              "key": "lessons",
+              "label": "课程",
+              "hint": "黑板上写了多少内容：课程、蜡笔画和教具",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.7,
+              "format": "percent"
+            },
+            {
+              "key": "color",
+              "label": "彩色粉笔",
+              "hint": "有多少线条和文字用彩色粉笔书写",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.5,
+              "format": "percent"
+            },
+            {
+              "key": "live",
+              "label": "现场书写",
+              "hint": "每个显示器上时常有一道题被粉笔一笔一笔写出来，过一会儿再被板擦擦掉",
+              "options": [
+                "关闭",
+                "开启"
+              ],
+              "default": 1
+            }
+          ]
+        },
+        {
+          "name": "动画",
+          "params": [
+            {
+              "key": "plane",
+              "label": "显示纸飞机",
+              "hint": "偶尔从桌面上飞过的纸飞机",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            },
+            {
+              "key": "flow",
+              "label": "速度",
+              "hint": "书写、纸飞机和粉笔灰的速度",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "london",
+      "adaptive": true,
+      "name": "伦敦",
+      "desc": "白色书桌上的伦敦旅行平铺摆拍，桌面上满是浅灰色的伦敦涂鸦和涂鸦字（也可以选灰色圆点或白色大理石）：二十七处伦敦名胜的真实照片做成拍立得——大本钟、塔桥、白金汉宫、伦敦眼、圣保罗大教堂、伦敦塔、西敏寺、特拉法加广场、皇家阿尔伯特音乐厅、大英博物馆、卡姆登水闸、考文特花园、卡蒂萨克号、环球剧场、肯辛顿宫、邱园、利德贺市场、大理石拱门、千禧桥、摄政街、碎片大厦、泰特现代美术馆等，还有红色电话亭和双层巴士，配有手写标题和和纸胶带；周围是布制英国国旗、镶着宝石和珍珠的白鼬皮王冠、一杯奶茶、圆顶礼帽、收起的黑伞、金色怀表、皮面笔记本和钢笔、城市地图、盖了邮戳的明信片和邮票、剧院门票、硬币、玳瑁太阳镜、黄油饼干、尤加利叶、红玫瑰和彩旗，每样东西都投下柔和的阴影；每组图标都放在一块带缝线和烫金边框的皮革桌垫上，图标和白色的名字都清晰醒目；晨光从窗户照进来，或者晚间台灯亮着；茶冒着热气，怀表显示真实时间，不时有一张拍立得重新显影，树叶的影子在阳光里摇曳",
+      "page": "london.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/london.webp?v=84a3a5d5b0) center / cover no-repeat, linear-gradient(160deg, #f6f6f5 0%, #e6e6e9 100%)",
+      "thumbSource": "custom",
+      "groups": [
+        {
+          "name": "图标",
+          "params": [
+            {
+              "key": "pad",
+              "label": "桌垫边距",
+              "hint": "图标周围的皮革桌垫留出多宽的边",
+              "min": 8,
+              "max": 80,
+              "step": 1,
+              "default": 26,
+              "unit": "px"
+            },
+            {
+              "key": "mat",
+              "label": "桌垫",
+              "hint": "图标下面的皮革桌垫的颜色",
+              "options": [
+                "绿色皮革",
+                "藏青皮革",
+                "酒红皮革"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "书桌",
+          "params": [
+            {
+              "key": "photos",
+              "label": "拍立得",
+              "hint": "每个显示器上有多少张拍立得照片",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 1,
+              "format": "percent"
+            },
+            {
+              "key": "decor",
+              "label": "物件",
+              "hint": "国旗、王冠、茶、礼帽、雨伞和其他物件的多少",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 1,
+              "format": "percent"
+            },
+            {
+              "key": "size",
+              "label": "大小",
+              "hint": "照片和物件画得多大",
+              "min": 0.75,
+              "max": 1.3,
+              "step": 0.01,
+              "default": 0.92,
+              "format": "times"
+            },
+            {
+              "key": "desk",
+              "label": "桌面",
+              "options": [
+                "伦敦涂鸦",
+                "灰色圆点",
+                "白色大理石"
+              ],
+              "default": 0
+            },
+            {
+              "key": "light",
+              "label": "光线",
+              "options": [
+                "晨光",
+                "晚间台灯"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "动画",
+          "params": [
+            {
+              "key": "develop",
+              "label": "显影的拍立得",
+              "hint": "不时有一张拍立得变暗，然后慢慢重新显影",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            },
+            {
+              "key": "sun",
+              "label": "窗外的阳光",
+              "hint": "阳光里摇曳的树叶影子，以及不时遮住太阳的云（仅限晨光）",
+              "options": [
+                "隐藏",
+                "显示"
+              ],
+              "default": 1
+            },
+            {
+              "key": "flow",
+              "label": "速度",
+              "hint": "茶的热气、树叶和云移动得多快",
+              "min": 0,
+              "max": 3,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
